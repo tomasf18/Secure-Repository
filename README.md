@@ -3,7 +3,7 @@
 # sio_2425_project
 
 # Group members
-- A
-- B
-- C
+- Danilo Silva  | 113384
+- João Gaspar   | 114514
+- Tomás Santos  | 112981
 
