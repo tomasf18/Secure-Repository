@@ -1,20 +1,51 @@
 /session
-	- Create
+	(POST) - Create a new session [Anonymous API]
     /role
-        - List
-        - Assume
-        - Release
-/roles
-    -
+        (GET) - List assumed roles [Authenticated API]
+        /{role}
+            (PUT) - Assume session Roles [Authenticated API]
+            (DELETE) - Release session Roles [Authenticated API]
 
 /organization
-    - Create
-    - List
+    (POST) - Create a new Organizations [Anonymous API]
+    (GET) - List Organizations [Anonymous API]
 
-/files
-    - Download/{file_handler}
-    - Upload
+    /subjects
+        (GET ?role={role}) - List Subjects (with a Role) [Authenticated API]
+        (POST) - Add a Subject to Organization [Authorized API]
+        /{subjectId}
+            (PUT) - Activate a subject [Authenticated API]
+            (DELETE) - Suspend a subject [Authenticated API]
+            /roles
+                (GET) -  Get Roles of subject [Authenticated API]
+                /{role}
+                    (PUT) - Add Role to Subject [Authenticated API]
+                    (DELETE) - Remove Role from Subject [Authenticated API]
 
-/documents
-    - List
-    - 
+    /roles
+        (GET ?permission={permission}) - List Organization Roles (that have a Permission) [Authenticated API]
+        (POST) - Add a new Role [Authenticated API]
+        /{role} 
+            (GET) - Get Roles Permission [Authenticated API]
+            (PUT) - Activate a Role [Authenticated API]
+            (DELETE) - Suspend a Role [Authenticated API]
+            /permissions
+                /{permission}
+                    (PUT) - Add Permission to Role [Authenticated API]
+                    (DELETE) - Remove Permission from Role [Authenticated API]
+
+
+    /documents
+        (GET ?minDate={minDate} & maxDate={maxDate} & creator={subjectId} & (...)) - Query Organization Documents
+        (PUT) - Add a Document [Authenticated API]
+        /{document_id}
+            (DELETE) - Delete a document 
+            /metadata
+                (GET) - Get document 
+            /ACL
+                (PUT) - Update document ACL
+
+/file
+    (POST) - Upload a file [Authenticated API]
+    /{file_handle}
+        (GET) - Download File [Anonymous API]
