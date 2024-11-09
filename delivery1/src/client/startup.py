@@ -1,9 +1,12 @@
+#!/usr/bin/python
+
 import os
 import sys
 import argparse
 import logging
 import json
 import requests
+from constants.return_code import ReturnCode
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
@@ -27,6 +30,8 @@ def load_state():
 
     return state
 
+
+
 def parse_env(state):
     if 'REP_ADDRESS' in os.environ:
         state['REP_ADDRESS'] = os.getenv('REP_ADDRESS')
@@ -34,15 +39,19 @@ def parse_env(state):
 
     if 'REP_PUB_KEY' in os.environ:
         rep_pub_key = os.getenv('REP_PUB_KEY')
-        logger.debug('Loading REP_PUB_KEY fron: ' + state['REP_PUB_KEY'])
+        logger.debug('Loading REP_PUB_KEY fron: ' + rep_pub_key)
         if os.path.exists(rep_pub_key):
             with open(rep_pub_key, 'r') as f:
                 state['REP_PUB_KEY'] = f.read()
                 logger.debug('Loaded REP_PUB_KEY from Environment')
+    
     return state
 
-def parse_args(state):
+def parse_args(state, positional_args: list[str] = list()):
     parser = argparse.ArgumentParser()
+
+    for arg in positional_args:
+        parser.add_argument(arg, nargs=1)
 
     parser.add_argument("-k", '--key', nargs=1, help="Path to the key file")
     parser.add_argument("-r", '--repo', nargs=1, help="Address:Port of the repository")
@@ -65,10 +74,21 @@ def parse_args(state):
     if args.repo:
         state['REP_ADDRESS'] = args.repo[0]
         logger.info('Overriding REP_ADDRESS from command line')
+    
+    parsed_positional_args = vars(args)
+    for arg in positional_args:
+        state[arg] = parsed_positional_args[arg][0]
 
+    if 'REP_ADDRESS' not in state:
+        logger.error("Must define Repository Address")
+        sys.exit(-1)
+
+    if 'REP_PUB_KEY' not in state:
+        logger.error("Must set the Repository Public Key")
+        sys.exit(-1)
     return state
 
-def save(state):
+def save_state(state):
     state_dir = os.path.join(os.path.expanduser('~'), '.sio')
     state_file = os.path.join(state_dir, 'state.json')
 
@@ -82,17 +102,3 @@ def save(state):
 
 state = load_state()
 state = parse_env(state)
-state = parse_args(state)
-
-if 'REP_ADDRESS' not in state:
-  logger.error("Must define Repository Address")
-  sys.exit(-1)
-
-if 'REP_PUB_KEY' not in state:
-  logger.error("Must set the Repository Public Key")
-  sys.exit(-1)
-  
-""" Do something """
-req = requests.get(f'http://{state['REP_ADDRESS']}/organization/list')
-print(req.json)
-save(state)
