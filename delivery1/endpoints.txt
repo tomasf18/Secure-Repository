@@ -1,51 +1,61 @@
-/session
+/sessions
 	(POST) - Create a new session [Anonymous API]
-    /role
-        (GET) - List assumed roles [Authenticated API]
-        /{role}
-            (PUT) - Assume session Roles [Authenticated API]
-            (DELETE) - Release session Roles [Authenticated API]
 
-/organization
+    /roles
+        (GET) - List assumed roles [Authenticated API]
+
+        /{role}
+            (PUT) - Assume session Roles: Update Session File [Authenticated API]
+            (DELETE) - Release session Roles: Update Session File [Authenticated API]
+
+/organizations
     (POST) - Create a new Organizations [Anonymous API]
     (GET) - List Organizations [Anonymous API]
 
-    /subjects
-        (GET ?role={role}) - List Subjects (with a Role) [Authenticated API]
-        (POST) - Add a Subject to Organization [Authorized API]
-        /{subjectId}
-            (PUT) - Activate a subject [Authenticated API]
-            (DELETE) - Suspend a subject [Authenticated API]
-            /roles
-                (GET) -  Get Roles of subject [Authenticated API]
-                /{role}
-                    (PUT) - Add Role to Subject [Authenticated API]
-                    (DELETE) - Remove Role from Subject [Authenticated API]
+    /{organization_name}
+        /subjects
+            (GET ?role={role}) - List Subjects (with a Role) [Authenticated API]
+            (POST) - Add a Subject to Organization [Authorized API]
+
+            /{subjectId}
+                (PUT) - Activate a subject [Authenticated API]
+                (DELETE) - Suspend a subject [Authenticated API]
+
+                /roles
+                    (GET) -  Get Roles of subject [Authenticated API]
+
+                    /{role}
+                        (PUT) - Add Role to Subject [Authenticated API]
+                        (DELETE) - Remove Role from Subject [Authenticated API]
+* List the roles of one of my organization’s subjects
 
     /roles
         (GET ?permission={permission}) - List Organization Roles (that have a Permission) [Authenticated API]
         (POST) - Add a new Role [Authenticated API]
+
         /{role} 
             (GET) - Get Roles Permission [Authenticated API]
             (PUT) - Activate a Role [Authenticated API]
             (DELETE) - Suspend a Role [Authenticated API]
+
             /permissions
                 /{permission}
                     (PUT) - Add Permission to Role [Authenticated API]
                     (DELETE) - Remove Permission from Role [Authenticated API]
 
-
     /documents
-        (GET ?minDate={minDate} & maxDate={maxDate} & creator={subjectId} & (...)) - Query Organization Documents
-        (PUT) - Add a Document [Authenticated API]
-        /{document_id}
-            (DELETE) - Delete a document 
-            /metadata
-                (GET) - Get document 
-            /ACL
-                (PUT) - Update document ACL
+        (GET ?minDate={minDate} & maxDate={maxDate} & creator={subjectId} & (...)) - Query Organization Documents [Authenticated API]
+        (POST) - Add a Document [Authenticated API]
 
-/file
-    (POST) - Upload a file [Authenticated API]
+        /{document_id}
+            (DELETE) - Delete a document [Authorized API]
+
+            /metadata
+                (GET) - Get document [Authorized API]
+
+            /ACL
+                (PUT) - Update document ACL [Authorized API]
+
+/files
     /{file_handle}
         (GET) - Download File [Anonymous API]
