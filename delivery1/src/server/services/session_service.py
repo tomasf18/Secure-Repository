@@ -1,5 +1,5 @@
-from dao.session_dao import sessions
-from dao.organization_dao import organizations
+from ..dao.session_dao import sessions
+from ..dao.organization_dao import organizations
 import json
 
 def create_session(data):

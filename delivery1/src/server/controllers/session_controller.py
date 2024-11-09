@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from services.session_service import *
+from ..services.session_service import *
 
 session_blueprint = Blueprint('sessions', __name__)
 

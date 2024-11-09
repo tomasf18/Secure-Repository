@@ -1,6 +1,6 @@
 from flask import Flask, request
-from src.server.controllers.organization_controller import organization_blueprint
-from src.server.controllers.session_controller import session_blueprint
+from .controllers.organization_controller import organization_blueprint
+from .controllers.session_controller import session_blueprint
 
 app = Flask(__name__)
 
