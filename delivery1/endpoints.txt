@@ -1,0 +1,20 @@
+/session
+	- Create
+    /role
+        - List
+        - Assume
+        - Release
+/roles
+    -
+
+/organization
+    - Create
+    - List
+
+/files
+    - Download/{file_handler}
+    - Upload
+
+/documents
+    - List
+    - 
