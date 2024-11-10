@@ -5,7 +5,7 @@ import sys
 # Run Startup 
 from startup import parse_args, state, save_state
 
-from utils import read_file
+from utils.files import read_file
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
@@ -24,6 +24,7 @@ state = parse_args(
         "public_key_file"
     ]
 )
+url = state["REP_ADDRESS"] + endpoint
 
 pubKey: str | None = read_file(state["public_key_file"])
 
@@ -31,9 +32,7 @@ if pubKey is None:
     sys.exit(ReturnCode.INPUT_ERROR)
 
 apiConsumer = ApiConsumer(
-    url = state["REP_ADDRESS"] + endpoint,
-    rep_pub_key = state["REP_PUB_KEY"],
-    pub_key = pubKey
+    rep_pub_key = state["REP_PUB_KEY"]
 )
 
 data = {
@@ -41,9 +40,10 @@ data = {
     'username': state["username"],
     'name': state["name"],
     'email': state["email"],
+    'public_key' : pubKey,
 }
 
-result = apiConsumer.send_request(method=httpMethod.POST, data=data)
+result = apiConsumer.send_request(url = url, method=httpMethod.POST, data=data)
 
 if result is None:
     sys.exit(ReturnCode.REPOSITORY_ERROR)

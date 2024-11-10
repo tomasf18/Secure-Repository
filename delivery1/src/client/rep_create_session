@@ -5,17 +5,17 @@ import sys
 # Run Startup 
 from startup import parse_args, state, save_state
 
-from utils import read_file
+from utils.files import read_file
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
 
 
 '''
-Create a session calling the endpoint /sessions/create
+Create a session calling the endpoint /sessions
 rep_create_session <organization> <username> <password> <credentials_file> <session_file>
 '''
-endpoint = "/sessions/create"
+endpoint = "/sessions"
 
 state = parse_args(
     state, 

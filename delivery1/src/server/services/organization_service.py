@@ -1,4 +1,4 @@
-from ..dao.organization_dao import organizations
+from dao.organization_dao import organizations
 import json
 
 def list_organizations():
