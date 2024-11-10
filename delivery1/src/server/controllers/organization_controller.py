@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from ..services.organization_service import *
+from services.organization_service import *
 
 organization_blueprint = Blueprint('organizations', __name__)
 

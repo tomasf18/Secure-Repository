@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import os
 import sys
 import argparse
@@ -14,9 +12,9 @@ logger.setLevel(logging.INFO)
 
 def load_state():
     state = {}
-    state_dir = os.path.join(os.path.expanduser('~'), '.sio')
+    state_dir = os.path.join(os.path.expanduser('~'), '.sio') # ~/.sio/state.json
     state_file = os.path.join(state_dir, 'state.json')
-
+ 
     logger.debug('State folder: ' + state_dir)
     logger.debug('State file: ' + state_file)
 

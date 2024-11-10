@@ -1,17 +1,18 @@
 #!/usr/bin/python3
+
 import sys
 
 # Run Startup 
 from startup import parse_args, state, save_state
 
-from utils import read_file
+from utils.files import read_file
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
 
 
-'''rep_list_orgs - List all organizations calling the endpoint /organizations/list'''
-endpoint = "/organizations/list"
+'''rep_list_orgs - List all organizations calling the endpoint /organizations'''
+endpoint = "/organizations"
 state = parse_args(state)
 url = state["REP_ADDRESS"] + endpoint
 
