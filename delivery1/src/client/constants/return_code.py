@@ -1,6 +1,4 @@
-from enum import Enum
-
-class ReturnCode(Enum):
+class ReturnCode:
     '''UNIX semantic return codes'''
     SUCCESS = 0
     INPUT_ERROR = 1
