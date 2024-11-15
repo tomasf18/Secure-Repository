@@ -133,6 +133,7 @@ def rep_subject_credentials(password, credentials_file):
     the public key in a file for verification (e.g. if using ECC).
     """
     
+    print("rep_subject_credentials")
     pass
 
 def rep_decrypt_file(encrypted_file, encryption_metadata):
@@ -145,6 +146,7 @@ def rep_decrypt_file(encrypted_file, encryption_metadata):
     used to encrypt its contents and the encryption key.
     """
     
+    print("rep_decrypt_file")
     pass
 
 
@@ -290,6 +292,7 @@ def rep_assume_role(session_file, role):
     - Calls /sessions/roles/{role} endpoint
     """
 
+    print("rep_assume_role")
     pass
 
 def rep_drop_role(session_file, role):
@@ -299,15 +302,17 @@ def rep_drop_role(session_file, role):
     - Calls DELETE /sessions/roles/{role} endpoint
     """
     
+    print("rep_drop_role")
     pass
 
-def rep_list_roles(session_file):
+def rep_list_roles(session_file, role):
     """
-    rep_list_roles <session_file>
+    rep_list_roles <session_file> <role>
     - This command lists the current session roles.
     - Calls GET /sessions/roles endpoint
     """
     
+    print("rep_list_roles")
     pass
 
 def rep_list_subjects(session_file, username=None):
@@ -320,6 +325,7 @@ def rep_list_subjects(session_file, username=None):
     - Calls GET /organizations/{organization_name}/subjects endpoint
     """
     
+    print("rep_list_subjects")
     pass
 
 def rep_list_roles_subject(session_file, role):
@@ -330,6 +336,7 @@ def rep_list_roles_subject(session_file, role):
     - Calls GET /organizations/{organization_name}/subjects/?role={role} endpoint
     """
     
+    print("rep_list_roles_subject")
     pass
 
 def rep_list_subject_roles(session_file, username):
@@ -340,6 +347,7 @@ def rep_list_subject_roles(session_file, username):
     - Calls GET /organizations/{organization_name}/subjects/{subject_username}/roles endpoint
     """
     
+    print("rep_list_subject_roles")
     pass
 
 def rep_list_role_permissions(session_file, role):
@@ -350,6 +358,7 @@ def rep_list_role_permissions(session_file, role):
     - Calls GET /organizations/{organization_name}/roles/{role}/permissions endpoint
     """
     
+    print("rep_list_role_permissions")
     pass
 
 def rep_list_permission_roles(session_file, permission):
@@ -364,9 +373,10 @@ def rep_list_permission_roles(session_file, permission):
     - Calls GET /organizations/{organization_name}/roles?permission={permission} endpoint
     """
     
+    print("rep_list_permission_roles")
     pass
 
-def rep_list_docs(session_file, username=None, date=None):
+def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     """
     rep_list_docs <session_file> [-s username] [-d nt/ot/et date]
     - This command lists the documents of the organization with which I 
@@ -376,6 +386,8 @@ def rep_list_docs(session_file, username=None, date=None):
     - Calls GET /organizations/{organization_name}/documents?subject={subject}&date={date} endpoint
     """
     
+    print(session_file, username, date_filter, date)
+    print("rep_list_docs")
     pass
 
 
@@ -399,6 +411,7 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     - Calls POST /organizations/{organization_name}/subjects endpoint
     """
     
+    print("rep_add_subject")
     pass
 
 def rep_suspend_subject(session_file, username):
@@ -409,6 +422,7 @@ def rep_suspend_subject(session_file, username):
     - Calls DELETE /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
     
+    print("rep_suspend_subject")
     pass
 
 def rep_activate_subject(session_file, username):
@@ -419,6 +433,7 @@ def rep_activate_subject(session_file, username):
     - Calls PUT /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
     
+    print("rep_activate_subject")
     pass
 
 def rep_add_role(session_file, role):
@@ -429,6 +444,7 @@ def rep_add_role(session_file, role):
     - Calls POST /organizations/{organization_name}/roles endpoint
     """
     
+    print("rep_add_role")
     pass
 
 def rep_suspend_role(session_file, role):
@@ -439,6 +455,7 @@ def rep_suspend_role(session_file, role):
     - Calls DELETE /organizations/{organization_name}/roles/{role} endpoint
     """
     
+    print("rep_suspend_role")
     pass
 
 def rep_reactivate_role(session_file, role):
@@ -449,50 +466,31 @@ def rep_reactivate_role(session_file, role):
     - Calls PUT /organizations/{organization_name}/roles/{role} endpoint
     """
     
+    print("rep_reactivate_role")
     pass
 
-def rep_add_permission(session_file, role, username):
+def rep_add_permission(session_file, role, target):
     """
-    rep_add_permission <session_file> <role> <username>
+    rep_add_permission <session_file> <role> <username/permission>
     - This command change the properties of a role of the organization with which I have currently a session,
-    by adding a subject. 
+    by adding a subject/permission. 
     - This commands requires a ROLE_MOD permission.
     - Calls ... endpoint
     """
     
+    print("rep_add_permission")
     pass
 
-def rep_remove_permission(session_file, role, username):
+def rep_remove_permission(session_file, role, target):
     """
-    rep_remove_permission <session_file> <role> <username>
+    rep_remove_permission <session_file> <role> <username/permission>
     - This command change the properties of a role of the organization with which I have currently a session,
-    by removing a subject. 
+    by removing a subject/permission. 
     - This commands requires a ROLE_MOD permission.
     - Calls ... endpoint
     """
     
-    pass
-
-def rep_add_permission(session_file, role, permission):
-    """
-    rep_add_permission <session_file> <role> <permission>
-    - This command change the properties of a role of the organization with which I have currently a session,
-    by adding a permission. 
-    - This commands requires a ROLE_MOD permission.
-    - Calls PUT /organizations/{organization_name}/roles/{role}/permissions?permission={permission} endpoint
-    """
-    
-    pass
-
-def rep_remove_permission(session_file, role, permission):
-    """
-    rep_remove_permission <session_file> <role> <permission>
-    - This command change the properties of a role of the organization with which I have currently a session,
-    by removing a permission. 
-    - This commands requires a ROLE_MOD permission.
-    - Calls DELETE /organizations/{organization_name}/roles/{role}/permissions?permission={permission} endpoint
-    """
-    
+    print("rep_remove_permission")
     pass
 
 def rep_add_doc(session_file, document_name, file):
@@ -504,6 +502,7 @@ def rep_add_doc(session_file, document_name, file):
     - Calls POST /organizations/{organization_name}/documents endpoint
     """
     
+    print("rep_add_doc")
     pass
 
 def rep_get_doc_metadata(session_file, document_name):
@@ -515,6 +514,7 @@ def rep_get_doc_metadata(session_file, document_name):
     - Calls GET /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
+    print("rep_get_doc_metadata")
     pass
 
 def rep_get_doc_file(session_file, document_name, output_file=None):
@@ -526,6 +526,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - Calls ... endpoint
     """
     
+    print("rep_get_doc_file")
     pass
 
 def rep_delete_doc(session_file, document_name):
@@ -537,9 +538,10 @@ def rep_delete_doc(session_file, document_name):
     - Calls DELETE /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
+    print("rep_delete_doc")
     pass
 
-def rep_acl_doc(session_file, document_name, role, permission):
+def rep_acl_doc(session_file, document_name, operator, role, permission):
     """
     rep_acl_doc <session_file> <document_name> [+/-] <role> <permission>
     - This command changes the ACL of a document by adding (+) or removing (-) a permission for a given role.
@@ -548,9 +550,11 @@ def rep_acl_doc(session_file, document_name, role, permission):
     - Calls PUT/DELETE /organizations/{organization_name}/documents/{document_name}/acl endpoint
     """
 
+    print("rep_acl_doc")
+    pass
 
 print("Program name:", args["command"])
-
+print("Arguments:", args)
 if args["command"] == "rep_subject_credentials":
     rep_subject_credentials(args["arg0"], args["arg1"])
 elif args["command"] == "rep_decrypt_file":
@@ -580,7 +584,24 @@ elif args["command"] == "rep_list_role_permissions":
 elif args["command"] == "rep_list_permission_roles":
     rep_list_permission_roles(args["arg0"], args["arg1"])
 elif args["command"] == "rep_list_docs":
-    rep_list_docs(args["arg0"], args["arg1"], args["arg2"])
+    session_file = args["arg0"]
+    
+    username = None
+    date_filter = None
+    date = None
+    
+    i = 1
+    while f"arg{i}" in args:
+        current_arg = args[f"arg{i}"]
+        if current_arg == "-s":
+            username = args[f"arg{i+1}"]
+            i += 1
+        elif current_arg == "-d":
+            date_filter = args[f"arg{i+1}"]
+            date = args[f"arg{i+2}"]
+            i += 2
+        i += 1
+    rep_list_docs(session_file, username, date_filter, date)
 elif args["command"] == "rep_add_subject":
     rep_add_subject(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
 elif args["command"] == "rep_suspend_subject":
@@ -597,10 +618,6 @@ elif args["command"] == "rep_add_permission":
     rep_add_permission(args["arg0"], args["arg1"], args["arg2"])
 elif args["command"] == "rep_remove_permission":
     rep_remove_permission(args["arg0"], args["arg1"], args["arg2"])
-elif args["command"] == "rep_add_permission":
-    rep_add_permission(args["arg0"], args["arg1"], args["arg2"])
-elif args["command"] == "rep_remove_permission":
-    rep_remove_permission(args["arg0"], args["arg1"], args["arg2"])
 elif args["command"] == "rep_add_doc":
     rep_add_doc(args["arg0"], args["arg1"], args["arg2"])
 elif args["command"] == "rep_get_doc_metadata":
@@ -610,8 +627,6 @@ elif args["command"] == "rep_get_doc_file":
 elif args["command"] == "rep_delete_doc":
     rep_delete_doc(args["arg0"], args["arg1"])
 elif args["command"] == "rep_acl_doc":
-    rep_acl_doc(args["arg0"], args["arg1"], args["arg2"], args["arg3"])
+    rep_acl_doc(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
 else:
   logger.error("Invalid command")
-
-
