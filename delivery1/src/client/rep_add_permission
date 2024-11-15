@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_add_permission <session_file> <role> <username/permission>
+python3 ./client.py --command rep_add_permission $1 $2 $3
