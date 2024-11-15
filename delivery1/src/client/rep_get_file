@@ -1,47 +1,8 @@
-#!/usr/bin/python3
+#!/bin/bash
 
-import sys
-
-# Run Startup
-from startup import parse_args, state, save_state
-
-from utils.files import read_file
-from apiConsumer.APIConsumer import ApiConsumer
-from constants.httpMethod import httpMethod
-from constants.return_code import ReturnCode
-
-
-'''rep_get_file <file_handle> [file]'''
-endpoint = "/files"
-
-state = parse_args(
-    state,
-    positional_args= [
-        "file_handle",  # Required argument
-    ]
-)
-
-file_handle: str | None = state["file_handle"]
-file_path: str | None = state["file"]   # Optional argument HOW???
-
-if file_handle is None:
-    sys.exit(ReturnCode.INPUT_ERROR)
-    
-url = state["REP_ADDRESS"] + endpoint + "/" + file_handle
-
-apiConsumer = ApiConsumer(
-    rep_pub_key = state["REP_PUB_KEY"],
-)
-
-result = apiConsumer.send_request(url=url, method=httpMethod.GET)
-
-if result is None:
-    sys.exit(ReturnCode.REPOSITORY_ERROR)
-
-if file_path is not None:
-    with open(file_path, "wb") as file:
-        file.write(result)
-else:
-    print(result)
-    
-sys.exit(ReturnCode.SUCCESS)
+# rep_get_file - Download a file from the repository
+if [ -z "$2" ]; then
+    python3 ./client.py --command rep_get_file $1
+else
+    python3 ./client.py --command rep_get_file $1 $2
+fi
