@@ -1,10 +1,10 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
-from base import Base
-from acl import ACL
-from organization import Organization
-from subject import Subject
+from .base import Base
+from .acl import ACL
+from .organization import Organization
+from .subject import Subject
 
 class Document(Base):
     __tablename__ = 'document'

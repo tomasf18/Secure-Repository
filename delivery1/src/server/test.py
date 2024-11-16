@@ -1,5 +1,5 @@
-from Database import Database
-from SubjectDAO import SubjectDAO
+from dao.Database import Database
+from dao.SubjectDAO import SubjectDAO
 
 
 def main():

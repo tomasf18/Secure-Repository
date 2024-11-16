@@ -1,7 +1,5 @@
-from server.models.subject import Subject
-from server.models.organization import Organization
-from server.models.role import Role
-from BaseDAO import BaseDAO
+from models.orm import Subject
+from .BaseDAO import BaseDAO
 from sqlalchemy.exc import IntegrityError
 
 class SubjectDAO(BaseDAO):

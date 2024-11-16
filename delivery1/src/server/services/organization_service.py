@@ -1,4 +1,4 @@
-from dao.organization_dao import organizations
+""" from dao.organization_dao import organizations
 import json
 
 def list_organizations():
@@ -20,4 +20,4 @@ def create_organization(data):
         'public_key_file': data.get('public_key_file')
     }
     
-    return json.dumps(f'Organization {org_name} created successfully'), 201
+    return json.dumps(f'Organization {org_name} created successfully'), 201 """
