@@ -16,14 +16,14 @@ def main():
     session = Session()
 
     # Create a Subject
-    new_subject = Subject(username="user1", full_name="John Doe", email="john.doe@example.com")
-    session.add(new_subject)
+    # new_subject = Subject(username="user2", full_name="Ole Doe", email="ole.doe@example.com")
+    # session.add(new_subject)
     
-    # Commit changes to the database
-    session.commit()
+    # # Commit changes to the database
+    # session.commit()
     
     # Query and print the created Subject
-    created_subject = session.query(Subject).filter_by(username="user1").first()
+    created_subject = session.query(Subject).filter_by(username="user2").first()
     if created_subject:
         print("\nCreated Subject:")
         print(f" - Username: {created_subject.username}")
@@ -33,7 +33,7 @@ def main():
         print("Subject creation failed.")
 
     # Cleanup (dropping all tables)
-    Base.metadata.drop_all(engine)
+    # Base.metadata.drop_all(engine)
     session.close()
 
 if __name__ == "__main__":

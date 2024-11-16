@@ -1,6 +1,0 @@
--> Python
--> SQLite
--> SQLAlchemy
--> Docker
--> sqlite image (storage)
--> busybox image (UNIX commands and filesystem)
