@@ -1,9 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from orm import Base, Subject  # Import only necessary schema classes
+from delivery1.src.server.orm.ORM import Base, Subject  # Import only necessary schema classes
 
-# Use the database file stored in ./sqlite_data on the host
-DATABASE_PATH = './sqlite_data/repo.db'  # Adjust to match your host path
+DATABASE_PATH = '../dao/database/repo.db' 
 engine = create_engine(f"sqlite:///{DATABASE_PATH}")
 
 # Now you can interact with the database via SQLAlchemy
