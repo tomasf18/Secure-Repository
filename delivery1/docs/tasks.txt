@@ -2,11 +2,11 @@
     - Document
         - Metadata
         - File
+    - ACL
     - Organization
     - Subject
     - Session
     - Role
-    - ACL
 -> Database
     - Setup SQLite
     - Dockerize it   
