@@ -7,6 +7,7 @@ from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
 from utils.files import read_file
+from utils.encryption.ECC import ECC
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
@@ -133,8 +134,26 @@ def rep_subject_credentials(password, credentials_file):
     the public key in a file for verification (e.g. if using ECC).
     """
     
-    print("rep_subject_credentials")
-    pass
+    if any(argument is None for argument in [password, credentials_file]):
+        logger.error("Missing arguments. Usage: rep_subject_credentials <password> <credentials_file>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    try:
+        ecc = ECC()
+        
+        # Generate the key pair
+        private_key, public_key = ecc.generate_keypair(password)
+        
+        # Save both keys in the credentials file
+        with open(credentials_file, "wb") as f:
+            f.write(private_key)
+            f.write(public_key)
+        
+        logger.info(f"Key pair generated and saved to {credentials_file}")
+        sys.exit(ReturnCode.SUCCESS)
+    except Exception as e:
+        logger.error(f"Error generating key pair: {e}")
+        sys.exit(ReturnCode.INPUT_ERROR)
 
 def rep_decrypt_file(encrypted_file, encryption_metadata):
     """
@@ -145,6 +164,17 @@ def rep_decrypt_file(encrypted_file, encryption_metadata):
     with the encryption metadata, that must contain the algorithms 
     used to encrypt its contents and the encryption key.
     """
+    
+    if any(argument is None for argument in [encrypted_file, encryption_metadata]):
+        logger.error("Missing arguments. Usage: rep_decrypt_file <encrypted_file> <encryption_metadata>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    metadata = read_file(encryption_metadata)
+    if metadata is None:
+        logger.error(f"Error reading metadata file: {encryption_metadata}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    algorithm = metadata['alg']
     
     print("rep_decrypt_file")
     pass
@@ -166,14 +196,17 @@ def rep_create_org(org, username, name, email, pubkey_file):
     - Calls POST /organizations endpoint
     """
     
-    endpoint = "/organizations"
-    url = state['REP_ADDRESS'] + endpoint
-    logger.debug(f'Calling {url}')
-    
+    if any(argument is None for argument in [org, username, name, email, pubkey_file]):
+        logger.error("Missing arguments. Usage: rep_create_org <org> <username> <name> <email> <pubkey_file>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
     pubKey = read_file(pubkey_file)
     if pubKey is None:
         logger.error(f"Error reading public key file: {pubkey_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = "/organizations"
+    url = state['REP_ADDRESS'] + endpoint
     
     data = {
         "organization": org,
@@ -201,7 +234,6 @@ def rep_list_org():
     
     endpoint = "/organizations"
     url = state['REP_ADDRESS'] + endpoint
-    logger.debug(f'Calling {url}')
     
     result = apiConsumer.send_request(url=url, method=httpMethod.GET)
     
@@ -220,14 +252,17 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     
-    endpoint = "/sessions"
-    url = state['REP_ADDRESS'] + endpoint
-    logger.debug(f'Calling {url}')
+    if any(argument is None for argument in [org, username, password, credentials_file, session_file]):
+        logger.error("Missing arguments. Usage: rep_create_session <org> <username> <password> <credentials_file> <session_file>")
+        sys.exit(ReturnCode.INPUT_ERROR)
     
     credentials = read_file(credentials_file)
     if credentials is None:
         logger.error(f"Error reading credentials file: {credentials_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = "/sessions"
+    url = state['REP_ADDRESS'] + endpoint
         
     data = {
         "organization": org,
@@ -256,10 +291,12 @@ def rep_get_file(file_handle, output_file=None):
     - Calls GET /files/{file_handle} endpoint
     """
     
-    endpoint = "/files"
     if file_handle is None:
+        logger.error("Missing arguments. Usage: rep_get_file <file_handle> [file]")
         sys.exit(ReturnCode.INPUT_ERROR)
-    url = state['REP_ADDRESS'] + endpoint + '/' + file_handle
+    
+    endpoint = f"/files/{file_handle}"
+    url = state['REP_ADDRESS'] + endpoint
     
     result = apiConsumer.send_request(url=url, method=httpMethod.GET)
     
@@ -324,9 +361,27 @@ def rep_list_subjects(session_file, username=None):
     This command accepts an extra command to show only one subject.
     - Calls GET /organizations/{organization_name}/subjects endpoint
     """
+
+    if session_file is None:
+        sys.exit(ReturnCode.INPUT_ERROR)
     
-    print("rep_list_subjects")
-    pass
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    base_endpoint = f"/organizations/{session_context['organization']}/subjects"
+    endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    
+    if result is None:
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
+        
 
 def rep_list_roles_subject(session_file, role):
     """
@@ -386,9 +441,17 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     - Calls GET /organizations/{organization_name}/documents?subject={subject}&date={date} endpoint
     """
     
-    print(session_file, username, date_filter, date)
-    print("rep_list_docs")
-    pass
+    if session_file is None:
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/documents"
+    url = state['REP_ADDRESS'] + endpoint
+    
 
 
 # ****************************************************
@@ -411,8 +474,38 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     - Calls POST /organizations/{organization_name}/subjects endpoint
     """
     
-    print("rep_add_subject")
-    pass
+    if any(argument is None for argument in [session_file, username, name, email, credentials_file]):
+        logger.error("Missing arguments. Usage: rep_add_subject <session_file> <username> <name> <email> <credentials_file>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    credentials = read_file(credentials_file)
+    if credentials is None:
+        logger.error(f"Error reading credentials file: {credentials_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    endpoint = f"/organizations/{session_context['organization']}/subjects"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    data = {
+        "username": username,
+        "name": name,
+        "email": email,
+        "credentials_file": credentials
+    }
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
+    
+    if result is None:
+        logger.error("Error adding subject")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_suspend_subject(session_file, username):
     """
@@ -422,8 +515,26 @@ def rep_suspend_subject(session_file, username):
     - Calls DELETE /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
     
-    print("rep_suspend_subject")
-    pass
+    if any(argument is None for argument in [session_file, username]):
+        logger.error("Missing arguments. Usage: rep_suspend_subject <session_file> <username>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.DELETE)
+    
+    if result is None:
+        logger.error("Error suspending subject")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_activate_subject(session_file, username):
     """
@@ -433,8 +544,26 @@ def rep_activate_subject(session_file, username):
     - Calls PUT /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
     
-    print("rep_activate_subject")
-    pass
+    if any(argument is None for argument in [session_file, username]):
+        logger.error("Missing arguments. Usage: rep_activate_subject <session_file> <username>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.PUT)
+    
+    if result is None:
+        logger.error("Error activating subject")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_add_role(session_file, role):
     """
@@ -502,8 +631,36 @@ def rep_add_doc(session_file, document_name, file):
     - Calls POST /organizations/{organization_name}/documents endpoint
     """
     
-    print("rep_add_doc")
-    pass
+    if any(argument is None for argument in [session_file, document_name, file]):
+        logger.error("Missing arguments. Usage: rep_add_doc <session_file> <document_name> <file>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    file_contents = read_file(file)
+    if file_contents is None:
+        logger.error(f"Error reading file: {file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/documents"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    data = {
+        "document_name": document_name,
+        "file": file_contents
+    }
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
+    
+    if result is None:
+        logger.error("Error adding document")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_get_doc_metadata(session_file, document_name):
     """
@@ -514,8 +671,26 @@ def rep_get_doc_metadata(session_file, document_name):
     - Calls GET /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
-    print("rep_get_doc_metadata")
-    pass
+    if any(argument is None for argument in [session_file, document_name]):
+        logger.error("Missing arguments. Usage: rep_get_doc_metadata <session_file> <document_name>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    
+    if result is None:
+        logger.error("Error getting document metadata")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_get_doc_file(session_file, document_name, output_file=None):
     """
@@ -526,8 +701,31 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - Calls ... endpoint
     """
     
-    print("rep_get_doc_file")
-    pass
+    if any(argument is None for argument in [session_file, document_name]):
+        logger.error("Missing arguments. Usage: rep_get_doc_file <session_file> <document_name> [file]")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    
+    if result is None:
+        logger.error("Error getting document file")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    if output_file is not None:
+        with open('./' + output_file, "w") as file:
+            file.write(result)
+    else:
+        print(result)
+    
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_delete_doc(session_file, document_name):
     """
@@ -538,8 +736,26 @@ def rep_delete_doc(session_file, document_name):
     - Calls DELETE /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
-    print("rep_delete_doc")
-    pass
+    if any(argument is None for argument in [session_file, document_name]):
+        logger.error("Missing arguments. Usage: rep_delete_doc <session_file> <document_name>")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    session_context = read_file(session_file)
+    if session_context is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
+    url = state['REP_ADDRESS'] + endpoint
+    
+    result = apiConsumer.send_request(url=url, method=httpMethod.DELETE)
+    
+    if result is None:
+        logger.error("Error deleting document")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 def rep_acl_doc(session_file, document_name, operator, role, permission):
     """
@@ -554,7 +770,6 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
     pass
 
 print("Program name:", args["command"])
-print("Arguments:", args)
 if args["command"] == "rep_subject_credentials":
     rep_subject_credentials(args["arg0"], args["arg1"])
 elif args["command"] == "rep_decrypt_file":
