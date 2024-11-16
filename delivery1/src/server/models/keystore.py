@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from base import Base
+from .base import Base
 
 class KeyStore(Base):
     __tablename__ = 'key_store'

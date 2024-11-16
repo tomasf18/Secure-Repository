@@ -1,9 +1,9 @@
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from base import Base
-from role import Role
-from subject import Subject
-from organization import Organization
+from .base import Base
+from .role import Role
+from .subject import Subject
+from .organization import Organization
 
 SessionRoles = Table(
     "session_roles",

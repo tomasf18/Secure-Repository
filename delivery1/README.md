@@ -24,7 +24,10 @@ Abaixo está a estrutura de pastas do projeto, com descrições básicas de cada
 │   │   ├── rep_list_org
 │   │   └── ...
 │   └── server/
-│            
+│       ├── controllers/
+│       ├── dao/
+│       ├── models/
+│       ├── orm/
 ├── .gitignore                
 ├── requirements.txt        
 └── README.md          

@@ -1,9 +1,9 @@
 from sqlalchemy import Column, ForeignKey, Table, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from base import Base
-from acl import ACL
-from subject import Subject
-from document import Document
+from .base import Base
+from .acl import ACL
+from .subject import Subject
+from .document import Document
 
 OrganizationSubjects = Table(
     "organization_subjects",

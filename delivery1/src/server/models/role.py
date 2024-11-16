@@ -1,9 +1,9 @@
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from base import Base
-from acl import ACL
-from permission import Permission
-from subject import Subject
+from .base import Base
+from .acl import ACL
+from .permission import Permission
+from .subject import Subject
 
 RoleSubjects = Table(
     "role_subjects",

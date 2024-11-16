@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from base import Base
-from role import Role
+from .base import Base
+from .role import Role
 
 class ACL(Base):
     __tablename__ = 'acl'

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from base import Base
+from .base import Base
 
 class Permission(Base):
     __tablename__ = 'permission'

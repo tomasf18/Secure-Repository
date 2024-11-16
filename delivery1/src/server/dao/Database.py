@@ -1,8 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
-from server.models.permission import Permission
-from server.models.base import Base
+from models.orm import Base, Permission
 from dotenv import load_dotenv
 import os
 
