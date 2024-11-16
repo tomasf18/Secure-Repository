@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_create_org <organization> <username> <name> <email> <public key file>
+python3 ./client.py --command rep_create_org $1 $2 $3 $4 $5

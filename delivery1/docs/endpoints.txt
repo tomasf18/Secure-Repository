@@ -1,0 +1,58 @@
+/sessions
+	(POST) - Create a new session [Anonymous API]
+
+    /roles
+        (GET) - List assumed roles [Authenticated API]
+
+        /{role}
+            (PUT) - Assume session Roles: Update Session File [Authenticated API]
+            (DELETE) - Release session Roles: Update Session File [Authenticated API]
+
+/organizations
+    (POST) - Create a new Organizations [Anonymous API]
+    (GET) - List Organizations [Anonymous API]
+
+    /{organization_name}
+        /subjects
+            (GET ?role={role}) - List Subjects (with a Role) [Authenticated API]
+            (POST) - Add a Subject to Organization [Authorized API]
+
+            /{subjectId}
+                (PUT) - Activate a subject: Update status do subject [Authenticated API]
+                (DELETE) - Suspend a subject: Update status do subject [Authenticated API]
+
+                /roles
+                    (GET) -  Get Roles of subject [Authenticated API]
+
+                    /{role}
+                        (PUT) - Add Role to Subject [Authenticated API]
+                        (DELETE) - Remove Role from Subject [Authenticated API]
+
+        /roles
+            (GET ?permission={permission}) - List Organization Roles (that have a Permission) [Authenticated API]
+            (POST) - Add a new Role [Authenticated API]
+
+            /{role}
+                (PUT) - Activate a Role [Authenticated API]
+                (DELETE) - Reactivate a Role [Authenticated API]
+
+                /permissions
+                    (GET) - Get Role Permission [Authenticated API]
+                    (PUT ?permission={permission}) - Add Permission to Role [Authenticated API]
+                    (DELETE ?permission={permission}) - Remove Permission from Role [Authenticated API]
+
+        /documents
+            (GET ?minDate={minDate} & maxDate={maxDate} & creator={subjectId} & (...)) - Query Organization Documents [Authenticated API]
+            (POST) - Add a Document [Authenticated API]
+
+            /{document_name}
+                (GET) - Get document Metadata [Authorized API]
+                (DELETE) - Delete a document [Authorized API]
+
+                /ACL
+                    (PUT) - Update document ACL [Authorized API]
+                    (DELETE) - Update document ACL [Authorized API]
+
+/files
+    /{file_handle}
+        (GET) - Download File [Anonymous API]
