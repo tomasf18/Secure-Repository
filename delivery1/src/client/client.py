@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 import argparse
@@ -52,6 +53,11 @@ def parse_args(state):
     parser.add_argument("-r", '--repo', nargs=1, help="Address:Port of the repository")
     parser.add_argument("-v", '--verbose', help="Increase verbosity", action="store_true")
     parser.add_argument("-c", "--command", help="Command to execute")
+    
+    # flags for rep_list_docs command
+    parser.add_argument("-s", "--subject", help="Username for filtering documents")
+    parser.add_argument("-d", "--date", nargs=2, metavar=('FILTER', 'DATE'), help="Date filter with type (nt/ot/et) and date in DD-MM-YYYY format")
+    
     parser.add_argument('arg0', nargs='?', default=None)
     parser.add_argument('arg1', nargs='?', default=None)
     parser.add_argument('arg2', nargs='?', default=None)
@@ -80,7 +86,18 @@ def parse_args(state):
     if args.command:
         logger.info("Command: " + args.command)
        
-    return state, {'command': args.command, 'arg0': args.arg0, 'arg1': args.arg1, 'arg2': args.arg2, 'arg3': args.arg3, 'arg4': args.arg4, 'arg5': args.arg5}
+    return state, {
+        'command': args.command, 
+        'subject': args.subject if args.subject else None,
+        'date_filter': args.date[0] if args.date else None,
+        'date': args.date[1] if args.date else None,
+        'arg0': args.arg0, 
+        'arg1': args.arg1, 
+        'arg2': args.arg2, 
+        'arg3': args.arg3, 
+        'arg4': args.arg4, 
+        'arg5': args.arg5
+    }
 
 def save(state):
     state_dir = os.path.join(os.path.expanduser('~'), '.sio')
@@ -134,10 +151,6 @@ def rep_subject_credentials(password, credentials_file):
     the public key in a file for verification (e.g. if using ECC).
     """
     
-    if any(argument is None for argument in [password, credentials_file]):
-        logger.error("Missing arguments. Usage: rep_subject_credentials <password> <credentials_file>")
-        sys.exit(ReturnCode.INPUT_ERROR)
-    
     try:
         ecc = ECC()
         
@@ -165,10 +178,6 @@ def rep_decrypt_file(encrypted_file, encryption_metadata):
     used to encrypt its contents and the encryption key.
     """
     
-    if any(argument is None for argument in [encrypted_file, encryption_metadata]):
-        logger.error("Missing arguments. Usage: rep_decrypt_file <encrypted_file> <encryption_metadata>")
-        sys.exit(ReturnCode.INPUT_ERROR)
-    
     metadata = read_file(encryption_metadata)
     if metadata is None:
         logger.error(f"Error reading metadata file: {encryption_metadata}")
@@ -195,10 +204,6 @@ def rep_create_org(org, username, name, email, pubkey_file):
     its first subject.
     - Calls POST /organizations endpoint
     """
-    
-    if any(argument is None for argument in [org, username, name, email, pubkey_file]):
-        logger.error("Missing arguments. Usage: rep_create_org <org> <username> <name> <email> <pubkey_file>")
-        sys.exit(ReturnCode.INPUT_ERROR)
         
     pubKey = read_file(pubkey_file)
     if pubKey is None:
@@ -252,10 +257,6 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     
-    if any(argument is None for argument in [org, username, password, credentials_file, session_file]):
-        logger.error("Missing arguments. Usage: rep_create_session <org> <username> <password> <credentials_file> <session_file>")
-        sys.exit(ReturnCode.INPUT_ERROR)
-    
     credentials = read_file(credentials_file)
     if credentials is None:
         logger.error(f"Error reading credentials file: {credentials_file}")
@@ -290,10 +291,6 @@ def rep_get_file(file_handle, output_file=None):
     file referred in the optional last argument.
     - Calls GET /files/{file_handle} endpoint
     """
-    
-    if file_handle is None:
-        logger.error("Missing arguments. Usage: rep_get_file <file_handle> [file]")
-        sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/files/{file_handle}"
     url = state['REP_ADDRESS'] + endpoint
@@ -361,9 +358,6 @@ def rep_list_subjects(session_file, username=None):
     This command accepts an extra command to show only one subject.
     - Calls GET /organizations/{organization_name}/subjects endpoint
     """
-
-    if session_file is None:
-        sys.exit(ReturnCode.INPUT_ERROR)
     
     session_context = read_file(session_file)
     if session_context is None:
@@ -441,17 +435,25 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     - Calls GET /organizations/{organization_name}/documents?subject={subject}&date={date} endpoint
     """
     
-    if session_file is None:
-        sys.exit(ReturnCode.INPUT_ERROR)
-    
     session_context = read_file(session_file)
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/documents"
-    url = state['REP_ADDRESS'] + endpoint
+    params = []
     
+    if username:
+        params.append(f"subject={username}")
+    if date_filter and date:
+        params.append(f"date_filter={date_filter}&date={date}")
+    
+    if params:
+        endpoint += "?" + "&".join(params)
+    
+    url = state['REP_ADDRESS'] + endpoint
+    print(url)
+    pass
 
 
 # ****************************************************
@@ -473,10 +475,6 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     - This commands requires a SUBJECT_NEW permission.
     - Calls POST /organizations/{organization_name}/subjects endpoint
     """
-    
-    if any(argument is None for argument in [session_file, username, name, email, credentials_file]):
-        logger.error("Missing arguments. Usage: rep_add_subject <session_file> <username> <name> <email> <credentials_file>")
-        sys.exit(ReturnCode.INPUT_ERROR)
     
     session_context = read_file(session_file)
     if session_context is None:
@@ -514,10 +512,6 @@ def rep_suspend_subject(session_file, username):
     - This commands requires a SUBJECT_DOWN permission.
     - Calls DELETE /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
-    
-    if any(argument is None for argument in [session_file, username]):
-        logger.error("Missing arguments. Usage: rep_suspend_subject <session_file> <username>")
-        sys.exit(ReturnCode.INPUT_ERROR)
         
     session_context = read_file(session_file)
     if session_context is None:
@@ -543,10 +537,6 @@ def rep_activate_subject(session_file, username):
     - This commands requires a SUBJECT_UP permission.
     - Calls PUT /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
-    
-    if any(argument is None for argument in [session_file, username]):
-        logger.error("Missing arguments. Usage: rep_activate_subject <session_file> <username>")
-        sys.exit(ReturnCode.INPUT_ERROR)
         
     session_context = read_file(session_file)
     if session_context is None:
@@ -630,10 +620,6 @@ def rep_add_doc(session_file, document_name, file):
     - This commands requires a DOCUMENT_NEW permission.
     - Calls POST /organizations/{organization_name}/documents endpoint
     """
-    
-    if any(argument is None for argument in [session_file, document_name, file]):
-        logger.error("Missing arguments. Usage: rep_add_doc <session_file> <document_name> <file>")
-        sys.exit(ReturnCode.INPUT_ERROR)
         
     session_context = read_file(session_file)
     if session_context is None:
@@ -671,10 +657,6 @@ def rep_get_doc_metadata(session_file, document_name):
     - Calls GET /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
-    if any(argument is None for argument in [session_file, document_name]):
-        logger.error("Missing arguments. Usage: rep_get_doc_metadata <session_file> <document_name>")
-        sys.exit(ReturnCode.INPUT_ERROR)
-    
     session_context = read_file(session_file)
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
@@ -700,10 +682,6 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - This commands requires a DOC_READ permission
     - Calls ... endpoint
     """
-    
-    if any(argument is None for argument in [session_file, document_name]):
-        logger.error("Missing arguments. Usage: rep_get_doc_file <session_file> <document_name> [file]")
-        sys.exit(ReturnCode.INPUT_ERROR)
     
     session_context = read_file(session_file)
     if session_context is None:
@@ -736,10 +714,6 @@ def rep_delete_doc(session_file, document_name):
     - Calls DELETE /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
-    if any(argument is None for argument in [session_file, document_name]):
-        logger.error("Missing arguments. Usage: rep_delete_doc <session_file> <document_name>")
-        sys.exit(ReturnCode.INPUT_ERROR)
-    
     session_context = read_file(session_file)
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
@@ -769,79 +743,192 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
     print("rep_acl_doc")
     pass
 
+
+# ****************************************************
+# Arguments Validation and Command Execution
+#
+# This section validates the arguments of the command
+# and calls the appropriate function.
+#
+# ****************************************************
+
+def validate_args(command_name, required_args, usage):
+    """
+    Checks if the required arguments are present in the command.
+    
+    :param command_name: The name of the command to print error messages.
+    :param required_args: A list of required arguments.
+    :param usage: The usage of the command to print in case of missing arguments.
+    """
+    missing_args = [arg for arg, value in required_args.items() if value is None]
+    
+    if missing_args:
+        logger.error(f"Missing arguments: {', '.join(missing_args)}. Usage: {command_name} {usage}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+
+
 print("Program name:", args["command"])
+        
 if args["command"] == "rep_subject_credentials":
+    usage = "<password> <credentials_file>"
+    validate_args("rep_subject_credentials", {"password": args["arg0"], "credentials_file": args["arg1"]}, usage)
     rep_subject_credentials(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_decrypt_file":
+    usage = "<encrypted_file> <encryption_metadata>"
+    validate_args("rep_decrypt_file", {"encrypted_file": args["arg0"], "encryption_metadata": args["arg1"]}, usage)
     rep_decrypt_file(args["arg0"], args["arg1"])
+    
 elif args["command"]  == "rep_create_org":
+    usage = "<org> <username> <name> <email> <pubkey_file>"
+    validate_args("rep_create_org", {"org": args["arg0"], "username": args["arg1"], "name": args["arg2"], "email": args["arg3"], "pubkey_file": args["arg4"]}, usage)
     rep_create_org(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
+    
 elif args["command"] == "rep_list_orgs":
     rep_list_org()
+    
 elif args["command"] == "rep_create_session":
+    usage = "<organization> <username> <password> <credentials_file> <session_file>"
+    validate_args("rep_create_session", {"organization": args["arg0"], "username": args["arg1"], "password": args["arg2"], "credentials_file": args["arg3"], "session_file": args["arg4"]}, usage)
     rep_create_session(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
+    
 elif args["command"] == "rep_get_file":
+    usage = "<file_handle> [file]"
+    validate_args("rep_get_file", {"file_handle": args["arg0"]}, usage)
     rep_get_file(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_assume_role":
+    usage = "<session_file> <role>"
+    validate_args("rep_assume_role", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_assume_role(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_drop_role":
+    usage = "<session_file> <role>"
+    validate_args("rep_drop_role", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_drop_role(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_roles":
+    usage = "<session_file> <role>"
+    validate_args("rep_list_roles", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_list_roles(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_subjects":
+    usage = "<session_file> [username]"
+    validate_args("rep_list_subjects", {"session_file": args["arg0"]}, usage)
     rep_list_subjects(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_roles_subject":
+    usage = "<session_file> <role>"
+    validate_args("rep_list_roles_subject", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_list_roles_subject(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_subject_roles":
+    usage = "<session_file> <username>"
+    validate_args("rep_list_subject_roles", {"session_file": args["arg0"], "username": args["arg1"]}, usage)
     rep_list_subject_roles(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_role_permissions":
+    usage = "<session_file> <role>"
+    validate_args("rep_list_role_permissions", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_list_role_permissions(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_permission_roles":
+    usage = "<session_file> <permission>"
+    validate_args("rep_list_permission_roles", {"session_file": args["arg0"], "permission": args["arg1"]}, usage)
     rep_list_permission_roles(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_list_docs":
-    session_file = args["arg0"]
+    usage = "<session_file> [-s username] [-d nt/ot/et date]"
+    validate_args("rep_list_docs", {"session_file": args["arg0"]}, usage)
     
-    username = None
-    date_filter = None
-    date = None
+    valid_filters = ["nt", "ot", "et"]
+    date_filter = args["date_filter"]
+    date = args["date"]
     
-    i = 1
-    while f"arg{i}" in args:
-        current_arg = args[f"arg{i}"]
-        if current_arg == "-s":
-            username = args[f"arg{i+1}"]
-            i += 1
-        elif current_arg == "-d":
-            date_filter = args[f"arg{i+1}"]
-            date = args[f"arg{i+2}"]
-            i += 2
-        i += 1
-    rep_list_docs(session_file, username, date_filter, date)
+    if date_filter and date_filter not in valid_filters:
+        logger.error(f"Invalid date filter: {date_filter}. Use one of: {valid_filters}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    if date:
+        try:
+            day, month, year = map(int, date.split("-"))
+            datetime.date(year, month, day) # Check if date is valid
+        except Exception as e:
+            logger.error(f"Invalid date format: {date}. Use DD-MM-YYYY")
+            sys.exit(ReturnCode.INPUT_ERROR)
+    
+    rep_list_docs(args["arg0"], args["subject"], date_filter, date)
+    
 elif args["command"] == "rep_add_subject":
+    usage = "<session_file> <username> <name> <email> <credentials_file>"
+    validate_args("rep_add_subject", {"session_file": args["arg0"], "username": args["arg1"], "name": args["arg2"], "email": args["arg3"], "credentials_file": args["arg4"]}, usage)
     rep_add_subject(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
+    
 elif args["command"] == "rep_suspend_subject":
+    usage = "<session_file> <username>"
+    validate_args("rep_suspend_subject", {"session_file": args["arg0"], "username": args["arg1"]}, usage)
     rep_suspend_subject(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_activate_subject":
+    usage = "<session_file> <username>"
+    validate_args("rep_activate_subject", {"session_file": args["arg0"], "username": args["arg1"]}, usage)
     rep_activate_subject(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_add_role":
+    usage = "<session_file> <role>"
+    validate_args("rep_add_role", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_add_role(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_suspend_role":
+    usage = "<session_file> <role>"
+    validate_args("rep_suspend_role", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_suspend_role(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_reactivate_role":
+    usage = "<session_file> <role>"
+    validate_args("rep_reactivate_role", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
     rep_reactivate_role(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_add_permission":
+    usage = "<session_file> <role> <username/permission>"
+    validate_args("rep_add_permission", {"session_file": args["arg0"], "role": args["arg1"], "target": args["arg2"]}, usage)
     rep_add_permission(args["arg0"], args["arg1"], args["arg2"])
+    
 elif args["command"] == "rep_remove_permission":
+    usage = "<session_file> <role> <username/permission>"
+    validate_args("rep_remove_permission", {"session_file": args["arg0"], "role": args["arg1"], "target": args["arg2"]}, usage)
     rep_remove_permission(args["arg0"], args["arg1"], args["arg2"])
+    
 elif args["command"] == "rep_add_doc":
+    usage = "<session_file> <document_name> <file>"
+    validate_args("rep_add_doc", {"session_file": args["arg0"], "document_name": args["arg1"], "file": args["arg2"]}, usage)
     rep_add_doc(args["arg0"], args["arg1"], args["arg2"])
+    
 elif args["command"] == "rep_get_doc_metadata":
+    usage = "<session_file> <document_name>"
+    validate_args("rep_get_doc_metadata", {"session_file": args["arg0"], "document_name": args["arg1"]}, usage)
     rep_get_doc_metadata(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_get_doc_file":
+    usage = "<session_file> <document_name> [file]"
+    validate_args("rep_get_doc_file", {"session_file": args["arg0"], "document_name": args["arg1"]}, usage)
     rep_get_doc_file(args["arg0"], args["arg1"], args["arg2"])
+    
 elif args["command"] == "rep_delete_doc":
+    usage = "<session_file> <document_name>"
+    validate_args("rep_delete_doc", {"session_file": args["arg0"], "document_name": args["arg1"]}, usage)
     rep_delete_doc(args["arg0"], args["arg1"])
+    
 elif args["command"] == "rep_acl_doc":
-    rep_acl_doc(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
+    usage = "<session_file> <document_name> [+/-] <role> <permission>"
+    validate_args("rep_acl_doc", {"session_file": args["arg0"], "document_name": args["arg1"], "operator": args["arg2"], "role": args["arg3"], "permission": args["arg4"]}, usage)
+    
+    operator = args["arg2"]
+    if operator not in ["+", "-"]:
+        logger.error(f"Invalid operator: {operator}. Use '+' to add or '-' to remove")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    rep_acl_doc(args["arg0"], args["arg1"], operator, args["arg3"], args["arg4"])
+    
 else:
   logger.error("Invalid command")
