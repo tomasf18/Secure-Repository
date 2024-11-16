@@ -18,6 +18,7 @@
             (POST) - Add a Subject to Organization [Authorized API]
 
             /{subjectId}
+                (GET) - List Subject [Authenticated API]
                 (PUT) - Activate a subject: Update status do subject [Authenticated API]
                 (DELETE) - Suspend a subject: Update status do subject [Authenticated API]
 
