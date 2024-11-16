@@ -22,6 +22,10 @@ class SubjectDAO(BaseDAO):
             raise ValueError(f"Subject with username '{username}' not found.")
         return subject
     
+    def get_all(self) -> list["Subject"]:
+        """Retrieve all Subjects."""
+        return self.session.query(Subject).all()
+    
     def update(self, username: str, full_name: str = None, email: str = None) -> "Subject":
         """Update an existing Subject's details."""
         subject = self.get_by_username(username)

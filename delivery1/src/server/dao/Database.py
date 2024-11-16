@@ -43,6 +43,10 @@ class Database:
     def __exit__(self, exc_type, exc_value, traceback):
         self.session.close()
         
+    def __clear_database__(self):
+        Base.metadata.drop_all(bind=self.engine)
+        Base.metadata.create_all(bind=self.engine)
+        
     def get_session(self):
         return self.session
 

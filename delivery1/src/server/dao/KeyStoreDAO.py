@@ -1,7 +1,16 @@
-from BaseDAO import BaseDAO
-from server.models.keystore import KeyStore
+from .BaseDAO import BaseDAO
+from models.orm import KeyStore
+from sqlalchemy.exc import IntegrityError
 
 class KeyStoreDAO(BaseDAO):
     
-    def get_by_key(self, key: str) -> "KeyStore":
-        return self.session.query(KeyStore).filter(KeyStore.key == key).first()
+    def create(self, key: str, type: str) -> "KeyStore":
+        """Create a new KeyStore entry."""
+        try:
+            new_key = KeyStore(key=key, type=type)
+            self.session.add(new_key)
+            self.session.commit()
+            return new_key
+        except IntegrityError:
+            self.session.rollback()
+            raise ValueError(f"Key '{key}' already registered.")

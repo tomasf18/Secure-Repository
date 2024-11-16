@@ -1,7 +1,16 @@
-from BaseDAO import BaseDAO
-from server.models.document import DocumentACL
+from .ACLDAO import ACLDAO
+from models.orm import DocumentACL
+from sqlalchemy.exc import IntegrityError
 
-class DocumentACLDAO(BaseDAO):  
+class DocumentACLDAO(ACLDAO):  
     
-    def get_by_document_id(self, document_id: int) -> "DocumentACL":
-        return self.session.query(DocumentACL).filter(DocumentACL.document_id == document_id).first()
+    def create(self,  document_id: str, acl_type: str = "document_acl") -> "DocumentACL":
+        """Create a new ACL instance."""
+        try:
+            new_org_acl = DocumentACL(type=acl_type, document_id=document_id)
+            self.session.add(new_org_acl)
+            self.session.commit()
+            return new_org_acl
+        except IntegrityError:
+            self.session.rollback()
+            raise ValueError(f"ACL with type '{acl_type}' already exists.")

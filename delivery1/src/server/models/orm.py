@@ -73,7 +73,6 @@ class RestrictedMetadata(Base):
     
     def __repr__(self):
         return f"<RestrictedMetadata(document_id={self.document_id}, alg={self.alg}, key={self.key})>"
-    
 
 
 class Organization(Base):
@@ -110,7 +109,7 @@ class OrganizationACL(ACL):
         'polymorphic_identity': 'organization_acl',  # Specific identity
     }
     
-    org_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), unique=True)
+    org_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), unique=True, nullable=True)
     
     # Relationships
     organization: Mapped["Organization"] = relationship(back_populates="acl")
@@ -123,7 +122,7 @@ class DocumentACL(ACL):
         'polymorphic_identity': 'document_acl',  # Specific identity
     }
     
-    document_id: Mapped[str] = mapped_column(ForeignKey('document.id'), unique=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey('document.id'), unique=True, nullable=True)
     
     # Relationships
     document: Mapped["Document"] = relationship(back_populates="acl")
@@ -146,7 +145,7 @@ class Role(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(nullable=False)
-    acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'))
+    acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
     
     # Relationships
     acl: Mapped["ACL"] = relationship(back_populates="roles")
