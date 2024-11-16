@@ -44,7 +44,7 @@ R.: Não (ver diagrama)
   Each session must have an identifier and one or more keys
   The session keys must be used to enforce the confidentiality (when necessary) and the integrity (correctness and freshness) of messages exchanged during a session. Different keys can be used for the different protections, if deemed necessary.
 
-  ![alt text](./images/image1.png)
+ 
 
   -> Confidencialidade: PubK Danilo
   -> Integridade: PrivK Tomás
