@@ -1,12 +1,9 @@
-from flask import Flask, request
+from flask import Flask
 from controllers.organization_controller import organization_blueprint
 from controllers.session_controller import session_blueprint
 from controllers.file_controller import file_blueprint
 
 app = Flask(__name__)
-
-organizations = {}
-sessions = {}
 
 app.register_blueprint(organization_blueprint)
 app.register_blueprint(session_blueprint)
