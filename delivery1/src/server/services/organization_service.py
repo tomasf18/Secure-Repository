@@ -1,4 +1,5 @@
 from dao.OrganizationDAO import OrganizationDAO
+from models.orm import Organization
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import json
@@ -6,9 +7,13 @@ import json
 def list_organizations(db_session: Session):
     '''Handles GET requests to /organizations'''
     organization_dao = OrganizationDAO(db_session)
-    organizations = organization_dao.get_all()
-    print(organizations)
-    return 200
+    organizations: list["Organization"] = organization_dao.get_all()
+    serializable_organizations = []
+    for org in organizations:
+        serializable_organizations.append({
+            "name": org.name
+        })
+    return json.dumps(serializable_organizations), 200
 
 def create_organization(data, db_session: Session):
     '''Handles POST requests to /organizations'''

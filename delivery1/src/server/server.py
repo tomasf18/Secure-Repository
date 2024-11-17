@@ -8,6 +8,7 @@ app = Flask(__name__)
 
 # Initialize the Database object
 db = Database()
+print(" ================ Empty Database created! ================ ")
 
 # Register blueprints for all controllers
 app.register_blueprint(organization_blueprint)
