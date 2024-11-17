@@ -3,7 +3,7 @@ from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
 from .RoleDAO import RoleDAO
 from .OrganizationACLDAO import OrganizationACLDAO
-from models.orm import Organization, Subject, OrganizationSubjects, RolePermissions, Permission, RoleSubjects
+from models.orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore
 from sqlalchemy.exc import IntegrityError
 
 class OrganizationDAO(BaseDAO):
@@ -20,44 +20,27 @@ class OrganizationDAO(BaseDAO):
             # Step 1: Create an Organization
             new_org = Organization(name=org_name)
             self.session.add(new_org)
-            self.session.commit()
             
             # Step 2: Retrieve or create the Subject
-            subject = self.session.query(Subject).filter_by(username=subject_username).first()
-            if not subject:
-                subject_dao.create(subject_username, subject_full_name, subject_email)
+            try:
+                subject = subject_dao.get_by_username(subject_username)
+            except ValueError:
+                subject = subject_dao.create(subject_username, subject_full_name, subject_email)
             
-            # Step 3: Create the public Key in Key store
+            # Step 3: Create the public Key in Key Store
             key = key_store_dao.create(pub_key, "public")
             
             # Step 4: Associate Subject with the organization along with their public key
-            new_org.subjects.append(subject)  # add the subject to the organization
-
-            # Insert into OrganizationSubjects table
-            self.session.execute(
-                OrganizationSubjects.insert().values(
-                    org_name=org_name,
-                    username=subject_username,
-                    pub_key_id=key.id
-                )
-            )
-            self.session.commit()
+            self.add_subject_with_key(new_org, subject, key)
 
             # Step 5: Create new OrganizationACL for this Organization
             org_acl = organization_acl_dao.create(org_name)
-            self.session.commit()
 
             # Step 6: Create new Role "Manager" for this OrganizationACL
             manager_role = role_dao.create("Manager", org_acl.id)
-
+            
             # Step 7: Add the creator Subject to the "Manager" Role
-            self.session.execute(
-                RoleSubjects.insert().values(
-                    role_id=manager_role.id,
-                    username=subject_username
-                )
-            )
-            self.session.commit()
+            manager_role.subjects.append(subject)  # add the subject to the role
 
             # Step 8: Add all Permissions for Manager
             permissions = self.session.query(Permission).filter(Permission.name.in_([
@@ -67,12 +50,9 @@ class OrganizationDAO(BaseDAO):
             ])).all()
 
             for permission in permissions:
-                self.session.execute(
-                    RolePermissions.insert().values(
-                        role_id=manager_role.id,
-                        permission_name=permission.name
-                    )
-                )
+                manager_role.permissions.append(permission)
+
+            # Commit all changes in one go
             self.session.commit()
 
             print(f"Organization '{org_name}' created successfully with 'Manager' role for {subject_username}.")
@@ -81,7 +61,34 @@ class OrganizationDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise ValueError("Error while creating the organization or associating the subject and key.")
-
+        
+    def add_subject_with_key(self, org: Organization, subject: Subject, key: KeyStore):
+        org.subjects.append(subject)
+        self.session.commit()
+        print(f"Subject '{subject.username}' added to organization '{org.name}'.")
+        
+        if key and key.id:
+            # Update the public key for the subject in the organization
+            stmt = OrganizationSubjects.update().where(
+                (OrganizationSubjects.c.org_name == org.name) &
+                (OrganizationSubjects.c.username == subject.username)
+            ).values(pub_key_id=key.id)
+            self.session.execute(stmt)
+            self.session.commit()
+            print(f"Public key {key.id} associated with subject '{subject.username}' in organization '{org.name}'.")
+        else:
+            print(f"Error: Public key not available for subject '{subject.username}'.")
+        
+        self.session.refresh(org)
+        org_subject = self.session.query(OrganizationSubjects).filter_by(
+            org_name=org.name, username=subject.username
+        ).first()
+        
+        if org_subject:
+            print(f"Organization: {org_subject.org_name}, Subject: {org_subject.username}, Key: {org_subject.pub_key_id}")
+        else:
+            print(f"Error: Subject '{subject.username}' not found in the organization '{org.name}' after update.")
+            
     def get_by_name(self, name: str) -> "Organization":
         """Retrieve an Organization by name."""
         organization = self.session.query(Organization).filter_by(name=name).first()
@@ -106,3 +113,57 @@ class OrganizationDAO(BaseDAO):
         organization = self.get_by_name(name)
         self.session.delete(organization)
         self.session.commit()
+        
+        
+    def verify_creation(self, org_name: str, subject_username: str, pub_key: str):
+        # Verify the organization exists
+        org = self.session.query(Organization).filter_by(name=org_name).first()
+        if not org:
+            print("Organization not found!")
+            return False
+        
+        # Verify the subject is associated with the organization
+        subject = self.session.query(Subject).filter_by(username=subject_username).first()
+        if not subject:
+            print("Subject not found!")
+            return False
+
+        org_subject = self.session.query(OrganizationSubjects).filter_by(
+            org_name=org_name, username=subject_username
+        ).first()
+        if not org_subject:
+            print("Subject is not associated with the organization!")
+            return False
+
+        # Verify the public key is associated with the subject
+        key_store = self.session.query(KeyStore).filter_by(id=org_subject.pub_key_id).first()
+        if not key_store or key_store.key != pub_key:
+            print("Public key not found or mismatch!")
+            return False
+
+        # Verify the "Manager" role exists and the subject is assigned to it
+        role = self.session.query(Role).filter_by(name="Manager", acl_id=org.acl.id).first()
+        if not role:
+            print("Manager role not found!")
+            return False
+
+        if subject not in role.subjects:
+            print("Subject not added to Manager role!")
+            return False
+
+        # Verify permissions are assigned to the "Manager" role
+        permissions = self.session.query(Permission).filter(
+            Permission.name.in_([
+                "DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", 
+                "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", 
+                "ROLE_UP", "ROLE_MOD"
+            ])
+        ).all()
+
+        for permission in permissions:
+            if permission not in role.permissions:
+                print(f"Permission '{permission.name}' not assigned to Manager role!")
+                return False
+
+        print("Organization creation and verifications passed!")
+        return True

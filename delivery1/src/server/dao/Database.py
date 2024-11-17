@@ -31,22 +31,28 @@ PERMISSIONS = [
 class Database:
     def __init__(self):
         self.engine = create_engine(f"sqlite:///{DATABASE_PATH}")
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        self.session = SessionLocal()
-        
-        Base.metadata.create_all(bind=self.engine)
-        self.initialize_permissions()
+        self.session = None
+
+        self.reset()
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def close_session(self):
         self.session.close()
         
-    def __clear_database__(self):
+    def reset(self):
         Base.metadata.drop_all(bind=self.engine)
-        Base.metadata.create_all(bind=self.engine)
+        Base.metadata.create_all(bind=self.engine)    
+        self.create_session()
+        self.initialize_permissions()
+        self.close_session()
+    
+    def create_session(self):
         
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.session = SessionLocal()
+    
     def get_session(self):
         return self.session
 

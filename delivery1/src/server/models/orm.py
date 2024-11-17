@@ -11,7 +11,7 @@ OrganizationSubjects = Table(
     Base.metadata,
     Column("org_name", ForeignKey("organization.name"), primary_key=True),
     Column("username", ForeignKey("subject.username"), primary_key=True),
-    Column("pub_key_id", ForeignKey("key_store.id")),
+    Column("pub_key_id", ForeignKey("key_store.id"), nullable=True),
     UniqueConstraint("username", "pub_key_id", name="uq_username_pub_key_id"),
 )
 
@@ -84,6 +84,7 @@ class Organization(Base):
     documents: Mapped[list["Document"]] = relationship(back_populates="organization") # nullable is False by default
     acl: Mapped["OrganizationACL"] = relationship(back_populates="organization")
     subjects: Mapped[list["Subject"]] = relationship(secondary=OrganizationSubjects)
+    
     
     def __repr__(self):
         return f"<Organization(name={self.name})>"
@@ -185,7 +186,7 @@ class KeyStore(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     key: Mapped[str] = mapped_column(nullable=False)
-    type: Mapped[str] = mapped_column(nullable=False)
+    type: Mapped[str] = mapped_column(nullable=False) # public/private/symmetric
     
     def __repr__(self):
         return f"<KeyStore(id={self.id}, key={self.key}, type={self.type})>"

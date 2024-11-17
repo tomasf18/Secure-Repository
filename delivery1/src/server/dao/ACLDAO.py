@@ -1,4 +1,4 @@
-from BaseDAO import BaseDAO
+from .BaseDAO import BaseDAO
 from models.orm import ACL
 from sqlalchemy.exc import IntegrityError
 

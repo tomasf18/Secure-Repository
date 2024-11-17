@@ -1,23 +1,28 @@
-""" from dao.organization_dao import organizations
+from dao.OrganizationDAO import OrganizationDAO
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 import json
 
-def list_organizations():
+def list_organizations(db_session: Session):
     '''Handles GET requests to /organizations'''
-    return json.dumps(organizations), 200
+    organization_dao = OrganizationDAO(db_session)
+    organizations = organization_dao.get_all()
+    print(organizations)
+    return 200
 
-def create_organization(data):
+def create_organization(data, db_session: Session):
     '''Handles POST requests to /organizations'''
+    organization_dao = OrganizationDAO(db_session)
     org_name = data.get('organization')
+    username = data.get('username')
+    name = data.get('name')
+    email = data.get('email')
+    public_key_file = data.get('public_key_file')
     
-    if org_name in organizations:
-        return json.dumps(f'Organization {org_name} already exists'), 400
+    try:
+        organization_dao.create(org_name, username, name, email, public_key_file)
+    except IntegrityError:
+        return json.dumps(f"Organization with name '{org_name}' already exists."), 400
     
-    # simulation of creating an organization
-    organizations[org_name] = {
-        'username': data.get('username'),
-        'name': data.get('name'),
-        'email': data.get('email'),
-        'public_key_file': data.get('public_key_file')
-    }
     
-    return json.dumps(f'Organization {org_name} created successfully'), 201 """
+    return json.dumps(f'Organization {org_name} created successfully'), 201
