@@ -118,6 +118,24 @@ class OrganizationDAO(BaseDAO):
             raise ValueError(f"Subject '{username}' is not associated with the organization '{org_name}'.")
         return subject
     
+    def get_org_subj_association(self, org_name: str, username: str):
+        """Retrieve the Organization-Subject association."""
+        org_subject = self.session.query(OrganizationSubjects).filter_by(org_name=org_name, username=username).first()
+        if not org_subject:
+            raise ValueError(f"Subject '{username}' is not associated with the organization '{org_name}'.")
+        return org_subject
+    
+    def update_org_subj_association_status(self, org_name: str, username: str, new_status: str):
+        """Update the Organization-Subject association."""
+        stmt = OrganizationSubjects.update().where(
+            (OrganizationSubjects.c.org_name == org_name) &
+            (OrganizationSubjects.c.username == username)
+        ).values(status=new_status)
+        self.session.execute(stmt)
+        self.session.commit()
+        
+        return self.get_org_subj_association(org_name, username)
+    
     # ========================================================================================================= #
 
     def update(self, name: str, new_name: str = None) -> "Organization":
