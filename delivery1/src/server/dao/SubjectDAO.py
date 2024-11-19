@@ -42,23 +42,6 @@ class SubjectDAO(BaseDAO):
         self.session.delete(subject)
         self.session.commit()
     
-    # def add_to_organization(self, username: str, organization_name: str, pub_key_id: int = None) -> None:
-    #     """Add a Subject to an Organization."""
-    #     subject = self.get_by_username(username)
-    #     organization = self.session.query(Organization).filter_by(name=organization_name).first()
-    #     if not organization:
-    #         raise ValueError(f"Organization '{organization_name}' not found.")
-    #     association_data = {"pub_key_id": pub_key_id} if pub_key_id else {}
-    #     organization.subjects.append(subject, **association_data)
-    #     self.session.commit()
-    
-    # def assign_role(self, username: str, role_id: int) -> None:
-    #     """Assign a Role to a Subject."""
-    #     subject = self.get_by_username(username)
-    #     role = self.session.query(Role).filter_by(id=role_id).first()
-    #     if not role:
-    #         raise ValueError(f"Role with ID '{role_id}' not found.")
-    #     subject.roles.append(role)
-    #     self.session.commit()
+
     
     

@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 class OrganizationDAO(BaseDAO):
     """DAO for managing Organization entities."""
 
-    def create(self, org_name: str, subject_username: str, subject_full_name: str, subject_email: str, pub_key: str) -> Organization:
+    def create(self, org_name: str, subject_username: str, subject_full_name: str, subject_email: str, subject_pub_key: str) -> Organization:
         """Create a new organization with the subject as the creator and include their public key."""
         subject_dao = SubjectDAO(self.session)
         key_store_dao = KeyStoreDAO(self.session)
@@ -28,7 +28,7 @@ class OrganizationDAO(BaseDAO):
                 subject = subject_dao.create(subject_username, subject_full_name, subject_email)
             
             # Step 3: Create the public Key in Key Store
-            key = key_store_dao.create(pub_key, "public")
+            key = key_store_dao.create(subject_pub_key, "public")
             
             # Step 4: Associate Subject with the organization along with their public key
             self.add_subject_with_key(new_org, subject, key)
@@ -88,6 +88,21 @@ class OrganizationDAO(BaseDAO):
             print(f"Organization: {org_subject.org_name}, Subject: {org_subject.username}, Key: {org_subject.pub_key_id}")
         else:
             print(f"Error: Subject '{subject.username}' not found in the organization '{org.name}' after update.")
+            
+    
+    def add_subject_to_organization(self, org_name: str, subject_username: str, subject_full_name: str, subject_email: str, subject_pub_key: str) -> Subject:
+        """Add a Subject to an Organization."""
+        subject_dao = SubjectDAO(self.session)
+        key_store_dao = KeyStoreDAO(self.session)
+        org = self.get_by_name(org_name)
+        
+        try:
+            new_subject = subject_dao.get_by_username(subject_username)
+        except ValueError:
+            new_subject = subject_dao.create(subject_username, subject_full_name, subject_email)
+        key = key_store_dao.create(subject_pub_key, "public")
+        self.add_subject_with_key(org, new_subject, key)
+        
             
     def get_by_name(self, name: str) -> "Organization":
         """Retrieve an Organization by name."""

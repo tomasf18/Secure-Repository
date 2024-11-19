@@ -18,6 +18,9 @@ def organization_subjects(organization_name):
     db_session = g.db_session
     if request.method == 'GET':
         return list_organization_subjects(organization_name, db_session)
+    elif request.method == 'POST':
+        data = request.json
+        return add_organization_subject(organization_name, data, db_session)
 
 @organization_blueprint.route('/organizations/<organization_name>/subjects/<username>', methods=['GET', 'PUT', 'DELETE'])
 def organization_subject(organization_name, username):

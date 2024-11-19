@@ -25,15 +25,31 @@ def create_organization(data, db_session: Session):
     username = data.get('username')
     name = data.get('name')
     email = data.get('email')
-    public_key_file = data.get('public_key')
+    public_key = data.get('public_key')
     
     try:
-        organization_dao.create(org_name, username, name, email, public_key_file)
+        organization_dao.create(org_name, username, name, email, public_key)
     except IntegrityError:
         return json.dumps(f"Organization with name '{org_name}' already exists."), 400
     
     
     return json.dumps(f'Organization {org_name} created successfully'), 201
+
+def add_organization_subject(organization_name, data, db_session: Session):
+    '''Handles POST requests to /organizations/<organization_name>/subjects'''
+    organization_dao = OrganizationDAO(db_session)
+    data = data.get("data")
+    username = data.get('username')
+    name = data.get('name')
+    email = data.get('email')
+    public_key = data.get('public_key')
+    
+    try:
+        organization_dao.add_subject_to_organization(organization_name, username, name, email, public_key)
+    except IntegrityError:
+        return json.dumps(f"Subject with username '{username}' already exists."), 400
+    
+    return json.dumps(f'Subject {username} added to organization {organization_name} successfully'), 201
 
 def list_organization_subjects(organization_name, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
