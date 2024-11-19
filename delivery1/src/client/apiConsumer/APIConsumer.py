@@ -60,6 +60,7 @@ class ApiConsumer:
                 body = {
                     "data": data
                 }
+                logging.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
                 response = requests.request(method, self.rep_address + endpoint, json=body)
 
 
@@ -121,7 +122,7 @@ class ApiConsumer:
         return receivedMessage
 
 
-    def exchangeKeys(self, private_key: ec.EllipticCurvePrivateKey):
+    def exchangeKeys(self, private_key: ec.EllipticCurvePrivateKey, data: dict):
         ### HANDSHAKE ###
         KeyDerivation = ECDH()
 
@@ -130,15 +131,16 @@ class ApiConsumer:
 
         # Create packet made of (public key)
         data = {
-            "public_key" : str(session_public_key)
+            "public_key" : str(session_public_key),
+            **data
         }
         # Write public key to send and encrypted digest
         body = {
             "data": data,
-            "digest": sign_document(
+            "digest": str(sign_document(
                 data = str(data),
                 private_key = private_key
-            )
+            ))
         }
 
         # Send to the server 

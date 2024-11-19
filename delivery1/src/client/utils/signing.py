@@ -9,7 +9,7 @@ def sign_document(
     ) -> bytes:
 
     return private_key.sign(
-        data,
+        data.encode(),
         ec.ECDSA(hashes.SHA256())
     )
 

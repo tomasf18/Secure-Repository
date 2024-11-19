@@ -275,13 +275,13 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         "username": username,
     }
 
-    derivedKey = apiConsumer.exchangeKeys(credentials=private_key)
+    derivedKey = apiConsumer.exchangeKeys(private_key=private_key, data=data)
 
     if derivedKey is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
     
     with open(session_file, "w") as file:
         file.write(str({
@@ -373,7 +373,6 @@ def rep_list_subjects(session_file, username=None):
     
     base_endpoint = f"/organizations/{session_context['organization']}/subjects"
     endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
-    url = state['REP_ADDRESS'] + endpoint
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     

@@ -19,4 +19,4 @@ def read_public_key(key_file: str):
 
 def read_private_key(key_file: str, password: str):
     content = read_file(key_file)
-    return serialization.load_pem_private_key(content.encode(), password)
+    return serialization.load_pem_private_key(content.encode(), password.encode())
