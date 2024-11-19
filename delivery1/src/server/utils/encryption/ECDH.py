@@ -15,12 +15,12 @@ class ECDH:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
 
-    def generate_shared_secret(self, peer_public_key: str):
+    def generate_shared_secret(self, peer_public_key: bytes):
         """ Returns derived key """
         if self.private_key is None:
             raise Exception("No private key has been generated yet!")
         
-        public_key = serialization.load_pem_public_key(peer_public_key.encode())
+        public_key = serialization.load_pem_public_key(peer_public_key)
 
         self.shared_key = self.private_key.exchange(
             ec.ECDH(), 
@@ -31,6 +31,7 @@ class ECDH:
             algorithm=hashes.SHA256(),
             length=64,
             salt=None,
+            info=b''
         ).derive(self.shared_key)
 
         return self.derived_key
