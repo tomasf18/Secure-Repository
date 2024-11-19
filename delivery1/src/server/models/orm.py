@@ -43,8 +43,18 @@ class Repository(Base):
     __tablename__ = 'repository'
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    public_key: Mapped[str] = mapped_column(nullable=False, unique=True)
-    private_key: Mapped[str] = mapped_column(nullable=False, unique=True)
+    public_key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  
+    private_key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  
+    
+    # Relationships
+    public_key: Mapped["KeyStore"] = relationship(foreign_keys=[public_key_id])
+    private_key: Mapped["KeyStore"] = relationship(foreign_keys=[private_key_id])
+    
+    # A repository must have a unique pair of public and private keys
+    __table_args__ = (
+        UniqueConstraint("id", "public_key_id", name="uq_repo_pub_key_id"),
+        UniqueConstraint("id", "private_key_id", name="uq_repo_priv_key_id"),
+    )
     
     def __repr__(self):
         return f"<Repository(id={self.id}, public_key={self.public_key}, private_key={self.private_key})>"
