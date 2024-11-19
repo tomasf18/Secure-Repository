@@ -62,9 +62,11 @@ def get_organization_subject(organization_name, username, db_session: Session):
 def activate_organization_subject(organization_name, username, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
-    return organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    return json.dumps(f"Subject '{username}' in the organization '{organization_name}' has been activated."), 200
 
 def suspend_organization_subject(organization_name, username, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
-    return organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+    organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+    return json.dumps(f"Subject '{username}' in the organization '{organization_name}' has been suspended."), 200
