@@ -1,0 +1,5 @@
+sqlalchemy
+flask
+requests
+python-dotenv
+cryptography
