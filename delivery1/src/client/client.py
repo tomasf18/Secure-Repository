@@ -7,7 +7,7 @@ import json
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
-from utils.files import read_file, read_public_key
+from utils.files import read_file, read_public_key, read_private_key
 from utils.encryption.ECC import ECC
 from cryptography.hazmat.primitives import serialization
 
@@ -242,7 +242,6 @@ def rep_list_org():
     """
     
     endpoint = "/organizations"
-    url = state['REP_ADDRESS'] + endpoint
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
@@ -262,33 +261,27 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     """
     
     try:
-        # Load public key from credentials file
-        with open(credentials_file, "rb") as f:
-            public_key = f.read()
-        
-        public_key = serialization.load_pem_public_key(public_key)
-        
-        # For later: derive the private key from the public key and the password
+        private_key = read_private_key(credentials_file, password)
         
     except Exception as e:
-        logger.error(f"Error loading public key: {e}")
+        logger.error(f"Error loading private key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
     
     endpoint = "/sessions"
-    url = state['REP_ADDRESS'] + endpoint
         
     data = {
         "organization": org,
         "username": username,
     }
 
-    derivedKey = apiConsumer.exchangeKeys(credentials=credentials, password=session_file)
-    # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    derivedKey = apiConsumer.exchangeKeys(credentials=private_key)
 
     if derivedKey is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
     
     with open(session_file, "w") as file:
         file.write(str({
