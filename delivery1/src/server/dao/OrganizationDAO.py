@@ -100,7 +100,7 @@ class OrganizationDAO(BaseDAO):
         """Retrieve all Organizations."""
         return self.session.query(Organization).all()
     
-    # =========================== Retrieve Subjects associated with an Organization =========================== #
+    # ==================== Retrieve Subjects and their data associated with an Organization =================== #
     
     def get_subjects(self, name: str) -> list[Subject]:
         """Retrieve all Subjects associated with an Organization."""

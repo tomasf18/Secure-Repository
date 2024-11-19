@@ -1,3 +1,5 @@
+import base64
+import sys
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -131,29 +133,39 @@ class ApiConsumer:
 
         # Create packet made of (public key)
         data = {
-            "public_key" : str(session_public_key),
+            "public_key" : base64.b64encode(session_public_key).decode('utf-8'),
             **data
         }
+
         # Write public key to send and encrypted digest
-        body = {
-            "data": data,
-            "digest": str(sign_document(
+        print("sent digest: ", sign_document(
                 data = str(data),
                 private_key = private_key
             ))
+        body = {
+            "data": data,
+            "digest": base64.b64encode(sign_document(
+                data = str(data),
+                private_key = private_key
+            )).decode('utf-8')
         }
 
         # Send to the server 
         response = requests.request("post", self.rep_address + "/sessions", json=body)
         
+        if response.status_code not in [201]:
+            logging.error(f"Error: Invalid repository response: {response.json()}")
+            sys.exit(ReturnCode.REPOSITORY_ERROR)
 
         # verify if signature is valid
         response = response.json()
         if (not verify_doc_sign(response, self.rep_pub_key)):
-            return None
+            logging.error("Error: Invalid repository signature")
+            sys.exit(ReturnCode.REPOSITORY_ERROR)
 
         # If it its, finish calculations
         server_key = response["public_key"]
         derivedKey: bytes = KeyDerivation.generate_shared_secret(server_key)
 
-        return derivedKey
+        print("derivedKey = ", derivedKey )
+        return derivedKey, response["session_id"]
