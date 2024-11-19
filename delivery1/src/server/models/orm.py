@@ -162,12 +162,12 @@ class Session(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
     organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
+    key: Mapped["KeyStore"] = mapped_column(ForeignKey('key_store.id'), nullable=True) # TODO: nullable=False
     # lifetime: Mapped[int] = mapped_column(nullable=False)  # Lifetime in seconds -> solved at application level
     
     # Relationships
     subject: Mapped["Subject"] = relationship()
     organization: Mapped["Organization"] = relationship()
-    # keys: Mapped[list["KeyStore"]] = relationship() -> We don't need, since we are generating symmetric keys for each message and the other key is the public key of the subject within that organization, which is already stored in the key_store table
     session_roles: Mapped[list["Role"]] = relationship(secondary=SessionRoles)
     
     def __repr__(self):
