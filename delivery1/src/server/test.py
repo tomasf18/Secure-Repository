@@ -3,6 +3,7 @@ from dao.Database import Database
 from dao.SubjectDAO import SubjectDAO
 from dao.SessionDAO import SessionDAO
 from dao.OrganizationDAO import OrganizationDAO
+from models.status import Status
 
 
 def main():
@@ -22,10 +23,17 @@ def main():
     organization_dao.verify_creation(org_name, subject_username, pub_key)
     
     new_session = session_dao.create(subject_username, org_name, secrets.token_hex(64))
+    org_subject = organization_dao.get_org_subj_association(org_name, subject_username)
     
     print(new_session.subject)  # Subject object corresponding to 'johndoe'
     print(new_session.organization)  # Organization object corresponding to 'ExampleOrg'
     print(new_session.session_roles) # List of Role objects associated with the session
+    print(org_subject.status)  # Status of the Organization-Subject association
+    
+    # Update status
+    org_subject = organization_dao.update_org_subj_association_status(org_name, subject_username, Status.SUSPENDED.value)
+    
+    print(org_subject.status)  # Updated status of the Organization-Subject association
     
     
 

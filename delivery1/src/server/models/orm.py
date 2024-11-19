@@ -1,7 +1,8 @@
-from sqlalchemy import Column, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, String, Table, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from sqlalchemy.orm import DeclarativeBase
+from models.status import Status
 
 class Base(DeclarativeBase):
     pass
@@ -13,6 +14,7 @@ OrganizationSubjects = Table(
     Column("org_name", ForeignKey("organization.name"), primary_key=True),
     Column("username", ForeignKey("subject.username"), primary_key=True),
     Column("pub_key_id", ForeignKey("key_store.id"), nullable=True),
+    Column("status", String, nullable=False, default=Status.ACTIVE.value),
     UniqueConstraint("username", "pub_key_id", name="uq_username_pub_key_id"),
 )
 
