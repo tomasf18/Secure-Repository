@@ -1,4 +1,6 @@
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
 
 from utils.encryption.ECDH import ECDH
 from utils.encryption.AES import AES
@@ -6,25 +8,18 @@ from utils.files import read_private_key
 from utils.digest import calculateDigest, verifyDigest
 from utils.signing import sign_document, verify_doc_sign
 
-def exchangeKeys(key: str, password: str, client_key: str, client_session_key: str):
+def exchangeKeys(client_session_key: bytes) -> tuple[bytes, bytes]:
     """
-    :param masterKey: Repository PEM master key 
-    :param password: Repository master key password
     :param client_key: Client known public key in order to verify signature
-    :param request: Create Session request in the format { data: {public_key}, digest }
     :return (sessionKey, public_key): session key and public key in order for client to derive session key
     """
-    private_key = serialization.load_pem_private_key(
-        data=key.encode(),
-        password=password
-    )
-
     ### HANDSHAKE ###
-    KeyDerivation = ECDH()
+    KeyDerivation: ECDH = ECDH()
 
-    # Generate Private key
-    public_key = KeyDerivation.generate_keys()
+    ## Generate random private key
+    public_key: bytes = KeyDerivation.generate_keys()
 
+    ## Generate shared secred
     sessionKey: bytes = KeyDerivation.generate_shared_secret(client_session_key)
 
     return sessionKey, public_key

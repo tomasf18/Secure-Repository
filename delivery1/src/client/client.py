@@ -266,25 +266,28 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     except Exception as e:
         logger.error(f"Error loading private key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
-        
+    
     data = {
         "organization": org,
         "username": username,
     }
 
-    derivedKey, sessionId = apiConsumer.exchangeKeys(private_key=private_key, data=data)
+    derived_key, session_data = apiConsumer.exchangeKeys(private_key=private_key, data=data)
 
-    if derivedKey is None:
+    if derived_key is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
-    logging.debug(f"Session created with sessionId: {sessionId}, derivedKey: {derivedKey}")
+    logging.debug(f"Session created with sessionId: {session_data["session_id"]}, derivedKey: {derived_key}")
 
     with open(session_file, "w") as file:
-        file.write(str({
-            "key": derivedKey,
-            "id" : sessionId
+        file.write(json.dumps({
+            "key": base64.b64encode(derived_key).decode('utf-8'),
+            "session_id": session_data["session_id"],
+            "username": session_data["username"],
+            "organization": session_data["organization"],
+            "roles": session_data["roles"],
         }))
     
     sys.exit(ReturnCode.SUCCESS)
@@ -372,8 +375,12 @@ def rep_list_subjects(session_file, username=None):
     
     base_endpoint = f"/organizations/{session_context['organization']}/subjects"
     endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
-    
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+
+    key = base64.b64decode(session_context["key"])
+    data = {
+        "session_id": session_context["session_id"],
+    }
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=key)
     
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
