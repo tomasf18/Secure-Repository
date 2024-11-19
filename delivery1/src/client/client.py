@@ -7,10 +7,9 @@ import json
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
-from utils.files import read_file, read_public_key
+from utils.files import read_file, read_public_key, read_private_key
 from utils.encryption.ECC import ECC
 from cryptography.hazmat.primitives import serialization
-
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
@@ -165,7 +164,7 @@ def rep_subject_credentials(password, credentials_file):
             priv.write(private_key)
             pub.write(public_key)
         
-        logger.info(f"Key pair generated and saved to {credentials_file}")
+        logger.info(f"Key pair generated and saved public key to {credentials_file}")
         sys.exit(ReturnCode.SUCCESS)
     except Exception as e:
         logger.error(f"Error generating key pair: {e}")
@@ -243,7 +242,6 @@ def rep_list_org():
     """
     
     endpoint = "/organizations"
-    url = state['REP_ADDRESS'] + endpoint
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
@@ -262,26 +260,28 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     
-    credentials = read_file(credentials_file)
-    if credentials is None:
-        logger.error(f"Error reading credentials file: {credentials_file}")
+    try:
+        private_key = read_private_key(credentials_file, password)
+        
+    except Exception as e:
+        logger.error(f"Error loading private key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
     
     endpoint = "/sessions"
-    url = state['REP_ADDRESS'] + endpoint
         
     data = {
         "organization": org,
         "username": username,
-        "password": password,
     }
 
-    derivedKey = apiConsumer.exchangeKeys(credentials=credentials, password=session_file)
-    # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    derivedKey = apiConsumer.exchangeKeys(credentials=private_key)
 
     if derivedKey is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
     
     with open(session_file, "w") as file:
         file.write(str({
@@ -500,7 +500,6 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         "username": username,
         "name": name,
         "email": email,
-        "credentials_file": credentials
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)

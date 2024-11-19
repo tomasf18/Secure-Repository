@@ -156,23 +156,6 @@ class Role(Base):
     def __repr__(self):
         return f"<Role(name={self.name}, acl_id={self.acl_id})>"
     
-class Session(Base):
-    __tablename__ = 'session'
-    
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
-    organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
-    key: Mapped["KeyStore"] = mapped_column(ForeignKey('key_store.id'), nullable=True) # TODO: nullable=False
-    # lifetime: Mapped[int] = mapped_column(nullable=False)  # Lifetime in seconds -> solved at application level
-    
-    # Relationships
-    subject: Mapped["Subject"] = relationship()
-    organization: Mapped["Organization"] = relationship()
-    session_roles: Mapped[list["Role"]] = relationship(secondary=SessionRoles)
-    
-    def __repr__(self):
-        return f"<Session(id={self.id}, subject_username={self.subject_username}, organization_name={self.organization_name})>"
-    
 class Permission(Base):
     __tablename__ = 'permission'
 
@@ -190,3 +173,22 @@ class KeyStore(Base):
     
     def __repr__(self):
         return f"<KeyStore(id={self.id}, key={self.key}, type={self.type})>"
+    
+class Session(Base):
+    __tablename__ = 'session'
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
+    organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
+    key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
+    
+    # Relationships
+    subject: Mapped["Subject"] = relationship()
+    organization: Mapped["Organization"] = relationship()
+    session_roles: Mapped[list["Role"]] = relationship(secondary=SessionRoles)
+    key: Mapped["KeyStore"] = relationship()  # Relationship to KeyStore
+    
+    def __repr__(self):
+        return f"<Session(id={self.id}, subject_username={self.subject_username}, organization_name={self.organization_name}, key_id={self.key_id})>"
+
+    
