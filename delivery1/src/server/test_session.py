@@ -36,6 +36,7 @@ def main():
     print("Verifying session relationships...")
     print("Subject associated with session:", new_session.subject)  # Subject object
     print("Organization associated with session:", new_session.organization)  # Organization object
+    print("Key associated with session:", new_session.key.key)  # Role objects (if any)
     print("Roles associated with session:", new_session.session_roles)  # Role objects (if any)
 
     # Clean-up logic (optional) or test assertions could go here
