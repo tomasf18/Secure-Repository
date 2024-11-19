@@ -1,12 +1,20 @@
 import requests
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from constants.return_code import ReturnCode
 from utils.signing import sign_document, verify_doc_sign
 from utils.files import read_private_key
 from utils.encryption.ECDH import ECDH
 from utils.encryption.AES import AES
 from utils.digest import calculateDigest, verifyDigest
+import logging
 
+logging.basicConfig(
+    filename='project.log',
+    filemode='a',
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG
+)
 
 class ApiConsumer:
     def __init__(
@@ -21,10 +29,11 @@ class ApiConsumer:
     def send_request(self, endpoint: str, method: str, data=None, sessionKey: bytes = None):
         '''Function to send a request to the server'''
         try:
+            receivedMessage = None
             if sessionKey:
                 messageKey, MACKey = sessionKey[:32], sessionKey[32:]
 
-                print("\ndata: data\n")
+                logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with data= \"{data}\"")
 
                 ## Create and encrypt Payload
                 body = self.encryptPayload(
@@ -33,17 +42,18 @@ class ApiConsumer:
                     MACKey = MACKey
                 )
 
-
-                print(f"\nEncrypted payload = {body}\n")
+                logging.debug(f"Encrypted payload = {body}")
                 ## Send Encrypted Payload
                 response = requests.request(method, self.rep_address + endpoint, json=body)
-                print(f"\nServer Response = {response.json()}\n")
+                logging.debug(f"Server Response = {response.json()}")
 
                 receivedMessage = self.decryptPayload(
                     response = response.json(),
                     messageKey = messageKey,
                     MACKey = MACKey
                 )
+                logging.debug(f"Decrypted Server Response = {receivedMessage}")
+
 
             else:
                 print("Sending request")
@@ -111,12 +121,7 @@ class ApiConsumer:
         return receivedMessage
 
 
-    def exchangeKeys(self, credentials: str, password: str):
-        private_key = serialization.load_pem_private_key(
-            data=credentials,
-            password=password
-        )
-
+    def exchangeKeys(self, private_key: ec.EllipticCurvePrivateKey):
         ### HANDSHAKE ###
         KeyDerivation = ECDH()
 
@@ -132,8 +137,7 @@ class ApiConsumer:
             "data": data,
             "digest": sign_document(
                 data = str(data),
-                key = private_key,
-                password = password
+                private_key = private_key
             )
         }
 
