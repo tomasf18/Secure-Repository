@@ -1,4 +1,3 @@
-import base64
 from dao.OrganizationDAO import OrganizationDAO
 from models.orm import Organization
 from models.orm import Subject
@@ -26,8 +25,8 @@ def create_organization(data, db_session: Session):
     username = data.get('username')
     name = data.get('name')
     email = data.get('email')
-    public_key_file: str = base64.b64decode(data.get('public_key')).decode('utf-8')
-
+    public_key_file = data.get('public_key')
+    
     try:
         organization_dao.create(org_name, username, name, email, public_key_file)
     except IntegrityError:
@@ -62,9 +61,11 @@ def get_organization_subject(organization_name, username, db_session: Session):
 def activate_organization_subject(organization_name, username, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
-    return organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    return json.dumps(f"Subject '{username}' in the organization '{organization_name}' has been activated."), 200
 
 def suspend_organization_subject(organization_name, username, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
-    return organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+    organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+    return json.dumps(f"Subject '{username}' in the organization '{organization_name}' has been suspended."), 200
