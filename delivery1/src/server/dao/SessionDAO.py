@@ -1,5 +1,5 @@
-from BaseDAO import BaseDAO
-from server.models.session import Session
+from .BaseDAO import BaseDAO
+from models.orm import Session
 
 class SessionDAO(BaseDAO): 
      

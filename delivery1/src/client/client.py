@@ -9,6 +9,7 @@ from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
 from utils.files import read_file
 from utils.encryption.ECC import ECC
+from cryptography.hazmat.primitives import serialization
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
@@ -159,10 +160,9 @@ def rep_subject_credentials(password, credentials_file):
         
         # Save both keys in the credentials file
         with open(credentials_file, "wb") as f:
-            f.write(private_key)
             f.write(public_key)
         
-        logger.info(f"Key pair generated and saved to {credentials_file}")
+        logger.info(f"Key pair generated and saved public key to {credentials_file}")
         sys.exit(ReturnCode.SUCCESS)
     except Exception as e:
         logger.error(f"Error generating key pair: {e}")
@@ -257,10 +257,19 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     
-    credentials = read_file(credentials_file)
-    if credentials is None:
-        logger.error(f"Error reading credentials file: {credentials_file}")
+    try:
+        # Load public key from credentials file
+        with open(credentials_file, "rb") as f:
+            public_key = f.read()
+        
+        public_key = serialization.load_pem_public_key(public_key)
+        
+        # For later: derive the private key from the public key and the password
+        
+    except Exception as e:
+        logger.error(f"Error loading public key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
     
     endpoint = "/sessions"
     url = state['REP_ADDRESS'] + endpoint
@@ -268,8 +277,6 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     data = {
         "organization": org,
         "username": username,
-        "password": password,
-        "credentials_file": credentials,
     }
     
     result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
@@ -493,7 +500,6 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         "username": username,
         "name": name,
         "email": email,
-        "credentials_file": credentials
     }
     
     result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
