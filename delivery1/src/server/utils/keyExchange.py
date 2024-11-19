@@ -6,7 +6,7 @@ from utils.files import read_private_key
 from utils.digest import calculateDigest, verifyDigest
 from utils.signing import sign_document, verify_doc_sign
 
-def exchangeKeys(masterKey: str, password: str, client_key: str, request):
+def exchangeKeys(key: str, password: str, client_key: str, client_session_key: str):
     """
     :param masterKey: Repository PEM master key 
     :param password: Repository master key password
@@ -15,12 +15,9 @@ def exchangeKeys(masterKey: str, password: str, client_key: str, request):
     :return (sessionKey, public_key): session key and public key in order for client to derive session key
     """
     private_key = serialization.load_pem_private_key(
-        data=masterKey.encode(),
+        data=key.encode(),
         password=password
     )
-
-    if (not verify_doc_sign(request, client_key)):
-        return None
 
     ### HANDSHAKE ###
     KeyDerivation = ECDH()
@@ -28,8 +25,7 @@ def exchangeKeys(masterKey: str, password: str, client_key: str, request):
     # Generate Private key
     public_key = KeyDerivation.generate_keys()
 
-    client_pub_key = request["public_key"]
-    sessionKey: bytes = KeyDerivation.generate_shared_secret(client_pub_key)
+    sessionKey: bytes = KeyDerivation.generate_shared_secret(client_session_key)
 
     return sessionKey, public_key
 

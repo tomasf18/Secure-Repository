@@ -99,6 +99,26 @@ class OrganizationDAO(BaseDAO):
     def get_all(self) -> list["Organization"]:
         """Retrieve all Organizations."""
         return self.session.query(Organization).all()
+    
+    # =========================== Retrieve Subjects associated with an Organization =========================== #
+    
+    def get_subjects(self, name: str) -> list[Subject]:
+        """Retrieve all Subjects associated with an Organization."""
+        organization = self.get_by_name(name)
+        return [subject for subject in organization.subjects]
+    
+    def get_subject_by_username(self, org_name: str, username: str) -> Subject:
+        """Retrieve a Subject by username associated with an Organization."""
+        subject_dao = SubjectDAO(self.session)
+        organization = self.get_by_name(org_name)
+        subject = subject_dao.get_by_username(username)
+        if not subject:
+            raise ValueError(f"Subject with username '{username}' not found.")
+        if subject not in organization.subjects:
+            raise ValueError(f"Subject '{username}' is not associated with the organization '{org_name}'.")
+        return subject
+    
+    # ========================================================================================================= #
 
     def update(self, name: str, new_name: str = None) -> "Organization":
         """Update an existing Organization's name."""

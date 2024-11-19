@@ -18,11 +18,12 @@ def list_organizations(db_session: Session):
 def create_organization(data, db_session: Session):
     '''Handles POST requests to /organizations'''
     organization_dao = OrganizationDAO(db_session)
+    data = data.get("data")
     org_name = data.get('organization')
     username = data.get('username')
     name = data.get('name')
     email = data.get('email')
-    public_key_file = data.get('public_key_file')
+    public_key_file = data.get('public_key')
     
     try:
         organization_dao.create(org_name, username, name, email, public_key_file)
@@ -31,3 +32,11 @@ def create_organization(data, db_session: Session):
     
     
     return json.dumps(f'Organization {org_name} created successfully'), 201
+
+def list_organization_subjects(organization_name):
+    '''Handles GET requests to /organizations/<organization_name>/subjects'''
+    pass
+
+def get_organization_subject(organization_name, username):
+    '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>'''
+    pass

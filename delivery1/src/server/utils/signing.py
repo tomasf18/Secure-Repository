@@ -15,11 +15,11 @@ def sign_document(
         ec.ECDSA(hashes.SHA256())
     )
 
-def verify_doc_sign(response: dict[str, str], rep_pub_key: str) -> bool:
-    msg = response["data"]
-    digest = response["digest"]
+def verify_doc_sign(data: dict[str, str], pub_key: str) -> bool:
+    msg = data["data"]
+    digest = data["digest"]
 
-    public_key = serialization.load_pem_public_key(rep_pub_key)
+    public_key = serialization.load_pem_public_key(pub_key)
 
     return public_key.verify(
         digest, 
