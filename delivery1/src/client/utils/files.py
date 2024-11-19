@@ -1,10 +1,15 @@
+import logging
+import sys
 from cryptography.hazmat.primitives import serialization
 import os
 import json
 
+from constants.return_code import ReturnCode
+
 def read_file(key_file: str) -> str | None:
     if not os.path.exists(key_file):
-        return
+        logging.error(f"File {key_file} does not exist")
+        # sys.exit(ReturnCode.INPUT_ERROR)
     
     with open(key_file, "r") as f:
         content = f.read();

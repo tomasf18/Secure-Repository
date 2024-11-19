@@ -1,11 +1,12 @@
 import base64
+import os
 import sys
 import requests
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from constants.return_code import ReturnCode
 from utils.signing import sign_document, verify_doc_sign
-from utils.files import read_private_key
+from utils.files import read_private_key, read_public_key
 from utils.encryption.ECDH import ECDH
 from utils.encryption.AES import AES
 from utils.digest import calculateDigest, verifyDigest
@@ -24,7 +25,7 @@ class ApiConsumer:
             rep_address: str,
             rep_pub_key: str,
         ):
-        self.rep_pub_key = rep_pub_key
+        self.rep_pub_key = serialization.load_pem_public_key(rep_pub_key.encode())
         self.rep_address = rep_address
 
 
@@ -131,41 +132,39 @@ class ApiConsumer:
         # Generate Private key
         session_public_key = KeyDerivation.generate_keys()
 
-        # Create packet made of (public key)
+        # Create packet made of public key and data
         data = {
             "public_key" : base64.b64encode(session_public_key).decode('utf-8'),
             **data
         }
 
-        # Write public key to send and encrypted digest
-        print("sent digest: ", sign_document(
-                data = str(data),
-                private_key = private_key
-            ))
+        ## Generate Signature 
+        signature = sign_document(
+            data = str(data),
+            private_key = private_key
+        )
+        ## Build Session creation packet
         body = {
             "data": data,
-            "digest": base64.b64encode(sign_document(
-                data = str(data),
-                private_key = private_key
-            )).decode('utf-8')
+            "digest": base64.b64encode(signature).decode('utf-8')
         }
 
-        # Send to the server 
+        ## Send to the server 
         response = requests.request("post", self.rep_address + "/sessions", json=body)
         
         if response.status_code not in [201]:
             logging.error(f"Error: Invalid repository response: {response.json()}")
             sys.exit(ReturnCode.REPOSITORY_ERROR)
 
-        # verify if signature is valid
+
+        ## verify if signature is from repository
         response = response.json()
         if (not verify_doc_sign(response, self.rep_pub_key)):
-            logging.error("Error: Invalid repository signature")
             sys.exit(ReturnCode.REPOSITORY_ERROR)
 
         # If it its, finish calculations
-        server_key = response["public_key"]
+        response_data = response["data"]
+        server_key = base64.b64decode(response_data["public_key"])
         derivedKey: bytes = KeyDerivation.generate_shared_secret(server_key)
 
-        print("derivedKey = ", derivedKey )
-        return derivedKey, response["session_id"]
+        return derivedKey, response_data

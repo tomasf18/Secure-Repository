@@ -275,19 +275,19 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         "username": username,
     }
 
-    derivedKey, sessionId = apiConsumer.exchangeKeys(private_key=private_key, data=data)
+    derived_key, session_data = apiConsumer.exchangeKeys(private_key=private_key, data=data)
 
-    if derivedKey is None:
+    if derived_key is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
-    logging.debug(f"Session created with sessionId: {sessionId}, derivedKey: {derivedKey}")
+    logging.debug(f"Session created with sessionId: {session_data["session_id"]}, derivedKey: {derived_key}")
 
     with open(session_file, "w") as file:
         file.write(str({
-            "key": derivedKey,
-            "id" : sessionId
+            "key": base64.b64encode(derived_key).decode('utf-8'),
+            **session_data
         }))
     
     sys.exit(ReturnCode.SUCCESS)
