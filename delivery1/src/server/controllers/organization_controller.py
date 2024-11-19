@@ -15,10 +15,12 @@ def organizations():
 
 @organization_blueprint.route('/organizations/<organization_name>/subjects', methods=['GET', 'POST'])
 def organization_subjects(organization_name):
+    db_session = g.db_session
     if request.method == 'GET':
-        return list_organization_subjects(organization_name)
+        return list_organization_subjects(organization_name, db_session)
 
 @organization_blueprint.route('/organizations/<organization_name>/subjects/<username>', methods=['GET', 'PUT', 'DELETE'])
 def organization_subject(organization_name, username):
+    db_session = g.db_session
     if request.method == 'GET':
-        return get_organization_subject(organization_name, username)
+        return get_organization_subject(organization_name, username, db_session)
