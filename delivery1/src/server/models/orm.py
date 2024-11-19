@@ -60,6 +60,11 @@ class Document(Base):
     restricted_metadata: Mapped["RestrictedMetadata"] = relationship(back_populates="document")
     organization: Mapped["Organization"] = relationship(back_populates="documents")
     
+    # A document name must be unique within an organization
+    __table_args__ = (
+        UniqueConstraint("name", "org_name", name="uq_document_name_org_name"),
+    )
+    
     def __repr__(self):
         return f"<Document(document_handle={self.document_handle}, name={self.name}, create_date={self.create_date}, file_handle={self.file_handle}, creator_username={self.creator_username}, deleter_username={self.deleter_username}, org_name={self.org_name})>"
 
