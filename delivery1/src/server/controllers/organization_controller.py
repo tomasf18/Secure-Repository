@@ -24,3 +24,7 @@ def organization_subject(organization_name, username):
     db_session = g.db_session
     if request.method == 'GET':
         return get_organization_subject(organization_name, username, db_session)
+    elif request.method == 'PUT':
+        return activate_organization_subject(organization_name, username, db_session)
+    elif request.method == 'DELETE':
+        return suspend_organization_subject(organization_name, username, db_session)
