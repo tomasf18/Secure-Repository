@@ -524,7 +524,6 @@ def rep_suspend_subject(session_file, username):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
-    url = state['REP_ADDRESS'] + endpoint
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE)
     
@@ -549,7 +548,6 @@ def rep_activate_subject(session_file, username):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
-    url = state['REP_ADDRESS'] + endpoint
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT)
     
