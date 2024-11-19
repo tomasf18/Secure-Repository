@@ -14,5 +14,5 @@ class AssymmetricEncryption(Encryption):
 
 class SymmetricEncryption(Encryption):
     @abstractmethod
-    def generate_key(self) -> str:
-        pass
+    def encrypt_data(self, data, key):
+        return super().encrypt_data(data, key)

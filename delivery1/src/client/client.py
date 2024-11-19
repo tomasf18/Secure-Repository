@@ -7,8 +7,9 @@ import json
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
-from utils.files import read_file
+from utils.files import read_file, read_public_key, read_private_key
 from utils.encryption.ECC import ECC
+from cryptography.hazmat.primitives import serialization
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
@@ -128,6 +129,7 @@ logger.debug("Arguments: " + str(args))
 
 apiConsumer = ApiConsumer(
     rep_pub_key = state["REP_PUB_KEY"],
+    rep_address = state["REP_ADDRESS"]
 )
 
 
@@ -158,11 +160,11 @@ def rep_subject_credentials(password, credentials_file):
         private_key, public_key = ecc.generate_keypair(password)
         
         # Save both keys in the credentials file
-        with open(credentials_file, "wb") as f:
-            f.write(private_key)
-            f.write(public_key)
+        with open(credentials_file, "wb") as priv, open("pub_"+credentials_file, "wb") as pub:
+            priv.write(private_key)
+            pub.write(public_key)
         
-        logger.info(f"Key pair generated and saved to {credentials_file}")
+        logger.info(f"Key pair generated and saved public key to {credentials_file}")
         sys.exit(ReturnCode.SUCCESS)
     except Exception as e:
         logger.error(f"Error generating key pair: {e}")
@@ -205,23 +207,25 @@ def rep_create_org(org, username, name, email, pubkey_file):
     - Calls POST /organizations endpoint
     """
         
-    pubKey = read_file(pubkey_file)
+    pubKey = read_public_key(pubkey_file)
     if pubKey is None:
         logger.error(f"Error reading public key file: {pubkey_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = "/organizations"
-    url = state['REP_ADDRESS'] + endpoint
     
     data = {
         "organization": org,
         "username": username,
         "name": name,
         "email": email,
-        "public_key_file": pubKey
+        "public_key": str(pubKey.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ))
     }
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.POST, data=data)
     
     if result is None:
         logger.error("Error creating organization")
@@ -238,9 +242,8 @@ def rep_list_org():
     """
     
     endpoint = "/organizations"
-    url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
     if result is None:
         logger.error("Error listing organizations")
@@ -257,29 +260,33 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     
-    credentials = read_file(credentials_file)
-    if credentials is None:
-        logger.error(f"Error reading credentials file: {credentials_file}")
+    try:
+        private_key = read_private_key(credentials_file, password)
+        
+    except Exception as e:
+        logger.error(f"Error loading private key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
     
     endpoint = "/sessions"
-    url = state['REP_ADDRESS'] + endpoint
         
     data = {
         "organization": org,
         "username": username,
-        "password": password,
-        "credentials_file": credentials,
     }
-    
-    result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
-    
-    if result is None:
+
+    derivedKey = apiConsumer.exchangeKeys(credentials=private_key)
+
+    if derivedKey is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    
     with open(session_file, "w") as file:
-        file.write(result)
+        file.write(str({
+            "key": derivedKey
+        }))
     
     sys.exit(ReturnCode.SUCCESS)
         
@@ -295,7 +302,7 @@ def rep_get_file(file_handle, output_file=None):
     endpoint = f"/files/{file_handle}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
@@ -368,7 +375,7 @@ def rep_list_subjects(session_file, username=None):
     endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
@@ -493,10 +500,9 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         "username": username,
         "name": name,
         "email": email,
-        "credentials_file": credentials
     }
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
     
     if result is None:
         logger.error("Error adding subject")
@@ -521,7 +527,7 @@ def rep_suspend_subject(session_file, username):
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.DELETE)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE)
     
     if result is None:
         logger.error("Error suspending subject")
@@ -546,7 +552,7 @@ def rep_activate_subject(session_file, username):
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.PUT)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT)
     
     if result is None:
         logger.error("Error activating subject")
@@ -639,7 +645,7 @@ def rep_add_doc(session_file, document_name, file):
         "file": file_contents
     }
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.POST, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
     
     if result is None:
         logger.error("Error adding document")
@@ -665,7 +671,7 @@ def rep_get_doc_metadata(session_file, document_name):
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
     if result is None:
         logger.error("Error getting document metadata")
@@ -691,7 +697,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
     
     if result is None:
         logger.error("Error getting document file")
@@ -722,7 +728,7 @@ def rep_delete_doc(session_file, document_name):
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
     url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(url=url, method=httpMethod.DELETE)
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE)
     
     if result is None:
         logger.error("Error deleting document")

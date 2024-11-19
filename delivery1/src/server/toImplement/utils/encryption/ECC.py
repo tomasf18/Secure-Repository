@@ -1,7 +1,8 @@
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
+from .encryption import AssymmetricEncryption
 
-class ECC:
+class ECC(AssymmetricEncryption):
     def __init__(self, curve=None):
         self.curve = curve or ec.SECP521R1()
 

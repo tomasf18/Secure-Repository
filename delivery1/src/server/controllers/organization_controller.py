@@ -1,9 +1,10 @@
 from flask import Blueprint, request, g
 from services.organization_service import *
 
-organization_blueprint = Blueprint('organizations', __name__)
+organization_blueprint = Blueprint("organizations", __name__)
 
-@organization_blueprint.route('/organizations', methods=['GET', 'POST'])
+
+@organization_blueprint.route("/organizations", methods=["GET", "POST"])
 def organizations():
     db_session = g.db_session
     if request.method == 'GET':
