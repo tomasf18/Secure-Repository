@@ -33,7 +33,7 @@ class ApiConsumer:
         '''Function to send a request to the server'''
         try:
             receivedMessage = None
-            if sessionKey:
+            if False: #sessionKey:
                 messageKey, MACKey = sessionKey[:32], sessionKey[32:]
 
                 logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with data= \"{data}\"")
