@@ -6,6 +6,7 @@ from sqlalchemy.orm import DeclarativeBase
 class Base(DeclarativeBase):
     pass
 
+
 OrganizationSubjects = Table(
     "organization_subjects",
     Base.metadata,
@@ -35,6 +36,16 @@ SessionRoles = Table(
     Column("session_id", ForeignKey("session.id"), primary_key=True),
     Column("role_id", ForeignKey("role.id"), primary_key=True),
 )
+
+class Repository(Base):
+    __tablename__ = 'repository'
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_key: Mapped[str] = mapped_column(nullable=False, unique=True)
+    private_key: Mapped[str] = mapped_column(nullable=False, unique=True)
+    
+    def __repr__(self):
+        return f"<Repository(id={self.id}, public_key={self.public_key}, private_key={self.private_key})>"
 
 class Document(Base):
     __tablename__ = 'document'

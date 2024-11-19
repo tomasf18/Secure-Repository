@@ -1,3 +1,4 @@
+import base64
 from dao.OrganizationDAO import OrganizationDAO
 from models.orm import Organization
 from sqlalchemy.exc import IntegrityError
@@ -23,8 +24,8 @@ def create_organization(data, db_session: Session):
     username = data.get('username')
     name = data.get('name')
     email = data.get('email')
-    public_key_file = data.get('public_key')
-    
+    public_key_file: str = base64.b64decode(data.get('public_key')).decode('utf-8')
+
     try:
         organization_dao.create(org_name, username, name, email, public_key_file)
     except IntegrityError:

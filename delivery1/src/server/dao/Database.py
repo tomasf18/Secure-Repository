@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
-from models.orm import Base, Permission
+from models.orm import Base, Permission, Repository
 from dotenv import load_dotenv
 import os
 
@@ -45,6 +45,7 @@ class Database:
         Base.metadata.drop_all(bind=self.engine)
         Base.metadata.create_all(bind=self.engine)    
         self.create_session()
+        self.initialize_repository()
         self.initialize_permissions()
         self.close_session()
     
@@ -55,6 +56,25 @@ class Database:
     
     def get_session(self):
         return self.session
+    
+    def initialize_repository(self):
+        # Create a new repository com as chaves
+        private_key = open(os.getenv("REP_PRIV_KEY_FILE")).read()
+        public_key = open(os.getenv("REP_PUB_KEY_FILE")).read()
+
+        existing_permissions = {
+            permission.name
+            for permission in self.session.scalars(select(Repository)).all()
+        }
+
+        if len(existing_permissions) == 0:
+            repository = Repository(private_key=private_key, public_key=public_key)
+            self.session.add(repository)
+            self.session.commit()
+            print("Added repository keys")
+        else:
+            print("Database already has keys")
+        
 
     def initialize_permissions(self):
         """

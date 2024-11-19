@@ -10,6 +10,7 @@ class ECDH:
         self.private_key = ec.generate_private_key(
             ec.SECP384R1()
         )
+        
         return self.private_key.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo

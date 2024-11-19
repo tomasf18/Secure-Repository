@@ -100,7 +100,7 @@ class OrganizationDAO(BaseDAO):
         """Retrieve all Organizations."""
         return self.session.query(Organization).all()
     
-    # =========================== Retrieve Subjects associated with an Organization =========================== #
+    # ==================== Retrieve Subjects and their data associated with an Organization =================== #
     
     def get_subjects(self, name: str) -> list[Subject]:
         """Retrieve all Subjects associated with an Organization."""
@@ -117,6 +117,13 @@ class OrganizationDAO(BaseDAO):
         if subject not in organization.subjects:
             raise ValueError(f"Subject '{username}' is not associated with the organization '{org_name}'.")
         return subject
+    
+    def get_org_subj_association(self, org_name: str, username: str):
+        """Retrieve the Organization-Subject association."""
+        org_subject = self.session.query(OrganizationSubjects).filter_by(org_name=org_name, username=username).first()
+        if not org_subject:
+            raise ValueError(f"Subject '{username}' is not associated with the organization '{org_name}'.")
+        return org_subject
     
     # ========================================================================================================= #
 

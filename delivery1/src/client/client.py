@@ -1,3 +1,4 @@
+import base64
 import datetime
 import os
 import sys
@@ -219,10 +220,10 @@ def rep_create_org(org, username, name, email, pubkey_file):
         "username": username,
         "name": name,
         "email": email,
-        "public_key": str(pubKey.public_bytes(
+        "public_key": base64.b64encode(pubKey.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ))
+        )).decode('utf-8')
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.POST, data=data)
@@ -259,7 +260,6 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     and stores the session context in a file.
     - Calls POST /sessions endpoint
     """
-    
     try:
         private_key = read_private_key(credentials_file, password)
         
@@ -275,17 +275,19 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         "username": username,
     }
 
-    derivedKey = apiConsumer.exchangeKeys(private_key=private_key, data=data)
+    derivedKey, sessionId = apiConsumer.exchangeKeys(private_key=private_key, data=data)
 
     if derivedKey is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
-    
+    logging.debug(f"Session created with sessionId: {sessionId}, derivedKey: {derivedKey}")
+
     with open(session_file, "w") as file:
         file.write(str({
-            "key": derivedKey
+            "key": derivedKey,
+            "id" : sessionId
         }))
     
     sys.exit(ReturnCode.SUCCESS)

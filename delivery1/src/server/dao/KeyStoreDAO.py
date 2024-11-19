@@ -14,3 +14,7 @@ class KeyStoreDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise ValueError(f"Key '{key}' already registered.")
+    
+    def get_by_id(self, key_id: int) -> "KeyStore":
+        """Retrieve a KeyStore entry by its ID."""
+        return self.session.query(KeyStore).get(key_id)

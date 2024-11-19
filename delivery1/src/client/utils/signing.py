@@ -14,11 +14,16 @@ def sign_document(
     )
 
 def verify_doc_sign(response: dict[str, str], public_key: ec.EllipticCurvePublicKey) -> bool:
+    print(f"Response: {response} type: {type(response)}")
     msg = response["data"]
     digest = response["digest"]
 
-    return public_key.verify(
-        digest, 
-        msg, 
-        ec.ECDSA(hashes.SHA256())
-    )
+    try:
+        public_key.verify(
+            digest, 
+            msg, 
+            ec.ECDSA(hashes.SHA256())
+        )
+        return True
+    except:
+        return False
