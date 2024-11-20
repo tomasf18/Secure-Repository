@@ -97,11 +97,15 @@ class RestrictedMetadata(Base):
     document_id: Mapped[str] = mapped_column(ForeignKey('document.id'), primary_key=True)
     alg: Mapped[str] = mapped_column(nullable=False)
     mode: Mapped[str] = mapped_column(nullable=True)
-    key: Mapped[str] = mapped_column(nullable=False)
+    key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
     iv: Mapped[str] = mapped_column(nullable=True)
+    
+    # IV used to encrypt the encryption file key
+    iv_encrypted_key: Mapped[str] = mapped_column(nullable=False)
     
     # Relationship
     document: Mapped["Document"] = relationship(back_populates="restricted_metadata")
+    key: Mapped["KeyStore"] = relationship()  # Relationship to KeyStore
     
     def __repr__(self):
         return f"<RestrictedMetadata(document_id={self.document_id}, alg={self.alg}, key={self.key})>"
