@@ -240,12 +240,13 @@ class OrganizationDAO(BaseDAO):
         return True
     
     
-    def create_document(self, name: str, session_id: str, encrypted_data: bytes, alg: str, key: bytes, iv: bytes) -> Document:
+    def create_document(self, name: str, session_id: str, encrypted_data: bytes, alg: str, key: str, iv: str) -> Document:
         """Create a new document, its ACL, and metadata, and store the encrypted file."""
 
         try:
             # Step 1: Obtain the session details
             session_dao = SessionDAO(self.session)
+            key_store_dao = KeyStoreDAO(self.session)
             session = session_dao.get_by_id(session_id)
             creator = session.subject
             organization = session.organization
@@ -288,12 +289,19 @@ class OrganizationDAO(BaseDAO):
 
             # Step 7: Create the RestrictedMetadata entity
             algorithm, mode = alg.split("-")
+            
+            print("DECRYPTED METADATA KEY: ", key)
+            encrypted_key, iv_encrypted_key = self.encrypt_metadata_key(key)
+            encrypted_metadata_key = key_store_dao.create(encrypted_key, "symmetric")
+            print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key.hex())
+    
             metadata = RestrictedMetadata(
                 document=document,
                 alg=algorithm,
                 mode=mode,
-                key=key,
-                iv=iv
+                key_id=encrypted_metadata_key.id,
+                iv=iv,
+                iv_encrypted_key=base64.b64encode(iv_encrypted_key).decode('utf-8')
             )
             self.session.add(metadata)
 
@@ -314,6 +322,68 @@ class OrganizationDAO(BaseDAO):
         # Write the encrypted data to the file
         with open(file_path, "wb") as f:
             f.write(data)
+    
+    
+    def encrypt_metadata_key(self, metadata_key: str) -> bytes:
+        """
+        Encrypt the metadata key using AES256 with a derived key from the repository password.
+        """
+        # Generate a random IV
+        iv = os.urandom(16)
+        
+        # Derive AES key from the repository password
+        repository_password = os.getenv("REPOSITORY_PASSWORD")
+        aes_key = self.derive_aes_key(repository_password)
+
+        encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(metadata_key.encode(), iv, aes_key)
+
+        return encrypted_key, iv
+
+
+    def derive_aes_key(self, password: str) -> bytes:
+        """
+        Derive a secure AES key from the repository password using PBKDF2.
+        """
+        # Generate a salt (e.g., from a secure source)
+        salt = 'salt'.encode()
+
+        # Use PBKDF2 to derive the AES key
+        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
+        return kdf.derive(password.encode())
+
+
+    def decrypt_metadata_key(self, encrypted_key: bytes, iv: bytes) -> str:
+        """
+        Decrypt the metadata key using AES256 with a derived key from the repository password.
+        """
+        # Derive AES key from the repository password
+        repository_password = os.getenv("REPOSITORY_PASSWORD")
+        aes_key = self.derive_aes_key(repository_password)
+        decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
+
+        return decrypted_key.decode()
+
+
+    def get_encrypted_key(self, document_id: int) -> bytes:
+        """
+        Retrieve the encrypted restricted_metadata key.
+        """
+        restricted_metadata = self.session.query(RestrictedMetadata).filter_by(document_id=document_id).first()
+        if not restricted_metadata:
+            raise ValueError(f"Session with ID '{document_id}' does not exist.")
+        return restricted_metadata.key.key
+    
+    
+    def get_decrypted_key(self, document_id: int) -> str:
+        """
+        Retrieve the decrypted restricted_metadata key. 
+        """
+        restricted_metadata = self.session.query(RestrictedMetadata).filter_by(document_id=document_id).first()
+        if not restricted_metadata:
+            raise ValueError(f"Session with ID '{document_id}' does not exist.")
+        encrypted_key = self.get_encrypted_key(document_id)
+        iv = base64.b64decode(restricted_metadata.iv_encrypted_key)
+        return self.decrypt_metadata_key(encrypted_key, iv)
 
 
 # ============================================================================================================= #
