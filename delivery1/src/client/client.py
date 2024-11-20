@@ -1,10 +1,12 @@
 import base64
 import datetime
 import os
+import subprocess
 import sys
 import argparse
 import logging
 import json
+import tempfile
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
@@ -188,15 +190,28 @@ def rep_decrypt_file(encrypted_file, encryption_metadata):
     used to encrypt its contents and the encryption key.
     """
     
+    with open(encrypted_file, "rb") as file:
+        file_contents = file.read()
+    
+    if file_contents is None:
+        logger.error(f"Error reading encrypted file: {encrypted_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
     metadata = read_file(encryption_metadata)
     if metadata is None:
         logger.error(f"Error reading metadata file: {encryption_metadata}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
-    algorithm = metadata['alg']
+    algorithm = metadata['algorithm']
+    mode = metadata['mode']
+    key = base64.b64decode(metadata['key'])
+    iv = base64.b64decode(metadata['iv'])
     
-    print("rep_decrypt_file")
-    pass
+    if algorithm == "AES256" and mode == "CBC":
+        aes = AES(AESModes.CBC)
+        decrypted_file = aes.decrypt_data(file_contents, iv, key)
+        print(decrypted_file.decode())
+    sys.exit(ReturnCode.SUCCESS)
 
 
 # ****************************************************
@@ -787,11 +802,43 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
         logger.error("Error getting document file")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    if output_file is not None:
-        with open('./' + output_file, "w") as file:
-            file.write(result)
-    else:
-        print(result)
+    encryption_data = result["encryption_data"]
+    file_handle = result["file_handle"]
+    
+    # Get encrypted file contents
+    subprocess.run(["python", "client.py", "rep_get_file", file_handle, "encrypted_file"])
+    
+    # Save encryption data to metadata.json
+    with open("metadata.json", "w") as file:
+        file.write(json.dumps(encryption_data))
+    
+    # Create a temporary file and keep its name
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_file_name = temp_file.name
+    temp_file.close()  # Close it for now, subprocess will use the path
+    
+    try:
+        # Decrypt the file using subprocess
+        subprocess.run(
+            ["python3", "-c", f"import client; client.rep_decrypt_file('encrypted_file', 'metadata.json')"],
+            stdout=open(temp_file_name, "w"),
+            check=True
+        )
+        
+        # Read the decrypted file content
+        with open(temp_file_name, "r") as file:
+            decrypted_file = file.read()
+        
+        # Output or save the decrypted content
+        if output_file is not None:
+            with open('./' + output_file, "w") as file:
+                file.write(decrypted_file)
+        else:
+            print(decrypted_file)
+    
+    finally:
+        # Clean up temporary files
+        os.remove(temp_file_name)
     
     sys.exit(ReturnCode.SUCCESS)
 

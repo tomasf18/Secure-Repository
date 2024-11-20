@@ -65,19 +65,19 @@ class DocumentDAO(BaseDAO):
         
         return document
     
-    def get_doc_file_handle(self, sessionId: int, document_name: str) -> str:
-        """
-        Fetches the file handle for a document.
+    # def get_doc_file_handle(self, sessionId: int, document_name: str) -> str:
+    #     """
+    #     Fetches the file handle for a document.
 
-        :param sessionId: ID of the session.
-        :param document_name: Name of the document.
-        :return: File handle.
-        :raises ValueError: If the document is not found.
-        """
-        document = self.get_metadata(sessionId, document_name)
-        if not document.file_handle:
-            raise ValueError(f"Document '{document_name}' does not have an associated file handle.")
-        return document.file_handle
+    #     :param sessionId: ID of the session.
+    #     :param document_name: Name of the document.
+    #     :return: File handle.
+    #     :raises ValueError: If the document is not found.
+    #     """
+    #     document = self.get_metadata(sessionId, document_name)
+    #     if not document.file_handle:
+    #         raise ValueError(f"Document '{document_name}' does not have an associated file handle.")
+    #     return document.file_handle
     
     def delete(self, sessionId: int, document_name: str) -> str:
         """
