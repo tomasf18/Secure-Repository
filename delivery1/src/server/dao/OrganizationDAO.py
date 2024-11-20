@@ -8,10 +8,7 @@ from .DocumentACLDAO import DocumentACLDAO
 from models.orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore, Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from models.orm import Document, DocumentACL, RestrictedMetadata
-from base64 import b64encode
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from models.orm import Document, RestrictedMetadata
 from datetime import datetime
 import os
 # from .SessionDAO import SessionDAO
