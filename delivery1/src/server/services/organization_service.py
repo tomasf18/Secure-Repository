@@ -283,13 +283,10 @@ def list_organization_documents(organization_name, data, username, date_filter, 
         })
     return json.dumps(serializable_documents), 200
 
-def get_organization_document_metadata(organization_name, document_name, data, db_session: Session):
-    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>'''
-    document_dao = DocumentDAO(db_session)
-    data = data.get("data")
-    session_id = data.get('session_id')
-    document: "Document" = document_dao.get_metadata(session_id, document_name)
-    serializable_document = {
+# =================================== Auxiliar Function =================================== #
+
+def get_serializable_document(document: "Document"):
+    return {
         "document_name": document.name,
         "create_date": document.create_date.strftime("%Y-%m-%d %H:%M:%S"),
         "file_handle": document.file_handle,
@@ -303,6 +300,16 @@ def get_organization_document_metadata(organization_name, document_name, data, d
             "iv": base64.b64encode(document.restricted_metadata.iv).decode()
         }
     }
+
+# ========================================================================================= #
+
+def get_organization_document_metadata(organization_name, document_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    serializable_document = get_serializable_document(document)
     return json.dumps(serializable_document), 200
 
 def get_organization_document_file(organization_name, document_name, data, db_session: Session):
@@ -310,8 +317,11 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     document_dao = DocumentDAO(db_session)
     data = data.get("data")
     session_id = data.get('session_id')
-    file_handle = document_dao.get_doc_file_handle(session_id, document_name)
-    return json.dumps({"file_handle": file_handle}), 200
+    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    if not document.file_handle:
+        return json.dumps({"error": f"Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."}), 404
+    serializable_document = get_serializable_document(document)
+    return json.dumps(serializable_document), 200
 
 def delete_organization_document(organization_name, document_name, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/documents/<document_name>'''
