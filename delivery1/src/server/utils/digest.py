@@ -1,12 +1,12 @@
 from cryptography.hazmat.primitives import hashes
 
-def calculateDigest(data: str):
+def calculate_digest(data: str):
     digest = hashes.Hash(hashes.SHA256())
     digest.update(data)
 
-    return digest.finalise()
+    return digest.finalize()
 
 def verifyDigest(data: str, digest: str):
-    dataDigest = calculateDigest(data);
+    dataDigest = calculate_digest(data);
 
     return digest == dataDigest 

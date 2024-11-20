@@ -213,6 +213,10 @@ class Session(Base):
     subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
     organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
+
+    ## TODO: Adicionado nonce e counter
+    nonce: Mapped[str] = mapped_column(nullable=True)
+    counter: Mapped[int] = mapped_column(nullable=True)
     
     # Relationships
     subject: Mapped["Subject"] = relationship()

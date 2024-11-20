@@ -311,7 +311,7 @@ class OrganizationDAO(BaseDAO):
 class SessionDAO(BaseDAO):
     """DAO for managing Session entities."""
 
-    def create(self, subject_username: str, organization_name: str, key: str) -> Session:
+    def create(self, subject_username: str, organization_name: str, key: str, counter: int, nonce: str) -> Session:
         """
         Create a new session and optionally associate roles with it.
 
@@ -343,7 +343,9 @@ class SessionDAO(BaseDAO):
             new_session = Session(
                 subject_username=subject_username,
                 organization_name=organization_name,
-                key_id=session_key.id
+                key_id=session_key.id,
+                counter=counter,
+                nonce=nonce
             )
 
             self.session.add(new_session)

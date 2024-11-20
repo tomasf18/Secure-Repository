@@ -16,6 +16,7 @@ def organizations():
 @organization_blueprint.route('/organizations/<organization_name>/subjects', methods=['GET', 'POST'])
 def organization_subjects(organization_name):
     db_session = g.db_session
+    data = request.json
     if request.method == 'GET':
         data = request.json
         return list_organization_subjects(organization_name, data, db_session)
@@ -38,6 +39,7 @@ def organization_subject(organization_name, username):
     
 @organization_blueprint.route('/organizations/<organization_name>/documents', methods=['GET', 'POST'])
 def organization_documents(organization_name):
+    
     db_session = g.db_session
     if request.method == 'GET':
         data = request.json

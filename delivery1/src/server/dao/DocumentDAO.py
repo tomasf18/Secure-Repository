@@ -32,11 +32,11 @@ class DocumentDAO(BaseDAO):
             query = query.filter(Document.creator_username == creator_username)
 
         if date and date_filter:
-            if date_filter == "lt":
-                query = query.filter(Document.create_date < date)
-            elif date_filter == "gt":
+            if date_filter == "nt":
                 query = query.filter(Document.create_date > date)
-            elif date_filter == "eq":
+            elif date_filter == "ot":
+                query = query.filter(Document.create_date < date)
+            elif date_filter == "et":
                 query = query.filter(func.date(Document.create_date) == date)
 
         return query.all()

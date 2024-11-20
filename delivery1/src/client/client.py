@@ -113,6 +113,12 @@ def save(state):
     with open(state_file, 'w') as f:
         f.write(json.dumps(state, indent=4))
 
+def saveContext(session_file, session_context, result):
+    session_context["counter"] += 1
+    session_context["nonce"] = result["nonce"]
+    with open(session_file, "w") as file:
+        file.write(json.dumps(session_context))
+
 
 state = load_state()
 state = parse_env(state)
@@ -284,13 +290,16 @@ def rep_create_session(org, username, password, credentials_file, session_file):
 
     with open(session_file, "w") as file:
         file.write(json.dumps({
-            "key": base64.b64encode(derived_key).decode('utf-8'),
+            "session_key": base64.b64encode(derived_key).decode('utf-8'),
             "session_id": session_data["session_id"],
             "username": session_data["username"],
             "organization": session_data["organization"],
             "roles": session_data["roles"],
+            "nonce" : session_data["nonce"],
+            "counter": 0,
         }))
-    
+
+    print(f"Session created and saved to {session_file}, sessionId={session_data['session_id']}")    
     sys.exit(ReturnCode.SUCCESS)
         
 def rep_get_file(file_handle, output_file=None):
@@ -375,21 +384,27 @@ def rep_list_subjects(session_file, username=None):
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
-    session_id = session_context['session_id']
-    
     base_endpoint = f"/organizations/{session_context['organization']}/subjects"
     endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
 
-    key = base64.b64decode(session_context["key"])
+
+    key = base64.b64decode(session_context["session_key"])
+
     data = {
         "session_id": session_context["session_id"],
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=key)
     
-    if result is None:
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=key, sessionId=session_context["session_id"])
+
+    if result is None or result.get("error") is not None:
+        print("Error: " + result["error"])
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    saveContext(session_file, session_context, result)
     
-    print(result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
         
 
@@ -506,6 +521,7 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
     
     try:
         public_key = read_public_key(credentials_file)
@@ -523,15 +539,21 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         "public_key": base64.b64encode(public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )).decode('utf-8')
+        )).decode('utf-8'),
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
+
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.POST, data=data, 
+                                      sessionKey=session_key, sessionId=session_id)
+    saveContext(session_file, session_context, result)
     
     if result is None:
         logger.error("Error adding subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
+    saveContext(session_file, session_context, result)
     print(result)
     sys.exit(ReturnCode.SUCCESS)
 
@@ -549,20 +571,26 @@ def rep_suspend_subject(session_file, username):
         sys.exit(ReturnCode.INPUT_ERROR)
         
     session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
+
     
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
     
     data = {
-        "session_id": session_id
+        "session_id": session_id,
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE, data=data,
+                                    sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error suspending subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    print(result)
+    saveContext(session_file, session_context, result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_activate_subject(session_file, username):
@@ -579,20 +607,26 @@ def rep_activate_subject(session_file, username):
         sys.exit(ReturnCode.INPUT_ERROR)
         
     session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
+
     
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
     
     data = {
-        "session_id": session_id
+        "session_id": session_id,
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT, data=data,
+                                     sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error activating subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    print(result)
+    saveContext(session_file, session_context, result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_add_role(session_file, role):
