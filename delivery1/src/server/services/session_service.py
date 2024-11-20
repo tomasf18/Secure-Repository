@@ -5,8 +5,8 @@ import json
 import secrets
 import os
 from dao.RepositoryDAO import RepositoryDAO
-from dao.OrganizationDAO import OrganizationDAO 
-from dao.SessionDAO import SessionDAO
+from dao.OrganizationDAO import OrganizationDAO, SessionDAO 
+#from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
 from models.orm import Session
 from server.utils.utils import exchange_keys

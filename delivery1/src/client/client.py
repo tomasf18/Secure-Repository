@@ -10,6 +10,7 @@ from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
 from utils.files import read_file, read_public_key, read_private_key
 from utils.encryption.ECC import ECC
+from utils.encryption.AES import AES, AESModes
 from cryptography.hazmat.primitives import serialization
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
@@ -382,6 +383,11 @@ def rep_list_subjects(session_file, username=None):
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_context['session_id']
+    
+    base_endpoint = f"/organizations/{session_context['organization']}/subjects"
+    endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
 
     key = base64.b64decode(session_context["key"])
     data = {
@@ -505,6 +511,8 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
+    session_id = session_context['session_id']
+    
     try:
         public_key = read_public_key(credentials_file)
     except Exception as e:
@@ -514,6 +522,7 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     endpoint = f"/organizations/{session_context['organization']}/subjects"
     
     data = {
+        "session_id": session_id,
         "username": username,
         "name": name,
         "email": email,
@@ -544,10 +553,16 @@ def rep_suspend_subject(session_file, username):
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_context['session_id']
     
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE)
+    data = {
+        "session_id": session_id
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE, data=data)
     
     if result is None:
         logger.error("Error suspending subject")
@@ -568,10 +583,16 @@ def rep_activate_subject(session_file, username):
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_context['session_id']
     
     endpoint = f"/organizations/{session_context['organization']}/subjects/{username}"
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT)
+    data = {
+        "session_id": session_id
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT, data=data)
     
     if result is None:
         logger.error("Error activating subject")
@@ -650,18 +671,28 @@ def rep_add_doc(session_file, document_name, file):
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_context['session_id']
     
     file_contents = read_file(file)
     if file_contents is None:
         logger.error(f"Error reading file: {file}")
         sys.exit(ReturnCode.INPUT_ERROR)
+        
+    # encrypt file_contents using AES mode CBC
+    aes = AES(AESModes.CBC)
+    random_key = aes.generate_random_key()
+    encrypted_file, iv = aes.encrypt_data(file_contents, random_key)
     
     endpoint = f"/organizations/{session_context['organization']}/documents"
-    url = state['REP_ADDRESS'] + endpoint
     
     data = {
+        "session_id": session_id,
         "document_name": document_name,
-        "file": file_contents
+        "file": base64.b64encode(encrypted_file).decode('utf-8'),
+        "alg": "AES256:CBC",
+        "key": base64.b64encode(random_key).decode('utf-8'),
+        "iv": base64.b64encode(iv).decode('utf-8')
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
