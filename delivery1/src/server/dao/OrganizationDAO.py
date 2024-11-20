@@ -1,5 +1,5 @@
 import hashlib
-import uuid
+import secrets
 from .BaseDAO import BaseDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
@@ -11,7 +11,18 @@ from sqlalchemy.orm import joinedload
 from models.orm import Document, RestrictedMetadata
 from datetime import datetime
 import os
-# from .SessionDAO import SessionDAO
+
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives import hashes
+import base64
+from .Cryptography import Cryptography
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class OrganizationDAO(BaseDAO):
     """DAO for managing Organization entities."""
@@ -326,6 +337,11 @@ class SessionDAO(BaseDAO):
         subject_dao = SubjectDAO(self.session)
         organization_dao = OrganizationDAO(self.session)
         key_store_dao = KeyStoreDAO(self.session)
+        
+        repo_password = os.getenv("REPOSITORY_PASSWORD")
+        if not repo_password:
+            raise ValueError("Repository password not found in environment variables")
+        
         try:
             # Check if the subject exists
             subject = subject_dao.get_by_username(subject_username)
@@ -337,15 +353,17 @@ class SessionDAO(BaseDAO):
             if not organization:
                 raise ValueError(f"Organization with name '{organization_name}' does not exist.")
 
-            session_key = key_store_dao.create(key, "symmetric")
+            encrypted_key, iv = self.encrypt_session_key(key, repo_password)
+            encrypted_session_key = key_store_dao.create(encrypted_key, "symmetric")
 
             # Create the session
             new_session = Session(
                 subject_username=subject_username,
                 organization_name=organization_name,
-                key_id=session_key.id,
-                counter=counter,
-                nonce=nonce
+                key_id=encrypted_session_key.id,
+                key_iv=base64.b64encode(iv).decode('utf-8'),
+                nonce=nonce,
+                counter=counter
             )
 
             self.session.add(new_session)
@@ -359,6 +377,55 @@ class SessionDAO(BaseDAO):
         except IntegrityError as e:
             self.session.rollback()
             raise IntegrityError("Failed to create session due to a database constraint violation.") from e
+        
+        
+    def get_iv(self, session_id: int) -> str:
+        """
+        Retrieve the IV associated with a session.
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        return session.key_iv
+        
+        
+    def encrypt_session_key(self, session_key: str, repository_password: str) -> bytes:
+        """
+        Encrypt the session key using AES256 with a derived key from the repository password.
+        """
+        # Generate a random IV
+        iv = os.urandom(16)
+
+        # Derive AES key from the repository password
+        aes_key = self.derive_aes_key(repository_password)
+
+        encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key.encode(), iv, aes_key)
+
+        return encrypted_key, iv
+
+
+    def derive_aes_key(self, password: str) -> bytes:
+        """
+        Derive a secure AES key from the repository password using PBKDF2.
+        """
+        # Generate a salt (e.g., from a secure source)
+        salt = secrets.token_bytes(16)
+
+        # Use PBKDF2 to derive the AES key
+        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
+        return kdf.derive(password.encode())
+
+
+    def decrypt_session_key(self, encrypted_key: bytes, iv: bytes, repository_password: str) -> str:
+        """
+        Decrypt the session key using AES256 with a derived key from the repository password.
+        """
+        # Derive AES key from the repository password
+        aes_key = self.derive_aes_key(repository_password)
+        decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
+
+        return decrypted_key.decode()
+
 
     def get_by_id(self, session_id: int) -> Session:
         """
