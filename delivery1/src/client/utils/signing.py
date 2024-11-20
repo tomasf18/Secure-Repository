@@ -1,3 +1,5 @@
+import base64
+import logging
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from utils.encryption.ECC import ECC
@@ -14,16 +16,17 @@ def sign_document(
     )
 
 def verify_doc_sign(response: dict[str, str], public_key: ec.EllipticCurvePublicKey) -> bool:
-    print(f"Response: {response} type: {type(response)}")
     msg = response["data"]
-    digest = response["digest"]
+    digest = base64.b64decode(response["digest"])
 
     try:
         public_key.verify(
             digest, 
-            msg, 
+            str(msg).encode(), 
             ec.ECDSA(hashes.SHA256())
         )
+        logging.info("Document signature is valid")
         return True
     except:
+        logging.error("Document signature is not valid")
         return False

@@ -1,3 +1,4 @@
+import base64
 from dao.OrganizationDAO import OrganizationDAO
 from models.orm import Organization
 from models.orm import Subject
@@ -26,8 +27,8 @@ def create_organization(data, db_session: Session):
     username = data.get('username')
     name = data.get('name')
     email = data.get('email')
-    public_key = data.get('public_key')
-    
+    public_key: bytes = base64.b64decode(data.get('public_key'))
+
     try:
         organization_dao.create(org_name, username, name, email, public_key)
     except IntegrityError:
