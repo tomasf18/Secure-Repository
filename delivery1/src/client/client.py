@@ -928,6 +928,7 @@ elif args["command"] == "rep_list_docs":
     valid_filters = ["nt", "ot", "et"]
     date_filter = args["date_filter"]
     date = args["date"]
+    datetime_date = None
     
     if date_filter and date_filter not in valid_filters:
         logger.error(f"Invalid date filter: {date_filter}. Use one of: {valid_filters}")
@@ -936,12 +937,12 @@ elif args["command"] == "rep_list_docs":
     if date:
         try:
             day, month, year = map(int, date.split("-"))
-            datetime.date(year, month, day) # Check if date is valid
+            datetime_date = datetime.date(year, month, day) # Check if date is valid
         except Exception as e:
             logger.error(f"Invalid date format: {date}. Use DD-MM-YYYY")
             sys.exit(ReturnCode.INPUT_ERROR)
     
-    rep_list_docs(args["arg0"], args["subject"], date_filter, date)
+    rep_list_docs(args["arg0"], args["subject"], date_filter, datetime_date)
     
 elif args["command"] == "rep_add_subject":
     usage = "<session_file> <username> <name> <email> <credentials_file>"
