@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint
 from services.file_service import *
 
 file_blueprint = Blueprint("files", __name__)

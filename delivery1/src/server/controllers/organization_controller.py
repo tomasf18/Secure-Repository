@@ -41,7 +41,10 @@ def organization_documents(organization_name):
     db_session = g.db_session
     if request.method == 'GET':
         data = request.json
-        #return list_organization_documents(organization_name, data, db_session)
+        subject = request.args.get('subject')
+        date_filter = request.args.get('date_filter')
+        date = request.args.get('date')
+        return list_organization_documents(organization_name, data, subject, date_filter, date, db_session)
     elif request.method == 'POST':
         data = request.json
         return create_organization_document(organization_name, data, db_session)

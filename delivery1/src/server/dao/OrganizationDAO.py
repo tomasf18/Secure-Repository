@@ -1,11 +1,11 @@
+import hashlib
 import uuid
 from .BaseDAO import BaseDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
 from .RoleDAO import RoleDAO
 from .OrganizationACLDAO import OrganizationACLDAO
-from .DocumentACLDAO import DocumentACLDAO
-from models.orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore, Session
+from models.orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore, Session, DocumentACL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from models.orm import Document, RestrictedMetadata
@@ -238,7 +238,6 @@ class OrganizationDAO(BaseDAO):
             session = session_dao.get_by_id(session_id)
             creator = session.subject
             organization = session.organization
-            alg, mode = alg.split(":")
 
             if not organization:
                 raise ValueError("Session is not associated with any organization.")
@@ -246,16 +245,18 @@ class OrganizationDAO(BaseDAO):
             # Step 2: Generate creation date
             creation_date = datetime.now()
 
-            # Step 3: Create a file handle for the encrypted file
-            file_handle = f"{organization.name}/{creation_date.strftime('%Y%m%d%H%M%S')}_{name}.enc"
-            file_path = os.path.join("data", file_handle)
+            # Step 3: Generate a digest for the encrypted data
+            digest = hashlib.sha256(encrypted_data).hexdigest()
+            document_handle = digest
+            file_handle = f"{organization.name}_{digest}"
+            file_path = os.path.join("data", organization.name, file_handle)
 
-            # Step 4: Store the encrypted data in a file
+            # Step 4: Encrypt the data and store it in a file
             self._store_encrypted_data(file_path, encrypted_data)
 
             # Step 5: Create the Document entity
             document = Document(
-                document_handle=str(uuid.uuid4()),
+                document_handle=document_handle,
                 name=name,
                 create_date=creation_date,
                 file_handle=file_handle,
@@ -263,22 +264,22 @@ class OrganizationDAO(BaseDAO):
                 org_name=organization.name
             )
             self.session.add(document)
-            
+
             # Step 6: Create the DocumentACL and link it to the Manager role of the organization
             role_dao = RoleDAO(self.session)
             manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
             if not manager_role:
                 raise ValueError("Manager role not found for the organization.")
 
-            document_acl_dao = DocumentACLDAO(self.session)
-            document_acl = document_acl_dao.create(document.id)
+            document_acl = DocumentACL(document=document)
             document_acl.roles.append(manager_role)
             self.session.add(document_acl)
 
             # Step 7: Create the RestrictedMetadata entity
+            algorithm, mode = alg.split("-")
             metadata = RestrictedMetadata(
                 document=document,
-                alg=alg,
+                alg=algorithm,
                 mode=mode,
                 key=key,
                 iv=iv
@@ -296,7 +297,6 @@ class OrganizationDAO(BaseDAO):
             raise ValueError("Error while creating the document or its associated entities.")
 
     def _store_encrypted_data(self, file_path: str, data: bytes):
-        """Store the encrypted data in a file."""
         # Ensure the directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
