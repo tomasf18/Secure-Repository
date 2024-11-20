@@ -1,10 +1,12 @@
 import base64
 import datetime
 import os
+import subprocess
 import sys
 import argparse
 import logging
 import json
+import tempfile
 from apiConsumer.APIConsumer import ApiConsumer
 from constants.httpMethod import httpMethod
 from constants.return_code import ReturnCode
@@ -178,7 +180,7 @@ def rep_subject_credentials(password, credentials_file):
         logger.error(f"Error generating key pair: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
 
-def rep_decrypt_file(encrypted_file, encryption_metadata):
+def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     """
     rep_decrypt_file <encrypted_file> <encryption_metadata>
     
@@ -188,15 +190,32 @@ def rep_decrypt_file(encrypted_file, encryption_metadata):
     used to encrypt its contents and the encryption key.
     """
     
+    with open(encrypted_file, "rb") as file:
+        file_contents = file.read()
+    
+    if file_contents is None:
+        logger.error(f"Error reading encrypted file: {encrypted_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
     metadata = read_file(encryption_metadata)
     if metadata is None:
         logger.error(f"Error reading metadata file: {encryption_metadata}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
-    algorithm = metadata['alg']
+    algorithm = metadata['algorithm']
+    mode = metadata['mode']
+    key = base64.b64decode(metadata['key'])
+    iv = base64.b64decode(metadata['iv'])
     
-    print("rep_decrypt_file")
-    pass
+    if algorithm == "AES256" and mode == "CBC":
+        aes = AES(AESModes.CBC)
+        decrypted_file = aes.decrypt_data(file_contents, iv, key)
+    
+    if exiting:
+        print(decrypted_file.decode())
+        sys.exit(ReturnCode.SUCCESS)
+    else:
+        return decrypted_file.decode()
 
 
 # ****************************************************
@@ -302,7 +321,7 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     print(f"Session created and saved to {session_file}, sessionId={session_data['session_id']}")    
     sys.exit(ReturnCode.SUCCESS)
         
-def rep_get_file(file_handle, output_file=None):
+def rep_get_file(file_handle, output_file=None, exiting=True):
     """
     rep_get_file <file_handle> [file] 
     - This command downloads a file given its handle. 
@@ -326,7 +345,10 @@ def rep_get_file(file_handle, output_file=None):
     else:
         print(file_contents)
 
-    sys.exit(ReturnCode.SUCCESS)
+    if exiting:
+        sys.exit(ReturnCode.SUCCESS)
+    else:
+        return
 
 
 # ****************************************************
@@ -751,9 +773,12 @@ def rep_get_doc_metadata(session_file, document_name):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
-    url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+    data = {
+        "session_id": session_context["session_id"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
     
     if result is None:
         logger.error("Error getting document metadata")
@@ -768,7 +793,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - This command is a combination of rep_get_doc_metadata with rep_get_file and rep_decrypt_file.
     - The file contents are written to stdout or to the file referred in the optional last argument.
     - This commands requires a DOC_READ permission
-    - Calls ... endpoint
+    - Calls GET /organizations/{organization_name}/documents/{document_name}/file endpoint
     """
     
     session_context = read_file(session_file)
@@ -776,20 +801,40 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
-    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
-    url = state['REP_ADDRESS'] + endpoint
+    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}/file"
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+    data = {
+        "session_id": session_context["session_id"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
     
     if result is None:
         logger.error("Error getting document file")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
+    encryption_data = result["encryption_data"]
+    file_handle = result["file_handle"]
+    
+    # Create a temporary file to store the encrypted file
+    rep_get_file(file_handle, "encrypted_file", exiting=False)
+    
+    # Save encryption data to metadata.json
+    with open("metadata.json", "w") as file:
+        file.write(json.dumps(encryption_data))
+    
+    # Decrypt the file and get its output
+    decrypted_file = rep_decrypt_file("encrypted_file", "metadata.json", exiting=False)
+    
+    # Delete the temporary files
+    os.remove("encrypted_file")
+    os.remove("metadata.json")
+    
     if output_file is not None:
-        with open('./' + output_file, "w") as file:
-            file.write(result)
+        with open(output_file, "w") as file:
+            file.write(decrypted_file)
     else:
-        print(result)
+        print(decrypted_file)
     
     sys.exit(ReturnCode.SUCCESS)
 
@@ -808,9 +853,12 @@ def rep_delete_doc(session_file, document_name):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
-    url = state['REP_ADDRESS'] + endpoint
-    
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE)
+
+    data = {
+        "session_id": session_context["session_id"],
+    }
+        
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE, data=data)
     
     if result is None:
         logger.error("Error deleting document")

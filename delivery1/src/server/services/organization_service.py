@@ -274,42 +274,62 @@ def create_organization_document(organization_name, data, db_session: Session):
 def list_organization_documents(organization_name, data, username, date_filter, date, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents'''
     document_dao = DocumentDAO(db_session)
-    session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    documents: list["Document"] = document_dao.get(session_id, username, date_filter, date)
+    if not documents:
+        return json.dumps({"error": "No documents found."}), 404
+    serializable_documents = []
+    for doc in documents:
+        serializable_documents.append({
+            "document_name": doc.name,
+        })
+    return json.dumps(serializable_documents), 200
 
-    ## Get session
-    try:
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
-    except ValueError as e:
-        message, code = e.args
-        return message, code
+# =================================== Auxiliar Function =================================== #
 
-    try:
-        documents: list["Document"] = document_dao.get(session.id, username, date_filter, date)
-        if not documents:
-            return json.dumps({"error": "No documents found."}), 404
-        serializable_documents = []
-        for doc in documents:
-            serializable_documents.append({
-                "document_name": doc.name,
-            })
-    except Exception as e:
-        ## TODO: Fix error message
-        return encrypt_payload({
-                    "error": str(e)
-                }, session_key[:32], session_key[32:]
-            ), 400
-
-    ## Create result
-    result = {
-        "nonce": secrets.token_hex(16),
-        "data": serializable_documents
+def get_serializable_document(document: "Document"):
+    return {
+        "document_name": document.name,
+        "create_date": document.create_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "file_handle": document.file_handle,
+        "creator_username": document.creator_username,
+        "deleter_username": document.deleter_username,
+        "organization": document.org_name,
+        "encryption_data": {
+            "algorithm": document.restricted_metadata.alg,
+            "mode": document.restricted_metadata.mode,
+            "key": base64.b64encode(document.restricted_metadata.key).decode(),
+            "iv": base64.b64encode(document.restricted_metadata.iv).decode()
+        }
     }
-    ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
-    session_dao.update_counter(session.id, decrypted_data["counter"])
 
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+# ========================================================================================= #
 
-    return json.dumps(encrypted_result), 200
+def get_organization_document_metadata(organization_name, document_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    serializable_document = get_serializable_document(document)
+    return json.dumps(serializable_document), 200
+
+def get_organization_document_file(organization_name, document_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    if not document.file_handle:
+        return json.dumps({"error": f"Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."}), 404
+    serializable_document = get_serializable_document(document)
+    return json.dumps(serializable_document), 200
+
+def delete_organization_document(organization_name, document_name, data, db_session: Session):
+    '''Handles DELETE requests to /organizations/<organization_name>/documents/<document_name>'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    ceasing_file_handle = document_dao.delete(session_id, document_name)
+    return json.dumps(f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."), 200
