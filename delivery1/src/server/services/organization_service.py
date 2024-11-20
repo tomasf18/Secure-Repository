@@ -1,5 +1,6 @@
 import base64
 from dao.OrganizationDAO import OrganizationDAO
+from dao.DocumentDAO import DocumentDAO
 from models.orm import Organization, Subject, Document
 from models.status import Status
 from sqlalchemy.exc import IntegrityError
@@ -109,14 +110,14 @@ def create_organization_document(organization_name, data, db_session: Session):
     organization_dao.create_document(document_name, session_id, encrypted_data, alg, key, iv)
     return json.dumps(f"Document '{document_name}' uploaded in the organization '{organization_name}' successfully."), 201
 
-def list_organization_documents(organization_name, data, subject, date_filter, date, db_session: Session):
+def list_organization_documents(organization_name, data, username, date_filter, date, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents'''
-    organization_dao = OrganizationDAO(db_session)
+    document_dao = DocumentDAO(db_session)
     data = data.get("data")
     session_id = data.get('session_id')
-    documents: list["Document"] = organization_dao.get_documents(session_id, subject, date_filter, date)
+    documents: list["Document"] = document_dao.get(session_id, username, date_filter, date)
     if not documents:
-        return json.dumps({f"No documents found in the organization: {organization_name}"}), 404
+        return json.dumps({"error": "No documents found."}), 404
     serializable_documents = []
     for doc in documents:
         serializable_documents.append({
