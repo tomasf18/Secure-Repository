@@ -63,10 +63,10 @@ class Document(Base):
     __tablename__ = 'document'
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    document_handle: Mapped[str] = mapped_column(nullable=False, autoincrement=True)
+    document_handle: Mapped[str] = mapped_column(nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     create_date: Mapped[datetime] = mapped_column(nullable=False)
-    file_handle: Mapped[str] = mapped_column(nullable=True, autoincrement=True)
+    file_handle: Mapped[str] = mapped_column(nullable=True)
     
     # Foreign Key Relationships
     creator_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
@@ -85,6 +85,7 @@ class Document(Base):
     __table_args__ = (
         UniqueConstraint("name", "org_name", name="uq_document_name_org_name"),
         UniqueConstraint("document_handle", "org_name", name="uq_document_handle_org_name"),
+        UniqueConstraint("file_handle", "org_name", name="uq_file_handle_org_name"),
     )
     
     def __repr__(self):
