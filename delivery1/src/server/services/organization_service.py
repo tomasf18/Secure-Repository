@@ -255,7 +255,7 @@ def create_organization_document(organization_name, data, db_session: Session):
     key = base64.b64decode(decrypted_data.get('key'))
     iv = base64.b64decode(decrypted_data.get('iv'))
     
-    organization_dao.create_document(document_name, session.id, encrypted_data, alg, key, iv)
+    organization_dao.create_document(document_name, session.id, encrypted_data, alg, key.decode(), iv.decode())
 
     ## Construct result
     result = {

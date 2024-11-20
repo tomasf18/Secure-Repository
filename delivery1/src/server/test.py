@@ -1,6 +1,7 @@
 import secrets
 from dao.Database import Database
-from dao.SubjectDAO import SubjectDAO
+# from dao.SubjectDAO import SubjectDAO
+from dao.DocumentDAO import DocumentDAO
 from dao.OrganizationDAO import SessionDAO
 from dao.OrganizationDAO import OrganizationDAO
 from models.status import Status
@@ -25,23 +26,19 @@ def main():
     session_key = "12345678"
     
     new_session = session_dao.create(subject_username, org_name, session_key, 0, 20)
-    org_subject = organization_dao.get_org_subj_association(org_name, subject_username)
+    
+    doc_name = "test_document"
+    sessionId = new_session.id
+    encrypted_data = "encrypted_data".encode()
+    alg = "AES-CBC"
+    metadata_file_key = "passphrase"
+    metadata_iv = secrets.token_hex(16)
+    document = organization_dao.create_document(doc_name, sessionId, encrypted_data, alg, metadata_file_key, metadata_iv)
+                                     
     print()
-    print(new_session.subject)  # Subject object corresponding to 'johndoe'
-    print(new_session.organization)  # Organization object corresponding to 'ExampleOrg'
-    print(new_session.session_roles) # List of Role objects associated with the session
-    print(org_subject.status)  # Status of the Organization-Subject association
-    
-    # Update status
-    org_subject = organization_dao.update_org_subj_association_status(org_name, subject_username, Status.SUSPENDED.value)
-    
-    print(org_subject.status)  # Updated status of the Organization-Subject association
-    print()
-    
-    print("SESSION ENCR KEY: ", session_dao.get_encrypted_key(new_session.id))    
-    print("SESSION ENCR KEY: ", session_dao.get_decrypted_key(new_session.id))    
-    
-    
+
+    print("ENCR METAD KEY: ", organization_dao.get_encrypted_key(document.id).hex())
+    print("DECR METAD IV: ", organization_dao.get_decrypted_key(document.id))
 
 if __name__ == "__main__":
     main()
