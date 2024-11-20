@@ -60,14 +60,12 @@ def create_session(data, db_session: SQLAlchemySession):
     )
 
     ## Create session
-    # TODO: Encrypt sessionKey 
-    encryptedSessionKey = sessionKey
     nonce = secrets.token_hex(16)
     try:
         session = session_dao.create(
             username, 
             org_name, 
-            base64.b64encode(encryptedSessionKey).decode('utf-8'),
+            sessionKey.decode(),
             counter = 0,
             nonce = nonce, 
         )

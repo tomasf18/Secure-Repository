@@ -1,8 +1,8 @@
 import base64
 import secrets
-from dao.OrganizationDAO import OrganizationDAO
+from dao.OrganizationDAO import OrganizationDAO, SessionDAO
 from dao.DocumentDAO import DocumentDAO
-from dao.SessionDAO import SessionDAO
+# from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
 from utils.utils import decrypt_payload, encrypt_payload, verify_message_order
 from dao.DocumentDAO import DocumentDAO

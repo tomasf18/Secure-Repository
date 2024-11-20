@@ -215,7 +215,6 @@ class Session(Base):
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
     key_iv: Mapped[str] = mapped_column(nullable=False)
 
-    ## TODO: Adicionado nonce e counter
     nonce: Mapped[str] = mapped_column(nullable=True)
     counter: Mapped[int] = mapped_column(nullable=True)
     

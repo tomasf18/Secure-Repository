@@ -338,10 +338,6 @@ class SessionDAO(BaseDAO):
         organization_dao = OrganizationDAO(self.session)
         key_store_dao = KeyStoreDAO(self.session)
         
-        repo_password = os.getenv("REPOSITORY_PASSWORD")
-        if not repo_password:
-            raise ValueError("Repository password not found in environment variables")
-        
         try:
             # Check if the subject exists
             subject = subject_dao.get_by_username(subject_username)
@@ -353,9 +349,8 @@ class SessionDAO(BaseDAO):
             if not organization:
                 raise ValueError(f"Organization with name '{organization_name}' does not exist.")
 
-            encrypted_key, iv = self.encrypt_session_key(key, repo_password)
+            encrypted_key, iv = self.encrypt_session_key(key)
             encrypted_session_key = key_store_dao.create(encrypted_key, "symmetric")
-
             # Create the session
             new_session = Session(
                 subject_username=subject_username,
@@ -389,14 +384,15 @@ class SessionDAO(BaseDAO):
         return session.key_iv
         
         
-    def encrypt_session_key(self, session_key: str, repository_password: str) -> bytes:
+    def encrypt_session_key(self, session_key: str) -> bytes:
         """
         Encrypt the session key using AES256 with a derived key from the repository password.
         """
         # Generate a random IV
         iv = os.urandom(16)
-
+        
         # Derive AES key from the repository password
+        repository_password = os.getenv("REPOSITORY_PASSWORD")
         aes_key = self.derive_aes_key(repository_password)
 
         encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key.encode(), iv, aes_key)
@@ -409,18 +405,19 @@ class SessionDAO(BaseDAO):
         Derive a secure AES key from the repository password using PBKDF2.
         """
         # Generate a salt (e.g., from a secure source)
-        salt = secrets.token_bytes(16)
+        salt = 'salt'.encode()
 
         # Use PBKDF2 to derive the AES key
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
         return kdf.derive(password.encode())
 
 
-    def decrypt_session_key(self, encrypted_key: bytes, iv: bytes, repository_password: str) -> str:
+    def decrypt_session_key(self, encrypted_key: bytes, iv: bytes) -> str:
         """
         Decrypt the session key using AES256 with a derived key from the repository password.
         """
         # Derive AES key from the repository password
+        repository_password = os.getenv("REPOSITORY_PASSWORD")
         aes_key = self.derive_aes_key(repository_password)
         decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
 
@@ -498,3 +495,25 @@ class SessionDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise
+        
+        
+    def get_encrypted_key(self, session_id: int) -> bytes:
+        """
+        Retrieve the encrypted session key.
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        return session.key.key
+    
+    
+    def get_decrypted_key(self, session_id: int) -> str:
+        """
+        Retrieve the decrypted session key. 
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        encrypted_key = self.get_encrypted_key(session_id)
+        iv = base64.b64decode(session.key_iv)
+        return self.decrypt_session_key(encrypted_key, iv)
