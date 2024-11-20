@@ -63,16 +63,16 @@ class Document(Base):
     __tablename__ = 'document'
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    document_handle: Mapped[str] = mapped_column(nullable=False)
+    document_handle: Mapped[str] = mapped_column(nullable=False, autoincrement=True)
     name: Mapped[str] = mapped_column(nullable=False)
     create_date: Mapped[datetime] = mapped_column(nullable=False)
-    file_handle: Mapped[str] = mapped_column(nullable=True)
+    file_handle: Mapped[str] = mapped_column(nullable=True, autoincrement=True)
     
     # Foreign Key Relationships
     creator_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
-    deleter_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=True)
+    deleter_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=True, default=None)
     
-    org_name: Mapped[str] = mapped_column(ForeignKey("organization.name"))
+    org_name: Mapped[str] = mapped_column(ForeignKey("organization.name"), nullable=False)
     
     # Relationships
     creator: Mapped["Subject"] = relationship(foreign_keys=[creator_username])
@@ -81,9 +81,10 @@ class Document(Base):
     restricted_metadata: Mapped["RestrictedMetadata"] = relationship(back_populates="document")
     organization: Mapped["Organization"] = relationship(back_populates="documents")
     
-    # A document name must be unique within an organization
+    # A document name and a document handle must be unique within an organization
     __table_args__ = (
         UniqueConstraint("name", "org_name", name="uq_document_name_org_name"),
+        UniqueConstraint("document_handle", "org_name", name="uq_document_handle_org_name"),
     )
     
     def __repr__(self):
@@ -94,7 +95,9 @@ class RestrictedMetadata(Base):
     
     document_id: Mapped[str] = mapped_column(ForeignKey('document.id'), primary_key=True)
     alg: Mapped[str] = mapped_column(nullable=False)
+    mode: Mapped[str] = mapped_column(nullable=True)
     key: Mapped[str] = mapped_column(nullable=False)
+    iv: Mapped[str] = mapped_column(nullable=True)
     
     # Relationship
     document: Mapped["Document"] = relationship(back_populates="restricted_metadata")
