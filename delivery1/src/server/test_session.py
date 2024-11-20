@@ -1,8 +1,7 @@
 import secrets
 from dao.Database import Database
 from dao.SubjectDAO import SubjectDAO
-from dao.SessionDAO import SessionDAO
-from dao.OrganizationDAO import OrganizationDAO
+from dao.OrganizationDAO import OrganizationDAO, SessionDAO
 
 
 def main():

@@ -1,5 +1,5 @@
 import json
-from dao.SessionDAO import SessionDAO
+from dao.OrganizationDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
 from utils.utils import encrypt_payload, decrypt_payload, verify_message_order
 import base64
@@ -23,8 +23,7 @@ def load_session(data: dict, session_dao: SessionDAO, key_store_dao: KeyStoreDAO
                 json.dumps(f"Session with id {session_id} not found"), 404
             )
 
-    # Decrypt data
-    session_key = base64.b64decode(session.key.key)
+    session_key = session_dao.get_decrypted_key(session_id)
 
     decrypted_data = decrypt_payload(data, session_key[:32], session_key[32:])
     if decrypted_data is None:
