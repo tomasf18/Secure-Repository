@@ -384,7 +384,7 @@ class SessionDAO(BaseDAO):
         return session.key_iv
         
         
-    def encrypt_session_key(self, session_key: str) -> bytes:
+    def encrypt_session_key(self, session_key: str | bytes) -> bytes:
         """
         Encrypt the session key using AES256 with a derived key from the repository password.
         """
@@ -395,7 +395,8 @@ class SessionDAO(BaseDAO):
         repository_password = os.getenv("REPOSITORY_PASSWORD")
         aes_key = self.derive_aes_key(repository_password)
 
-        encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key.encode(), iv, aes_key)
+        session_key = session_key.encode() if isinstance(session_key, str) else session_key
+        encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key, iv, aes_key)
 
         return encrypted_key, iv
 
@@ -412,7 +413,7 @@ class SessionDAO(BaseDAO):
         return kdf.derive(password.encode())
 
 
-    def decrypt_session_key(self, encrypted_key: bytes, iv: bytes) -> str:
+    def decrypt_session_key(self, encrypted_key: bytes, iv: bytes) -> bytes:
         """
         Decrypt the session key using AES256 with a derived key from the repository password.
         """
@@ -421,7 +422,7 @@ class SessionDAO(BaseDAO):
         aes_key = self.derive_aes_key(repository_password)
         decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
 
-        return decrypted_key.decode()
+        return decrypted_key
 
 
     def get_by_id(self, session_id: int) -> Session:
@@ -517,3 +518,40 @@ class SessionDAO(BaseDAO):
         encrypted_key = self.get_encrypted_key(session_id)
         iv = base64.b64decode(session.key_iv)
         return self.decrypt_session_key(encrypted_key, iv)
+    
+
+    def update_nonce(self, session_id: int, new_nonce: str) -> Session:
+        """
+        Update the nonce associated with a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+
+            session.nonce = new_nonce
+            self.session.commit()
+            self.session.refresh(session)
+
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise
+    
+    def update_counter(self, session_id: int, new_counter: int) -> Session:
+        """
+        Update the counter associated with a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+
+            session.counter = new_counter
+            self.session.commit()
+            self.session.refresh(session)
+
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise

@@ -47,12 +47,10 @@ def add_organization_subject(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/subjects'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
 
     ## Get session
     try:
-        from utils.loadSession import load_session
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -90,11 +88,10 @@ def list_organization_subjects(organization_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
 
     ## Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -135,11 +132,10 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
     '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
 
     ## Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -169,10 +165,9 @@ def activate_organization_subject(organization_name, username, data, db_session:
     '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -204,10 +199,9 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     '''Handles DELETE requests to /organizations/<organization_name>/subjects/<subject_name>'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -239,15 +233,13 @@ def create_organization_document(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/documents'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-    key_store_dao = KeyStoreDAO(db_session)
 
     ## Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, key_store_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
-
 
     document_name = decrypted_data.get('document_name')
     encrypted_data = base64.b64decode(decrypted_data.get('file'))
@@ -274,17 +266,40 @@ def create_organization_document(organization_name, data, db_session: Session):
 def list_organization_documents(organization_name, data, username, date_filter, date, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents'''
     document_dao = DocumentDAO(db_session)
-    data = data.get("data")
-    session_id = data.get('session_id')
-    documents: list["Document"] = document_dao.get(session_id, username, date_filter, date)
+    session_dao = SessionDAO(db_session)
+
+    ## Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    documents: list["Document"] = document_dao.get(session.id, username, date_filter, date)
     if not documents:
-        return json.dumps({"error": "No documents found."}), 404
+        return encrypt_payload({
+            "error": "No documents found."
+        }), 404
+
     serializable_documents = []
     for doc in documents:
         serializable_documents.append({
             "document_name": doc.name,
         })
-    return json.dumps(serializable_documents), 200
+
+    ## Construct result
+    result = {
+        "nonce": secrets.token_hex(16),
+        "data": serializable_documents
+    }
+
+    ## Update session
+    session_dao.update_nonce(session.id, result["nonce"])
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    return encrypted_result, 201
 
 # =================================== Auxiliar Function =================================== #
 
@@ -309,27 +324,103 @@ def get_serializable_document(document: "Document"):
 def get_organization_document_metadata(organization_name, document_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>'''
     document_dao = DocumentDAO(db_session)
-    data = data.get("data")
-    session_id = data.get('session_id')
-    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    session_dao = SessionDAO(db_session)
+
+    ## Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    try:
+        document: "Document" = document_dao.get_metadata(session.id, document_name)
+    except Exception as e:
+        return encrypt_payload({
+                    "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
+                }, session_key[:32], session_key[32:]
+            ), 404
+    
     serializable_document = get_serializable_document(document)
-    return json.dumps(serializable_document), 200
+
+    ## Construct result
+    result = {
+        "nonce": secrets.token_hex(16),
+        "data": serializable_document
+    }
+
+    ## Update session
+    session_dao.update_nonce(session.id, result["nonce"])
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    return encrypted_result, 201
 
 def get_organization_document_file(organization_name, document_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
     document_dao = DocumentDAO(db_session)
-    data = data.get("data")
-    session_id = data.get('session_id')
-    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    session_dao = SessionDAO(db_session)
+
+    ## Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    document: "Document" = document_dao.get_metadata(session.id, document_name)
     if not document.file_handle:
-        return json.dumps({"error": f"Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."}), 404
+        return encrypt_payload({
+            "error": f"Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
+        }), 404
+    
     serializable_document = get_serializable_document(document)
-    return json.dumps(serializable_document), 200
+    
+    ## Construct result
+    result = {
+        "nonce": secrets.token_hex(16),
+        "data": serializable_document
+    }
+
+    ## Update session
+    session_dao.update_nonce(session.id, result["nonce"])
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    return encrypted_result, 201
+
 
 def delete_organization_document(organization_name, document_name, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/documents/<document_name>'''
     document_dao = DocumentDAO(db_session)
-    data = data.get("data")
-    session_id = data.get('session_id')
-    ceasing_file_handle = document_dao.delete(session_id, document_name)
-    return json.dumps(f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."), 200
+    session_dao = SessionDAO(db_session)
+
+    ## Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    try:
+        ceasing_file_handle = document_dao.delete(session.id, document_name)
+    except ValueError as e:
+        return encrypt_payload({
+            "error": e.args[0]
+        }), 400
+    
+    ## Construct result
+    result = {
+        "nonce": secrets.token_hex(16),
+        "data": f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."
+    }
+
+    ## Update session
+    session_dao.update_nonce(session.id, result["nonce"])
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    return encrypted_result, 200

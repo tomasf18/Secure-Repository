@@ -409,16 +409,16 @@ def rep_list_subjects(session_file, username=None):
     base_endpoint = f"/organizations/{session_context['organization']}/subjects"
     endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
 
-
-    key = base64.b64decode(session_context["session_key"])
+    session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
 
     data = {
-        "session_id": session_context["session_id"],
+        "session_id": session_id,
         "counter": session_context["counter"] + 1,
         "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=key, sessionId=session_context["session_id"])
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
 
     if result is None or result.get("error") is not None:
         print("Error: " + result["error"])
@@ -503,18 +503,24 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     
     if params:
         endpoint += "?" + "&".join(params)
+
+    session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
     
     data = {
-        "session_id": session_context["session_id"],
+        "session_id": session_id,
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
-    
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
+        
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET, data=data,
+                                      sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error listing documents")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    print(result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 # ****************************************************
@@ -576,7 +582,7 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     saveContext(session_file, session_context, result)
-    print(result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_suspend_subject(session_file, username):
@@ -755,7 +761,7 @@ def rep_add_doc(session_file, document_name, file):
         logger.error("Error adding document")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    print(result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_get_doc_metadata(session_file, document_name):
@@ -774,17 +780,24 @@ def rep_get_doc_metadata(session_file, document_name):
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
     
+    session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
+
     data = {
-        "session_id": session_context["session_id"],
+        "session_id": session_id,
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
+
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data,
+                                      sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error getting document metadata")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
         
-    print(result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_get_doc_file(session_file, document_name, output_file=None):
@@ -802,12 +815,18 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}/file"
+
+    session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
     
     data = {
-        "session_id": session_context["session_id"],
+        "session_id": session_id,
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
-    
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
+        
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET, data=data,
+                                      sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error getting document file")
@@ -854,17 +873,23 @@ def rep_delete_doc(session_file, document_name):
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
 
+    session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
+
     data = {
-        "session_id": session_context["session_id"],
+        "session_id": session_id,
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
         
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE, data=data,
+                                      sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error deleting document")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    print(result)
+    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_acl_doc(session_file, document_name, operator, role, permission):

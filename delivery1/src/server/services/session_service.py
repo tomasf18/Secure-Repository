@@ -70,13 +70,12 @@ def create_session(data, db_session: SQLAlchemySession):
         session = session_dao.create(
             username, 
             org_name, 
-            sessionKey.decode(),
+            sessionKey,
             counter = 0,
             nonce = nonce, 
         )
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), 400
-
 
     ## Create response
     result = {

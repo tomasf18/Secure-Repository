@@ -53,7 +53,7 @@ class ApiConsumer:
                 logging.debug(f"Server Response = {response.json()}")
 
                 ## If sesssion found
-                if response.status_code != 404:
+                if response.status_code not in [404, 405]:
                     receivedMessage = self.decryptPayload(
                         response = response.json(),
                         messageKey = messageKey,
