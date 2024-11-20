@@ -303,9 +303,8 @@ def rep_get_file(file_handle, output_file=None):
     """
     
     endpoint = f"/files/{file_handle}"
-    url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET)
     
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
