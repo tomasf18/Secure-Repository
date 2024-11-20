@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import sys
 import requests
@@ -13,8 +14,8 @@ from utils.digest import calculateDigest, verifyDigest
 import logging
 
 logging.basicConfig(
-    filename='project.log',
-    filemode='a',
+    # filename='project.log',
+    # filemode='a',
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.DEBUG
 )
@@ -40,7 +41,7 @@ class ApiConsumer:
 
                 ## Create and encrypt Payload
                 body = self.encryptPayload(
-                    data = str(data),
+                    data = data,
                     messageKey = messageKey,
                     MACKey = MACKey
                 )
@@ -51,16 +52,17 @@ class ApiConsumer:
                 response = requests.request(method, self.rep_address + endpoint, json=body)
                 logging.debug(f"Server Response = {response.json()}")
 
-                receivedMessage = self.decryptPayload(
-                    response = response.json(),
-                    messageKey = messageKey,
-                    MACKey = MACKey
-                )
-                logging.debug(f"Decrypted Server Response = {receivedMessage}")
-
+                ## If sesssion found
+                if response.status_code != 404:
+                    receivedMessage = self.decryptPayload(
+                        response = response.json(),
+                        messageKey = messageKey,
+                        MACKey = MACKey
+                    )
+                    logging.debug(f"Decrypted Server Response = {receivedMessage}")
 
             else:
-                print("Sending request")
+                logging.debug("Sending request")
                 body = {
                     "data": data
                 }
@@ -68,8 +70,7 @@ class ApiConsumer:
                 response = requests.request(method, self.rep_address + endpoint, json=body)
 
 
-            if response.status_code in [200, 201]:
-                print(f'\nResponse: {response.status_code} - {response.json()}\n')
+            if response.status_code in [200, 201, 403]:
                 return receivedMessage if receivedMessage else response.json()
             else:
                 print(f'\nError: {response.status_code} - {response.json()}\n')
@@ -80,6 +81,9 @@ class ApiConsumer:
 
     def encryptPayload(self, data, messageKey, MACKey):
         ## Encrypt data
+        if isinstance(data, dict):
+            data = json.dumps(data)
+
         encryptor = AES()
         encryptedData, dataIv = encryptor.encrypt_data(data, messageKey)
 
@@ -107,23 +111,24 @@ class ApiConsumer:
 
         ## Decrypt Digest
         receivedDigest = encryptor.decrypt_data(
-            receivedMac["mac"],
-            receivedMac["iv"],
+            base64.b64decode(receivedMac["mac"]),
+            base64.b64decode(receivedMac["iv"]),
             MACKey
         )
 
+        encryptedMessage = base64.b64decode(receivedData["message"])
         ## Verify digest of received data
-        if ( not verifyDigest(receivedData, receivedDigest) ):
+        if ( not verifyDigest(encryptedMessage, receivedDigest) ):
             return None
-        
+
         ## Decrypt data
         receivedMessage = encryptor.decrypt_data(
-            encrypted_data=receivedData["message"],
-            iv = receivedData["iv"],
+            encrypted_data = base64.b64decode(receivedData["message"]),
+            iv = base64.b64decode(receivedData["iv"]),
             key = messageKey
         )
 
-        return receivedMessage
+        return json.loads(receivedMessage.decode())
 
 
     def exchangeKeys(self, private_key: ec.EllipticCurvePrivateKey, data: dict):
@@ -162,6 +167,7 @@ class ApiConsumer:
         response = response.json()
         if (not verify_doc_sign(response, self.rep_pub_key)):
             sys.exit(ReturnCode.REPOSITORY_ERROR)
+
 
         # If it its, finish calculations
         response_data = response["data"]

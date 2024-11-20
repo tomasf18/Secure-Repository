@@ -1,4 +1,5 @@
 import base64
+import json
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -37,13 +38,16 @@ def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[
         digest: {mac, iv}
     }
     """
+    if isinstance(data, dict):
+        data = json.dumps(data)
+
     ## Encrypt data
     encryptor = AES()
-    encryptedData, dataIv = encryptor.encrypt_data(str(data), messageKey)
+    encryptedData, dataIv = encryptor.encrypt_data(data, messageKey)
 
     message = {
-        "message": encryptedData,
-        "iv" : dataIv,
+        "message": base64.b64encode(encryptedData).decode(),
+        "iv" : base64.b64encode(dataIv).decode(),
     }
 
     digest = calculate_digest(encryptedData)
@@ -52,8 +56,8 @@ def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[
     body = {
         "data": message,
         "digest": {
-            "mac": mac,
-            "iv": macIv,
+            "mac": base64.b64encode(mac).decode(),
+            "iv": base64.b64encode(macIv).decode(),
         }
     }
     return body
@@ -88,10 +92,10 @@ def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
         key = messageKey
     )
 
-    return receivedMessage
+    return json.loads(receivedMessage.decode('utf-8'))
 
 def verify_message_order(data: dict, counter: int, nonce: bytes) -> bool:
-    received_nonce = base64.b64decode(data["nonce"])
+    received_nonce = data["nonce"]
     received_counter = data["counter"]
 
     return all([

@@ -59,17 +59,18 @@ def create_session(data, db_session: SQLAlchemySession):
         client_session_key=base64.b64decode(client_session_pub_key),
     )
 
-
     ## Create session
     # TODO: Encrypt sessionKey 
     encryptedSessionKey = sessionKey
     nonce = secrets.token_hex(16)
     try:
         session = session_dao.create(
-                username, 
-                org_name, 
-                base64.b64encode(encryptedSessionKey).decode('utf-8')
-            ) #, nonce, counter=0) TODO: descomentar
+            username, 
+            org_name, 
+            base64.b64encode(encryptedSessionKey).decode('utf-8'),
+            counter = 0,
+            nonce = nonce, 
+        )
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), 400
 
@@ -83,6 +84,7 @@ def create_session(data, db_session: SQLAlchemySession):
         "public_key": base64.b64encode(public_key).decode('utf-8'),
         "nonce": nonce,
     }
+
     ## Sign response
     signature = sign_document(
         data = str(result),
@@ -94,6 +96,5 @@ def create_session(data, db_session: SQLAlchemySession):
         "data": result,
         "digest": base64.b64encode(signature).decode('utf-8')
     })
-
     
     return result, 201
