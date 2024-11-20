@@ -1,8 +1,9 @@
 import base64
 import secrets
 from dao.OrganizationDAO import OrganizationDAO
-from server.dao import SessionDAO
-from server.utils.utils import decrypt_payload, encrypt_payload, verify_message_order
+from dao.SessionDAO import SessionDAO
+from dao.KeyStoreDAO import KeyStoreDAO
+from utils.utils import decrypt_payload, encrypt_payload, verify_message_order
 from models.orm import Organization
 from models.orm import Subject
 from models.status import Status
@@ -93,7 +94,8 @@ def add_organization_subject(data, organization_name, db_session: Session):
 def list_organization_subjects(organization_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
     organization_dao = OrganizationDAO(db_session)
-    session_dao = SessionDAO(db_session);
+    session_dao = SessionDAO(db_session)
+    key_store_dao = KeyStoreDAO(db_session)
 
     ## Get session
     session_id = data.get("session_id")
@@ -102,12 +104,16 @@ def list_organization_subjects(organization_name, data, db_session: Session):
         return json.dumps(f"Session with id {session_id} not found"), 404
     
     ## Decrypt data
-    session_key = base64.b64decode(session.key)
+    session_key_id = session.key_id
+    session_key = base64.b64decode(key_store_dao.get_by_id(session_key_id).key)
+
     decrypted_data = decrypt_payload(data, session_key[:32], session_key[32:])
     if decrypted_data is None:
         return json.dumps(f"Invalid session key"), 403
 
-    if (not verify_message_order(decrypted_data)):
+    counter = session.counter
+    nounce = session.nonce # TODO pedir ao tomas para adicionar nounce na sessao
+    if (not verify_message_order(decrypted_data, counter=counter, nounce=nounce)):
         return json.dumps(f"Invalid message order"), 403
     
     organization_name = session.organization_name

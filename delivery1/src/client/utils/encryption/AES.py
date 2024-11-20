@@ -26,7 +26,9 @@ class AES:
         encryptor = cipher.encryptor()
 
         padder = padding.PKCS7(algorithms.AES256.block_size).padder()
-        padded_data = padder.update(data.encode())
+        if (type(data) == str):
+            data = data.encode()
+        padded_data = padder.update(data)
         padded_data += padder.finalize()
 
         return (

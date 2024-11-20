@@ -12,7 +12,7 @@ class AESModes:
 
 class AES:
     def __init__(self, mode: AESModes = AESModes.CBC):
-        self.mode = AESModes.mode
+        self.mode = mode
 
     def encrypt_data(self, data: str, key: str) -> tuple[bytes, bytes]:
         """
@@ -34,14 +34,14 @@ class AES:
             iv
         )
 
-    def decrypt_data(self, encrypted_data: str, iv: bytes, key: str) -> str:
+    def decrypt_data(self, encrypted_data: bytes, iv: bytes, key: str) -> str:
         cipher = Cipher(algorithms.AES256(key), self.mode(iv))
 
         decryptor = cipher.decryptor()
         padded_data = decryptor.update(encrypted_data) + decryptor.finalize() 
 
         unpadder = padding.PKCS7(algorithms.AES256.block_size).unpadder()
-        return (unpadder.update(padded_data) + unpadder.finalize()).decode()
+        return unpadder.update(padded_data) + unpadder.finalize()
 
     def generate_random_key(self):
         return os.urandom(32)

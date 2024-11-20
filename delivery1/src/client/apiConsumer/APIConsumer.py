@@ -40,7 +40,7 @@ class ApiConsumer:
 
                 ## Create and encrypt Payload
                 body = self.encryptPayload(
-                    message = data,
+                    data = str(data),
                     messageKey = messageKey,
                     MACKey = MACKey
                 )
@@ -84,8 +84,8 @@ class ApiConsumer:
         encryptedData, dataIv = encryptor.encrypt_data(data, messageKey)
 
         message = {
-            "message": encryptedData,
-            "iv" : dataIv,
+            "message": base64.b64encode(encryptedData).decode(),
+            "iv" : base64.b64encode(dataIv).decode(),
         }
 
         digest = calculateDigest(encryptedData)
@@ -94,8 +94,8 @@ class ApiConsumer:
         body = {
             "data": message,
             "digest": {
-                "mac": mac,
-                "iv": macIv,
+                "mac": base64.b64encode(mac).decode(),
+                "iv": base64.b64encode(macIv).decode(),
             }
         }
         return body

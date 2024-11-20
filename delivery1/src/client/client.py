@@ -376,24 +376,22 @@ def rep_list_subjects(session_file, username=None):
     This command accepts an extra command to show only one subject.
     - Calls GET /organizations/{organization_name}/subjects endpoint
     """
-    base_endpoint = f"/organizations/{session_context['organization']}/subjects"
-    endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
     
     session_context = read_file(session_file)
     if session_context is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
-    session_id = session_context['session_id']
-    
     base_endpoint = f"/organizations/{session_context['organization']}/subjects"
     endpoint = base_endpoint if username is None else f"{base_endpoint}/{username}"
 
+
     key = base64.b64decode(session_context["key"])
+
     data = {
         "session_id": session_context["session_id"],
         "counter": session_context["counter"],
-        "nonce": base64.b64decode(session_context["nonce"]),
+        "nonce": session_context["nonce"],
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=key, sessionId=session_context["session_id"])

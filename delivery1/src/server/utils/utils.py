@@ -76,8 +76,9 @@ def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
         MACKey
     )
 
+    encryptedMessage = base64.b64decode(receivedData["message"])
     ## Verify digest of received data
-    if ( not verifyDigest(receivedData, receivedDigest) ):
+    if ( not verifyDigest(encryptedMessage, receivedDigest) ):
         return None
     
     ## Decrypt data

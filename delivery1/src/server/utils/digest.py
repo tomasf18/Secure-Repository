@@ -4,7 +4,7 @@ def calculate_digest(data: str):
     digest = hashes.Hash(hashes.SHA256())
     digest.update(data)
 
-    return digest.finalise()
+    return digest.finalize()
 
 def verifyDigest(data: str, digest: str):
     dataDigest = calculate_digest(data);
