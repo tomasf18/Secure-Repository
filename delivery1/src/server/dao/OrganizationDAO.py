@@ -1,10 +1,20 @@
+import uuid
 from .BaseDAO import BaseDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
 from .RoleDAO import RoleDAO
 from .OrganizationACLDAO import OrganizationACLDAO
-from models.orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore
+from .DocumentACLDAO import DocumentACLDAO
+from models.orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore, Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
+from models.orm import Document, DocumentACL, RestrictedMetadata
+from base64 import b64encode
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from datetime import datetime
+import os
+# from .SessionDAO import SessionDAO
 
 class OrganizationDAO(BaseDAO):
     """DAO for managing Organization entities."""
@@ -55,7 +65,7 @@ class OrganizationDAO(BaseDAO):
             # Commit all changes in one go
             self.session.commit()
 
-            print(f"Organization '{org_name}' created successfully with 'Manager' role for {subject_username}.")
+            print(f"Organization '{org_name}' created successfully with 'Manager' (id: {manager_role.id}) role for {subject_username}.")
             
             return new_org
         except IntegrityError:
@@ -220,3 +230,205 @@ class OrganizationDAO(BaseDAO):
 
         print("Organization creation and verifications passed!")
         return True
+    
+    
+    def create_document(self, name: str, session_id: str, encrypted_data: bytes, alg: str, key: bytes, iv: bytes) -> Document:
+        """Create a new document, its ACL, and metadata, and store the encrypted file."""
+
+        try:
+            # Step 1: Obtain the session details
+            session_dao = SessionDAO(self.session)
+            session = session_dao.get_by_id(session_id)
+            creator = session.subject
+            organization = session.organization
+            alg, mode = alg.split(":")
+
+            if not organization:
+                raise ValueError("Session is not associated with any organization.")
+
+            # Step 2: Generate creation date
+            creation_date = datetime.now()
+
+            # Step 3: Create a file handle for the encrypted file
+            file_handle = f"{organization.name}/{creation_date.strftime('%Y%m%d%H%M%S')}_{name}.enc"
+            file_path = os.path.join("data", file_handle)
+
+            # Step 4: Store the encrypted data in a file
+            self._store_encrypted_data(file_path, encrypted_data)
+
+            # Step 5: Create the Document entity
+            document = Document(
+                document_handle=str(uuid.uuid4()),
+                name=name,
+                create_date=creation_date,
+                file_handle=file_handle,
+                creator_username=creator.username,
+                org_name=organization.name
+            )
+            self.session.add(document)
+            
+            # Step 6: Create the DocumentACL and link it to the Manager role of the organization
+            role_dao = RoleDAO(self.session)
+            manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+            if not manager_role:
+                raise ValueError("Manager role not found for the organization.")
+
+            document_acl_dao = DocumentACLDAO(self.session)
+            document_acl = document_acl_dao.create(document.id)
+            document_acl.roles.append(manager_role)
+            self.session.add(document_acl)
+
+            # Step 7: Create the RestrictedMetadata entity
+            metadata = RestrictedMetadata(
+                document=document,
+                alg=alg,
+                mode=mode,
+                key=key,
+                iv=iv
+            )
+            self.session.add(metadata)
+
+            # Commit all changes
+            self.session.commit()
+
+            print(f"Document '{name}' created successfully for organization '{organization.name}'.")
+            return document
+
+        except IntegrityError:
+            self.session.rollback()
+            raise ValueError("Error while creating the document or its associated entities.")
+
+    def _store_encrypted_data(self, file_path: str, data: bytes):
+        """Store the encrypted data in a file."""
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        # Write the encrypted data to the file
+        with open(file_path, "wb") as f:
+            f.write(data)
+
+
+# ============================================================================================================= #
+
+
+class SessionDAO(BaseDAO):
+    """DAO for managing Session entities."""
+
+    def create(self, subject_username: str, organization_name: str, key: str) -> Session:
+        """
+        Create a new session and optionally associate roles with it.
+
+        :param subject_username: The username of the subject creating the session.
+        :param organization_name: The name of the organization associated with the session.
+        :param key: The key associated with this session.
+        :return: The created Session object.
+        :raises ValueError: If any of the parameters are invalid.
+        :raises IntegrityError: If a database constraint is violated.
+        """
+        
+        subject_dao = SubjectDAO(self.session)
+        organization_dao = OrganizationDAO(self.session)
+        key_store_dao = KeyStoreDAO(self.session)
+        try:
+            # Check if the subject exists
+            subject = subject_dao.get_by_username(subject_username)
+            if not subject:
+                raise ValueError(f"Subject with username '{subject_username}' does not exist.")
+
+            # Check if the organization exists
+            organization = organization_dao.get_by_name(organization_name)
+            if not organization:
+                raise ValueError(f"Organization with name '{organization_name}' does not exist.")
+
+            session_key = key_store_dao.create(key, "symmetric")
+
+            # Create the session
+            new_session = Session(
+                subject_username=subject_username,
+                organization_name=organization_name,
+                key_id=session_key.id
+            )
+
+            self.session.add(new_session)
+            self.session.commit()
+
+            # Optionally load relationships if needed
+            self.session.refresh(new_session, attribute_names=['subject', 'organization', 'session_roles'])
+
+            return new_session
+
+        except IntegrityError as e:
+            self.session.rollback()
+            raise IntegrityError("Failed to create session due to a database constraint violation.") from e
+
+    def get_by_id(self, session_id: int) -> Session:
+        """
+        Retrieve a session by its ID.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject),
+            joinedload(Session.organization)
+        ).filter_by(id=session_id).one_or_none()
+
+    def get_all(self) -> list[Session]:
+        """
+        Retrieve all sessions.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject),
+            joinedload(Session.organization)
+        ).all()
+
+    def get_by_subject(self, subject_username: str) -> list[Session]:
+        """
+        Retrieve all sessions associated with a given subject.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.organization)
+        ).filter_by(subject_username=subject_username).all()
+
+    def get_by_organization(self, organization_name: str) -> list[Session]:
+        """
+        Retrieve all sessions associated with a given organization.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject)
+        ).filter_by(organization_name=organization_name).all()
+
+    def delete_by_id(self, session_id: int) -> bool:
+        """
+        Delete a session by its ID.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if session:
+                self.session.delete(session)
+                self.session.commit()
+                return True
+            return False
+        except IntegrityError:
+            self.session.rollback()
+            raise
+
+    def update_key(self, session_id: int, new_key: str) -> Session:
+        """
+        Update the key associated with a session.
+        """
+        key_store_dao = KeyStoreDAO(self.session)
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+
+            # Update key in KeyStore
+            session_key = key_store_dao.update(session.key_id, new_key)
+
+            # Reflect updated key in session
+            session.key_id = session_key.id
+            self.session.commit()
+            self.session.refresh(session)
+
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise
