@@ -180,7 +180,7 @@ def rep_subject_credentials(password, credentials_file):
         logger.error(f"Error generating key pair: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
 
-def rep_decrypt_file(encrypted_file, encryption_metadata):
+def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     """
     rep_decrypt_file <encrypted_file> <encryption_metadata>
     
@@ -210,8 +210,12 @@ def rep_decrypt_file(encrypted_file, encryption_metadata):
     if algorithm == "AES256" and mode == "CBC":
         aes = AES(AESModes.CBC)
         decrypted_file = aes.decrypt_data(file_contents, iv, key)
+    
+    if exiting:
         print(decrypted_file.decode())
-    sys.exit(ReturnCode.SUCCESS)
+        sys.exit(ReturnCode.SUCCESS)
+    else:
+        return decrypted_file.decode()
 
 
 # ****************************************************
@@ -317,7 +321,7 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     print(f"Session created and saved to {session_file}, sessionId={session_data['session_id']}")    
     sys.exit(ReturnCode.SUCCESS)
         
-def rep_get_file(file_handle, output_file=None):
+def rep_get_file(file_handle, output_file=None, exiting=True):
     """
     rep_get_file <file_handle> [file] 
     - This command downloads a file given its handle. 
@@ -341,7 +345,10 @@ def rep_get_file(file_handle, output_file=None):
     else:
         print(file_contents)
 
-    sys.exit(ReturnCode.SUCCESS)
+    if exiting:
+        sys.exit(ReturnCode.SUCCESS)
+    else:
+        return
 
 
 # ****************************************************
@@ -805,40 +812,25 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     encryption_data = result["encryption_data"]
     file_handle = result["file_handle"]
     
-    # Get encrypted file contents
-    subprocess.run(["python", "client.py", "rep_get_file", file_handle, "encrypted_file"])
+    # Create a temporary file to store the encrypted file
+    rep_get_file(file_handle, "encrypted_file", exiting=False)
     
     # Save encryption data to metadata.json
     with open("metadata.json", "w") as file:
         file.write(json.dumps(encryption_data))
     
-    # Create a temporary file and keep its name
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    temp_file_name = temp_file.name
-    temp_file.close()  # Close it for now, subprocess will use the path
+    # Decrypt the file and get its output
+    decrypted_file = rep_decrypt_file("encrypted_file", "metadata.json", exiting=False)
     
-    try:
-        # Decrypt the file using subprocess
-        subprocess.run(
-            ["python3", "-c", f"import client; client.rep_decrypt_file('encrypted_file', 'metadata.json')"],
-            stdout=open(temp_file_name, "w"),
-            check=True
-        )
-        
-        # Read the decrypted file content
-        with open(temp_file_name, "r") as file:
-            decrypted_file = file.read()
-        
-        # Output or save the decrypted content
-        if output_file is not None:
-            with open('./' + output_file, "w") as file:
-                file.write(decrypted_file)
-        else:
-            print(decrypted_file)
+    # Delete the temporary files
+    os.remove("encrypted_file")
+    os.remove("metadata.json")
     
-    finally:
-        # Clean up temporary files
-        os.remove(temp_file_name)
+    if output_file is not None:
+        with open(output_file, "w") as file:
+            file.write(decrypted_file)
+    else:
+        print(decrypted_file)
     
     sys.exit(ReturnCode.SUCCESS)
 
