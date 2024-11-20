@@ -49,7 +49,7 @@ class RoleDAO(BaseDAO):
         self.session.delete(role)
         self.session.commit()
         
-    def get_by_name_and_acl_id(self, acl_id: int, name: str) -> "Role":
+    def get_by_name_and_acl_id(self, name: str, acl_id: int) -> "Role":
         """Retrieve a Role by name and ACL ID."""
         role = self.session.query(Role).filter_by(acl_id=acl_id, name=name).first()
         if not role:

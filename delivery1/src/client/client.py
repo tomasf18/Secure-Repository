@@ -280,7 +280,7 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
-    logging.debug(f"Session created with sessionId: {session_data["session_id"]}, derivedKey: {derived_key}")
+    logging.debug(f"Session created with sessionId: {session_data['session_id']}, derivedKey: {derived_key}")
 
     with open(session_file, "w") as file:
         file.write(json.dumps({

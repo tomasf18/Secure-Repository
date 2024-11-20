@@ -1,3 +1,4 @@
+import uuid
 from .BaseDAO import BaseDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
@@ -64,7 +65,7 @@ class OrganizationDAO(BaseDAO):
             # Commit all changes in one go
             self.session.commit()
 
-            print(f"Organization '{org_name}' created successfully with 'Manager' role for {subject_username}.")
+            print(f"Organization '{org_name}' created successfully with 'Manager' (id: {manager_role.id}) role for {subject_username}.")
             
             return new_org
         except IntegrityError:
@@ -248,21 +249,23 @@ class OrganizationDAO(BaseDAO):
             # Step 2: Generate creation date
             creation_date = datetime.now()
 
-            # Step 3: Create the Document entity
+            # Step 3: Create a file handle for the encrypted file
+            file_handle = f"{organization.name}/{creation_date.strftime('%Y%m%d%H%M%S')}_{name}.enc"
+            file_path = os.path.join("data", file_handle)
+
+            # Step 4: Store the encrypted data in a file
+            self._store_encrypted_data(file_path, encrypted_data)
+
+            # Step 5: Create the Document entity
             document = Document(
+                document_handle=str(uuid.uuid4()),
                 name=name,
                 create_date=creation_date,
+                file_handle=file_handle,
                 creator_username=creator.username,
                 org_name=organization.name
             )
             self.session.add(document)
-
-            # Step 4: Create a file handle for the encrypted file
-            file_name = f"{organization.name}/{document.file_handle}.enc"
-            file_path = os.path.join("data", file_name)
-
-            # Step 5: Store the encrypted data in a file
-            self._store_encrypted_data(file_path, encrypted_data)
             
             # Step 6: Create the DocumentACL and link it to the Manager role of the organization
             role_dao = RoleDAO(self.session)
