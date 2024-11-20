@@ -24,14 +24,21 @@ def load_session(data: dict, session_dao: SessionDAO, key_store_dao: KeyStoreDAO
             )
 
     # Decrypt data
-    session_key_id = session.key_id
-    session_key = base64.b64decode(key_store_dao.get_by_id(session_key_id).key)
+    session_key = base64.b64decode(session.key.key)
 
     decrypted_data = decrypt_payload(data, session_key[:32], session_key[32:])
     if decrypted_data is None:
         raise ValueError(
             encrypt_payload({
                     "error": f"Invalid session key"
+                }, session_key[:32], session_key[32:]
+            ), 403
+        )
+    
+    if (decrypted_data.get("counter") is None) or (decrypted_data.get("nonce") is None):
+        raise ValueError(
+            encrypt_payload({
+                    "error": f"No counter or nonce provided!"
                 }, session_key[:32], session_key[32:]
             ), 403
         )
@@ -44,7 +51,7 @@ def load_session(data: dict, session_dao: SessionDAO, key_store_dao: KeyStoreDAO
             ), 403
         )
 
-    print("reached here")
+
     if organization_name != session.organization_name:
         raise ValueError(
             encrypt_payload({
@@ -52,6 +59,5 @@ def load_session(data: dict, session_dao: SessionDAO, key_store_dao: KeyStoreDAO
                 }, session_key[:32], session_key[32:]
             ), 403
         )
-    print("reached here")
 
     return decrypted_data, session, session_key

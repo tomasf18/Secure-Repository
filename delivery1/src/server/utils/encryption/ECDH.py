@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 class ECDH:
     def generate_keys(self) -> bytes:
         self.private_key = ec.generate_private_key(
-            ec.SECP384R1()
+            ec.SECP521R1()
         )
         return self.private_key.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,

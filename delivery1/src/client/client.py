@@ -701,6 +701,7 @@ def rep_add_doc(session_file, document_name, file):
         sys.exit(ReturnCode.INPUT_ERROR)
         
     session_id = session_context['session_id']
+    session_key = base64.b64decode(session_context["session_key"])
     
     file_contents = read_file(file)
     if file_contents is None:
@@ -720,10 +721,13 @@ def rep_add_doc(session_file, document_name, file):
         "file": base64.b64encode(encrypted_file).decode('utf-8'),
         "alg": "AES256-CBC",
         "key": base64.b64encode(random_key).decode('utf-8'),
-        "iv": base64.b64encode(iv).decode('utf-8')
+        "iv": base64.b64encode(iv).decode('utf-8'),
+        "counter": session_context["counter"] + 1,
+        "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data,
+                                     sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error adding document")

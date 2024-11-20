@@ -34,10 +34,15 @@ def create_session(data, db_session: SQLAlchemySession):
     client_session_pub_key = msgData.get("public_key")
     org_name = msgData.get('organization')
     username = msgData.get('username')
-    client = organization_dao.get_org_subj_association(
-        org_name=org_name,
-        username=username
-    )
+
+    try:
+        client = organization_dao.get_org_subj_association(
+            org_name=org_name,
+            username=username
+        )
+    except ValueError as e:
+        message = e.args[0]
+        return json.dumps({"error:": message}), 404
 
     if (client is None):
         # No user found
