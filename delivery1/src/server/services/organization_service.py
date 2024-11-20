@@ -282,3 +282,41 @@ def list_organization_documents(organization_name, data, username, date_filter, 
             "document_name": doc.name,
         })
     return json.dumps(serializable_documents), 200
+
+def get_organization_document_metadata(organization_name, document_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    document: "Document" = document_dao.get_metadata(session_id, document_name)
+    serializable_document = {
+        "document_name": document.name,
+        "create_date": document.create_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "file_handle": document.file_handle,
+        "creator_username": document.creator_username,
+        "deleter_username": document.deleter_username,
+        "organization": document.org_name,
+        "encryption_data": {
+            "algorithm": document.restricted_metadata.alg,
+            "mode": document.restricted_metadata.mode,
+            "key": base64.b64encode(document.restricted_metadata.key).decode(),
+            "iv": base64.b64encode(document.restricted_metadata.iv).decode()
+        }
+    }
+    return json.dumps(serializable_document), 200
+
+def get_organization_document_file(organization_name, document_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    file_handle = document_dao.get_doc_file_handle(session_id, document_name)
+    return json.dumps({"file_handle": file_handle}), 200
+
+def delete_organization_document(organization_name, document_name, data, db_session: Session):
+    '''Handles DELETE requests to /organizations/<organization_name>/documents/<document_name>'''
+    document_dao = DocumentDAO(db_session)
+    data = data.get("data")
+    session_id = data.get('session_id')
+    ceasing_file_handle = document_dao.delete(session_id, document_name)
+    return json.dumps(f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."), 200

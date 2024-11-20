@@ -747,9 +747,12 @@ def rep_get_doc_metadata(session_file, document_name):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
-    url = state['REP_ADDRESS'] + endpoint
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+    data = {
+        "session_id": session_context["session_id"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
     
     if result is None:
         logger.error("Error getting document metadata")
@@ -764,7 +767,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - This command is a combination of rep_get_doc_metadata with rep_get_file and rep_decrypt_file.
     - The file contents are written to stdout or to the file referred in the optional last argument.
     - This commands requires a DOC_READ permission
-    - Calls ... endpoint
+    - Calls GET /organizations/{organization_name}/documents/{document_name}/file endpoint
     """
     
     session_context = read_file(session_file)
@@ -772,10 +775,13 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
-    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
-    url = state['REP_ADDRESS'] + endpoint
+    endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}/file"
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+    data = {
+        "session_id": session_context["session_id"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
     
     if result is None:
         logger.error("Error getting document file")
@@ -804,9 +810,12 @@ def rep_delete_doc(session_file, document_name):
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = f"/organizations/{session_context['organization']}/documents/{document_name}"
-    url = state['REP_ADDRESS'] + endpoint
-    
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE)
+
+    data = {
+        "session_id": session_context["session_id"],
+    }
+        
+    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE, data=data)
     
     if result is None:
         logger.error("Error deleting document")
