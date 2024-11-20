@@ -308,12 +308,14 @@ def rep_get_file(file_handle, output_file=None):
     
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    file_contents = base64.b64decode(result['data'])
 
     if output_file is not None:
-        with open('./' + output_file, "w") as file:
-            file.write(result)
+        with open('./' + output_file, "wb") as file:
+            file.write(file_contents)
     else:
-        print(result)
+        print(file_contents)
 
     sys.exit(ReturnCode.SUCCESS)
 
@@ -446,7 +448,7 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     have currently a session, possibly filtered by a subject that created 
     them and by a date (newer than, older than, equal to), expressed in the 
     DD-MM-YYYY format.
-    - Calls GET /organizations/{organization_name}/documents?subject={subject}&date={date} endpoint
+    - Calls GET /organizations/{organization_name}/documents?subject={subject}&date_filter={date_filter}&date={date} endpoint
     """
     
     session_context = read_file(session_file)
@@ -465,10 +467,18 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     if params:
         endpoint += "?" + "&".join(params)
     
-    url = state['REP_ADDRESS'] + endpoint
-    print(url)
-    pass
-
+    data = {
+        "session_id": session_context["session_id"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data)
+    
+    if result is None:
+        logger.error("Error listing documents")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    print(result)
+    sys.exit(ReturnCode.SUCCESS)
 
 # ****************************************************
 # Authorized API Commands
@@ -674,7 +684,7 @@ def rep_add_doc(session_file, document_name, file):
         "session_id": session_id,
         "document_name": document_name,
         "file": base64.b64encode(encrypted_file).decode('utf-8'),
-        "alg": "AES256:CBC",
+        "alg": "AES256-CBC",
         "key": base64.b64encode(random_key).decode('utf-8'),
         "iv": base64.b64encode(iv).decode('utf-8')
     }
