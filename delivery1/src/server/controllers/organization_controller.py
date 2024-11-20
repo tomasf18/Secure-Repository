@@ -50,3 +50,19 @@ def organization_documents(organization_name):
     elif request.method == 'POST':
         data = request.json
         return create_organization_document(organization_name, data, db_session)
+    
+@organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>', methods=['GET', 'DELETE'])
+def organization_document(organization_name, document_name):
+    db_session = g.db_session
+    if request.method == 'GET':
+        data = request.json
+        return get_organization_document_metadata(organization_name, document_name, data, db_session)
+    elif request.method == 'DELETE':
+        data = request.json
+        return delete_organization_document(organization_name, document_name, data, db_session)
+    
+@organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>/file', methods=['GET'])
+def organization_document_file(organization_name, document_name):
+    db_session = g.db_session
+    data = request.json
+    return get_organization_document_file(organization_name, document_name, data, db_session)

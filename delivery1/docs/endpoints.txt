@@ -50,6 +50,9 @@
                 (GET) - Get document Metadata [Authorized API]
                 (DELETE) - Delete a document [Authorized API]
 
+                /file
+                (GET) - Get fileof a document [Authorized API]
+
                 /ACL
                     (PUT) - Update document ACL [Authorized API]
                     (DELETE) - Update document ACL [Authorized API]
