@@ -9,7 +9,7 @@ from dao.OrganizationDAO import OrganizationDAO
 from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
 from models.orm import Session
-from utils.keyExchange import exchangeKeys
+from server.utils.utils import exchange_keys
 from utils.signing import verify_doc_sign, sign_document
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -55,7 +55,7 @@ def create_session(data, db_session: SQLAlchemySession):
     ## Derive session key
     sessionKey: bytes
     public_key: bytes
-    sessionKey, public_key = exchangeKeys(
+    sessionKey, public_key = exchange_keys(
         client_session_key=base64.b64decode(client_session_pub_key),
     )
 
@@ -63,8 +63,9 @@ def create_session(data, db_session: SQLAlchemySession):
     ## Create session
     # TODO: Encrypt sessionKey 
     encryptedSessionKey = sessionKey
+    nonce = secrets.token_hex(16)
     try:
-        session = session_dao.create(username, org_name, encryptedSessionKey)
+        session = session_dao.create(username, org_name, encryptedSessionKey) #, nonce, counter=0) TODO: descomentar
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), 400
 
@@ -75,14 +76,14 @@ def create_session(data, db_session: SQLAlchemySession):
         "username": session.subject_username,
         "organization": session.organization_name,
         "roles": [role.name for role in session.session_roles],
-        "public_key": base64.b64encode(public_key).decode('utf-8'),   
+        "public_key": base64.b64encode(public_key).decode('utf-8'),
+        "nonce": nonce,
     }
     ## Sign response
     signature = sign_document(
         data = str(result),
         private_key = rep_priv_key,
     )
-
 
     ## Finish response packet
     result = json.dumps({

@@ -29,11 +29,11 @@ class ApiConsumer:
         self.rep_address = rep_address
 
 
-    def send_request(self, endpoint: str, method: str, data=None, sessionKey: bytes = None):
+    def send_request(self, endpoint: str, method: str, data=None, sessionKey: bytes = None, sessionId: int = None):
         '''Function to send a request to the server'''
         try:
             receivedMessage = None
-            if False: #sessionKey:
+            if sessionKey:
                 messageKey, MACKey = sessionKey[:32], sessionKey[32:]
 
                 logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with data= \"{data}\"")
@@ -44,6 +44,7 @@ class ApiConsumer:
                     messageKey = messageKey,
                     MACKey = MACKey
                 )
+                body["session_id"] = sessionId
 
                 logging.debug(f"Encrypted payload = {body}")
                 ## Send Encrypted Payload

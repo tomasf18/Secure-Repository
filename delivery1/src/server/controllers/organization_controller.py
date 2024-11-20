@@ -16,8 +16,15 @@ def organizations():
 @organization_blueprint.route('/organizations/<organization_name>/subjects', methods=['GET', 'POST'])
 def organization_subjects(organization_name):
     db_session = g.db_session
+    data = request.json
     if request.method == 'GET':
+<<<<<<< Updated upstream
         return list_organization_subjects(organization_name, db_session)
+=======
+        return list_organization_subjects(organization_name, data, db_session)
+    elif request.method == 'POST':
+        return add_organization_subject(organization_name, data, db_session)
+>>>>>>> Stashed changes
 
 @organization_blueprint.route('/organizations/<organization_name>/subjects/<username>', methods=['GET', 'PUT', 'DELETE'])
 def organization_subject(organization_name, username):

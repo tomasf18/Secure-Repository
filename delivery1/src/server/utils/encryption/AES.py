@@ -1,18 +1,14 @@
 import os
-from enum import Enum
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 
 
-class AESModes(Enum):
+class AESModes:
     ECB = modes.ECB
     CBC = modes.CBC
     GCM = modes.GCM
 
-    @property
-    def mode(self):
-        return self.value()
-
+## TODO: Atualizar conforme client AES.py
 
 class AES:
     def __init__(self, mode: AESModes = AESModes.CBC):
@@ -24,13 +20,13 @@ class AES:
         :param key: key to encrypt data
         :return (encrypted_data, iv):
         """
-        iv = os.urandom(32)
+        iv = os.urandom(16)
         cipher = Cipher(algorithms.AES256(key), self.mode(iv))
 
         encryptor = cipher.encryptor()
 
         padder = padding.PKCS7(algorithms.AES256.block_size).padder()
-        padded_data = padder.update(data)
+        padded_data = padder.update(data.encode())
         padded_data += padder.finalize()
 
         return (
@@ -45,7 +41,7 @@ class AES:
         padded_data = decryptor.update(encrypted_data) + decryptor.finalize() 
 
         unpadder = padding.PKCS7(algorithms.AES256.block_size).unpadder()
-        return unpadder.update(padded_data) + unpadder.finalize()
+        return (unpadder.update(padded_data) + unpadder.finalize()).decode()
 
     def generate_random_key(self):
         return os.urandom(32)
