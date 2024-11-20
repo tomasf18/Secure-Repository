@@ -505,18 +505,22 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
-    credentials = read_file(credentials_file)
-    if credentials is None:
-        logger.error(f"Error reading credentials file: {credentials_file}")
+    try:
+        public_key = read_public_key(credentials_file)
+    except Exception as e:
+        logger.error(f"Error loading public key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
     endpoint = f"/organizations/{session_context['organization']}/subjects"
-    url = state['REP_ADDRESS'] + endpoint
     
     data = {
         "username": username,
         "name": name,
         "email": email,
+        "public_key": base64.b64encode(public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )).decode('utf-8')
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)

@@ -39,9 +39,6 @@ def create_organization(data, db_session: Session):
     
     return json.dumps(f'Organization {org_name} created successfully'), 201
 
-<<<<<<< Updated upstream
-def list_organization_subjects(organization_name, db_session: Session):
-=======
 def add_organization_subject(data, organization_name, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/subjects'''
     organization_dao = OrganizationDAO(db_session)
@@ -92,7 +89,6 @@ def add_organization_subject(data, organization_name, db_session: Session):
     return json.dumps(encrypted_result), 201
 
 def list_organization_subjects(organization_name, data, db_session: Session):
->>>>>>> Stashed changes
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session);
