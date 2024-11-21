@@ -837,7 +837,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     
 
     if result is None or result.get("error") is not None:
-        logger.error(f"Error getting document file: {result.get("error")}")
+        logger.error(f"Error getting document file: {result.get('error')}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     new_nonce = result["nonce"]

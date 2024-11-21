@@ -19,32 +19,32 @@
 
             /{subjectId}
                 (GET) - List Subject [Authenticated API]
-                (PUT) - Activate a subject: Update status do subject [Authenticated API]
-                (DELETE) - Suspend a subject: Update status do subject [Authenticated API]
+                (PUT) - Activate a subject: Update status do subject [Authorized API]
+                (DELETE) - Suspend a subject: Update status do subject [Authorized API]
 
                 /roles
                     (GET) -  Get Roles of subject [Authenticated API]
 
                     /{role}
-                        (PUT) - Add Role to Subject [Authenticated API]
-                        (DELETE) - Remove Role from Subject [Authenticated API]
+                        (PUT) - Add Role to Subject [Authorized API]
+                        (DELETE) - Remove Role from Subject [Authorized API]
 
         /roles
             (GET ?permission={permission}) - List Organization Roles (that have a Permission) [Authenticated API]
-            (POST) - Add a new Role [Authenticated API]
+            (POST) - Add a new Role [Authorized API]
 
             /{role}
-                (PUT) - Activate a Role [Authenticated API]
-                (DELETE) - Reactivate a Role [Authenticated API]
+                (PUT) - Activate a Role [Authorized API]
+                (DELETE) - Reactivate a Role [Authorized API]
 
                 /permissions
                     (GET) - Get Role Permission [Authenticated API]
-                    (PUT ?permission={permission}) - Add Permission to Role [Authenticated API]
-                    (DELETE ?permission={permission}) - Remove Permission from Role [Authenticated API]
+                    (PUT ?permission={permission}) - Add Permission to Role [Authorized API]
+                    (DELETE ?permission={permission}) - Remove Permission from Role [Authorized API]
 
         /documents
             (GET ?minDate={minDate} & maxDate={maxDate} & creator={subjectId} & (...)) - Query Organization Documents [Authenticated API]
-            (POST) - Add a Document [Authenticated API]
+            (POST) - Add a Document [Authorized API]
 
             /{document_name}
                 (GET) - Get document Metadata [Authorized API]
