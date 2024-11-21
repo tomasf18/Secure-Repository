@@ -1,0 +1,5 @@
+venv
+.venv
+__pycache__
+src/server/dao/database
+project.log

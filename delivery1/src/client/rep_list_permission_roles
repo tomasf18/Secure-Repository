@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_list_permission_roles <session_file> <permission>
+python3 ./client.py --command rep_list_permission_roles $1 $2
