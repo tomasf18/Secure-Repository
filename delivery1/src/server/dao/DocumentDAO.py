@@ -100,6 +100,12 @@ class DocumentDAO(BaseDAO):
         # Clear file_handle
         ceasing_file_handle = document.file_handle
         document.file_handle = None
+        
+        # Assign deleter
+        session_dao = SessionDAO(self.session)
+        session = session_dao.get_by_id(sessionId)
+        document.deleter_username = session.username
+        
         self.session.commit()
 
         return ceasing_file_handle
