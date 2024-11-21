@@ -14,6 +14,9 @@ from utils.files import read_file, read_public_key, read_private_key
 from utils.encryption.ECC import ECC
 from utils.encryption.AES import AES, AESModes
 from cryptography.hazmat.primitives import serialization
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
@@ -189,7 +192,6 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     with the encryption metadata, that must contain the algorithms 
     used to encrypt its contents and the encryption key.
     """
-    
     with open(encrypted_file, "rb") as file:
         file_contents = file.read()
     
@@ -202,11 +204,12 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
         logger.error(f"Error reading metadata file: {encryption_metadata}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
+    print("\n\n", metadata)
     algorithm = metadata['algorithm']
     mode = metadata['mode']
     key = base64.b64decode(metadata['key'])
     iv = base64.b64decode(metadata['iv'])
-    
+
     if algorithm == "AES256" and mode == "CBC":
         aes = AES(AESModes.CBC)
         decrypted_file = aes.decrypt_data(file_contents, iv, key)
@@ -516,10 +519,12 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
+    
+    if result is None or result.get("error") is not None:
         logger.error("Error listing documents")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
+    saveContext(session_file, session_context, result)
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
@@ -760,7 +765,8 @@ def rep_add_doc(session_file, document_name, file):
     if result is None:
         logger.error("Error adding document")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
+
+    saveContext(session_file, session_context, result)
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
@@ -796,7 +802,8 @@ def rep_get_doc_metadata(session_file, document_name):
     if result is None:
         logger.error("Error getting document metadata")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
+
+    saveContext(session_file, session_context, result)
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
@@ -828,10 +835,19 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
+
+    if result is None or result.get("error") is not None:
+        logger.error(f"Error getting document file: {result.get("error")}")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    new_nonce = result["nonce"]
+    result = result["data"]
+    
     if result is None:
         logger.error("Error getting document file")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
+
     encryption_data = result["encryption_data"]
     file_handle = result["file_handle"]
     
@@ -855,6 +871,8 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     else:
         print(decrypted_file)
     
+    ## FIX corrigir o dicionario
+    saveContext(session_file, session_context, {"nonce": new_nonce})
     sys.exit(ReturnCode.SUCCESS)
 
 def rep_delete_doc(session_file, document_name):
@@ -885,10 +903,13 @@ def rep_delete_doc(session_file, document_name):
     result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
+
+    print("\n\n", result)
     if result is None:
         logger.error("Error deleting document")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
+    saveContext(session_file, session_context, result)
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 

@@ -52,14 +52,15 @@ class ApiConsumer:
                 response = requests.request(method, self.rep_address + endpoint, json=body)
                 logging.debug(f"Server Response = {response.json()}")
 
-                ## If sesssion found
-                if response.status_code not in [404, 405]:
+                try:
                     receivedMessage = self.decryptPayload(
                         response = response.json(),
                         messageKey = messageKey,
                         MACKey = MACKey
                     )
                     logging.debug(f"Decrypted Server Response = {receivedMessage}")
+                except Exception as e:
+                    logging.error(f"Error decrypting server response: {e}")
 
             else:
                 logging.debug("Sending request")
@@ -70,7 +71,8 @@ class ApiConsumer:
                 response = requests.request(method, self.rep_address + endpoint, json=body)
 
 
-            if response.status_code in [200, 201, 403]:
+            ## TODO: adicionar maneira de dar print error 404 (getOrganizationDocumentFile orgservices)
+            if response.status_code in [200, 201, 403, 404]:
                 return receivedMessage if receivedMessage else response.json()
             else:
                 print(f'\nError: {response.status_code} - {response.json()}\n')
