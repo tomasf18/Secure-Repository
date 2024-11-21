@@ -104,7 +104,7 @@ class DocumentDAO(BaseDAO):
         # Assign deleter
         session_dao = SessionDAO(self.session)
         session = session_dao.get_by_id(sessionId)
-        document.deleter_username = session.username
+        document.deleter_username = session.subject_username
         
         self.session.commit()
 
