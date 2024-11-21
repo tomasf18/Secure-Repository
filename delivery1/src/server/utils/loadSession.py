@@ -33,7 +33,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
                 }, session_key[:32], session_key[32:]
             ), 403
         )
-    
+
     if (decrypted_data.get("counter") is None) or (decrypted_data.get("nonce") is None):
         raise ValueError(
             encrypt_payload({
@@ -41,7 +41,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
                 }, session_key[:32], session_key[32:]
             ), 403
         )
-
+        
     if not verify_message_order(decrypted_data, counter=session.counter, nonce=session.nonce):
         raise ValueError(
             encrypt_payload({
@@ -49,7 +49,6 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
                 }, session_key[:32], session_key[32:]
             ), 403
         )
-
 
     if organization_name != session.organization_name:
         raise ValueError(

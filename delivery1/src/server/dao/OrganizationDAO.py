@@ -290,6 +290,7 @@ class OrganizationDAO(BaseDAO):
             # Step 7: Create the RestrictedMetadata entity
             algorithm, mode = alg.split("-")
             
+
             print("DECRYPTED METADATA KEY: ", key)
             encrypted_key, iv_encrypted_key = self.encrypt_metadata_key(key)
             encrypted_metadata_key = key_store_dao.create(encrypted_key, "symmetric")
@@ -301,7 +302,7 @@ class OrganizationDAO(BaseDAO):
                 mode=mode,
                 key_id=encrypted_metadata_key.id,
                 iv=iv,
-                iv_encrypted_key=base64.b64encode(iv_encrypted_key).decode('utf-8')
+                iv_encrypted_key=iv_encrypted_key
             )
             self.session.add(metadata)
 
@@ -361,7 +362,7 @@ class OrganizationDAO(BaseDAO):
         aes_key = self.derive_aes_key(repository_password)
         decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
 
-        return decrypted_key.decode()
+        return decrypted_key
 
 
     def get_encrypted_key(self, document_id: int) -> bytes:
@@ -382,7 +383,7 @@ class OrganizationDAO(BaseDAO):
         if not restricted_metadata:
             raise ValueError(f"Session with ID '{document_id}' does not exist.")
         encrypted_key = self.get_encrypted_key(document_id)
-        iv = base64.b64decode(restricted_metadata.iv_encrypted_key)
+        iv = restricted_metadata.iv_encrypted_key
         return self.decrypt_metadata_key(encrypted_key, iv)
 
 

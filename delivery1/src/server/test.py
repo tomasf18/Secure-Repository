@@ -13,6 +13,7 @@ def main():
     session = db.get_session()
     organization_dao = OrganizationDAO(session)
     session_dao = SessionDAO(session)
+    document_dao = DocumentDAO(session)
     
     org_name = "TestOrg"
     subject_username = "test_user"
@@ -39,6 +40,14 @@ def main():
 
     print("ENCR METAD KEY: ", organization_dao.get_encrypted_key(document.id).hex())
     print("DECR METAD IV: ", organization_dao.get_decrypted_key(document.id))
+    
+    
+    # Delete document
+    print("DELETING DOCUMENT")
+    document_dao.delete(new_session.id, doc_name)
+    
+    metadata = document_dao.get_metadata(new_session.id, doc_name)
+    print("METADATA: ", metadata.deleter)
 
 if __name__ == "__main__":
     main()

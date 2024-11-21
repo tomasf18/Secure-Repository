@@ -4,7 +4,7 @@ from dao.OrganizationDAO import OrganizationDAO, SessionDAO
 from dao.DocumentDAO import DocumentDAO
 # from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
-from utils.utils import decrypt_payload, encrypt_payload, verify_message_order
+from utils.utils import encrypt_payload
 from utils.loadSession import load_session
 from dao.DocumentDAO import DocumentDAO
 from models.orm import Organization, Subject, Document
@@ -64,9 +64,9 @@ def add_organization_subject(organization_name, data, db_session: Session):
         organization_dao.add_subject_to_organization(organization_name, username, name, email, public_key)
     except IntegrityError:
         return encrypt_payload({
-                    "error": f"Subject with username '{username}' already exists."
-                }, session_key[:32], session_key[32:]
-            ), 400
+                "error": f"Subject with username '{username}' already exists."
+            }, session_key[:32], session_key[32:]
+        ), 400
 
     ## Construct result
     result = {
@@ -108,9 +108,9 @@ def list_organization_subjects(organization_name, data, db_session: Session):
     except Exception as e:
         ## TODO: Fix error message
         return encrypt_payload({
-                    "error": str(e)
-                }, session_key[:32], session_key[32:]
-            ), 400
+                "error": str(e)
+            }, session_key[:32], session_key[32:]
+        ), 400
     
     ## Construct result
     result = {
@@ -176,9 +176,9 @@ def activate_organization_subject(organization_name, username, data, db_session:
         organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
     except Exception as e:
         return encrypt_payload({
-                    "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
-                }, session_key[:32], session_key[32:]
-            ), 403
+                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
+            }, session_key[:32], session_key[32:]
+        ), 403
     
     ## Construct result
     result = {
@@ -210,9 +210,9 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
         organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
     except Exception as e:
         return encrypt_payload({
-                    "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
-                }, session_key[:32], session_key[32:]
-            ), 403
+                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
+            }, session_key[:32], session_key[32:]
+        ), 403
     
     ## Construct result
     result = {
@@ -240,14 +240,14 @@ def create_organization_document(organization_name, data, db_session: Session):
     except ValueError as e:
         message, code = e.args
         return message, code
-
+    
     document_name = decrypted_data.get('document_name')
     encrypted_data = base64.b64decode(decrypted_data.get('file'))
     alg = decrypted_data.get('alg')
-    key = base64.b64decode(decrypted_data.get('key'))
-    iv = base64.b64decode(decrypted_data.get('iv'))
+    key = decrypted_data.get('key')
+    iv = decrypted_data.get('iv')
     
-    organization_dao.create_document(document_name, session.id, encrypted_data, alg, key.decode(), iv.decode())
+    organization_dao.create_document(document_name, session.id, encrypted_data, alg, key, iv)
 
     ## Construct result
     result = {
@@ -275,11 +275,13 @@ def list_organization_documents(organization_name, data, username, date_filter, 
         message, code = e.args
         return message, code
     
+
     documents: list["Document"] = document_dao.get(session.id, username, date_filter, date)
     if not documents:
         return encrypt_payload({
-            "error": "No documents found."
-        }), 404
+                "error": "No documents found."
+            }, session_key[:32], session_key[32:]
+        ), 404
 
     serializable_documents = []
     for doc in documents:
@@ -304,6 +306,7 @@ def list_organization_documents(organization_name, data, username, date_filter, 
 # =================================== Auxiliar Function =================================== #
 
 def get_serializable_document(document: "Document"):
+
     return {
         "document_name": document.name,
         "create_date": document.create_date.strftime("%Y-%m-%d %H:%M:%S"),
@@ -314,8 +317,8 @@ def get_serializable_document(document: "Document"):
         "encryption_data": {
             "algorithm": document.restricted_metadata.alg,
             "mode": document.restricted_metadata.mode,
-            "key": base64.b64encode(document.restricted_metadata.key).decode(),
-            "iv": base64.b64encode(document.restricted_metadata.iv).decode()
+            "key": None,
+            "iv": document.restricted_metadata.iv,
         }
     }
 
@@ -337,9 +340,9 @@ def get_organization_document_metadata(organization_name, document_name, data, d
         document: "Document" = document_dao.get_metadata(session.id, document_name)
     except Exception as e:
         return encrypt_payload({
-                    "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
-                }, session_key[:32], session_key[32:]
-            ), 404
+                "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
+            }, session_key[:32], session_key[32:]
+        ), 404
     
     serializable_document = get_serializable_document(document)
 
@@ -361,6 +364,7 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
 
     ## Get session
     try:
@@ -372,11 +376,16 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     document: "Document" = document_dao.get_metadata(session.id, document_name)
     if not document.file_handle:
         return encrypt_payload({
-            "error": f"Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
-        }), 404
+                "error": f"ERROR 404 - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
+            }, session_key[:32], session_key[32:]
+        ), 404
     
     serializable_document = get_serializable_document(document)
-    
+    serializable_document["encryption_data"]["key"] = organization_dao.decrypt_metadata_key(
+        document.restricted_metadata.key.key,
+        document.restricted_metadata.iv_encrypted_key
+    ).decode()
+
     ## Construct result
     result = {
         "nonce": secrets.token_hex(16),
@@ -408,8 +417,9 @@ def delete_organization_document(organization_name, document_name, data, db_sess
         ceasing_file_handle = document_dao.delete(session.id, document_name)
     except ValueError as e:
         return encrypt_payload({
-            "error": e.args[0]
-        }), 400
+                "error": e.args[0]
+            }, session_key[:32], session_key[32:]
+        ), 400
     
     ## Construct result
     result = {

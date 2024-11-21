@@ -90,6 +90,7 @@ def test_get_doc_metadata():
     ret = os.system(f'./rep_get_doc_metadata {session_file} {doc_name}')
     assert ret == 0
     output = subprocess.check_output(f'./rep_get_doc_metadata {session_file} {doc_name}', shell=True, text=True)
+    print("\n\nOUTPUT = ", output)
     assert "'document_name': 'doc1'" in output
     
 def test_get_doc_file():
