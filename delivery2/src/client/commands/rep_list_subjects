@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_list_subjects <session_file> [username]
+python3 ../client.py --command rep_list_subjects $1 $2

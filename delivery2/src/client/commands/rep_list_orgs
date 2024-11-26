@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_list_orgs - List all organizations calling the endpoint /organizations
+python3 ../client.py --command rep_list_orgs

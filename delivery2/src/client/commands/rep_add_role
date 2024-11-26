@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_add_role <session_file> <role>
+python3 ../client.py --command rep_add_role $1 $2

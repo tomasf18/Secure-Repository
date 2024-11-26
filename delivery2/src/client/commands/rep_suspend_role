@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_suspend_role <session_file> <role>
+python3 ../client.py --command rep_suspend_role $1 $2

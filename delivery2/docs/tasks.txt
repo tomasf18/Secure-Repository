@@ -1,0 +1,42 @@
+-> Classes:
+    - Document
+        - Metadata
+        - File
+    - ACL
+    - Organization
+    - Subject
+    - Session
+    - Role
+-> Database
+    - Setup SQLite
+    - Dockerize it   
+--- 
+-> Endpoints
+    - Upload a new document
+    - Download a document
+    - List Documents
+    - Delete a document
+    - Create organization
+    - List organizations
+    - Create session
+    - Download file
+-> Client - Implementation Guidelines
+    - Implement one console application (a command) for each API function.
+    - Each command that produces a useful persistent result (e.g. a session key upon a login, a file_handle and a file key upon getting a document metadata, etc.) should be able to save that into a state file, in order to be used by other commands.
+-> Commands
+    - Local commands
+        - rep_subject_credentials <password> <credentials file>
+        - rep_decrypt_file <encrypted file> <encryption metadata>
+    - Anonymous API
+        - rep_create_org <organization> <username> <name> <email> <public key file> (Create organization)
+        - rep_list_orgs (List organizations)
+        - rep_create_session <organization> <username> <password> <credentials file> <session file> (Create session)
+        - rep_get_file <file handle> [file] (then use rep_decrypt_file) (Download a document)
+---
+-> Security Guidelines
+    - The Repository must have a well-known public key that client applications can use for confidentiality and source authentication. 
+    - This key must be used to protect anonymous client-Repository interactions that require some security protection (not all of them require).
+    - The Repository should use some kind of master key, possibly derived from a password, to protect the confidentiality of file’s keys.
+
+
+

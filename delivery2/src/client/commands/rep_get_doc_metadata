@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_get_doc_metadata <session_file> <document_name>
+python3 ../client.py --command rep_get_doc_metadata $1 $2

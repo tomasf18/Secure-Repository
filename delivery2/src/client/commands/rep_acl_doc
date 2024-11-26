@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_acl_doc <session_file> <document_name> [+/-] <role> <permission>
+python3 ../client.py --command rep_acl_doc $1 $2 $3 $4 $5

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_suspend_subject <session_file> <username>
+python3 ../client.py --command rep_suspend_subject $1 $2

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_delete_doc <session_file> <document_name>
+python3 ../client.py --command rep_delete_doc $1 $2
