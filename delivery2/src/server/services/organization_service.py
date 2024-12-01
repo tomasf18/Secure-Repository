@@ -1,18 +1,19 @@
+import json
 import base64
 import secrets
-from dao.OrganizationDAO import OrganizationDAO
-from dao.DocumentDAO import DocumentDAO
+
 from dao.SessionDAO import SessionDAO
+from dao.DocumentDAO import DocumentDAO
+from dao.OrganizationDAO import OrganizationDAO
+
+from models.status import Status
+from models.database_orm import Organization, Subject, Document
 
 from utils.utils import encrypt_payload
 from utils.loadSession import load_session
-from dao.DocumentDAO import DocumentDAO
-from models.database_orm import Organization, Subject, Document
-from models.status import Status
-from sqlalchemy.exc import IntegrityError
+
 from sqlalchemy.orm import Session
-import json
-import base64
+from sqlalchemy.exc import IntegrityError
 
 
 def create_organization(data, db_session: Session):

@@ -5,8 +5,10 @@ import base64
 import logging
 import datetime
 import argparse
+
 from dotenv import load_dotenv
 from api.api_consumer import ApiConsumer
+
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES, AESModes
 from utils.constants.http_method import HTTPMethod

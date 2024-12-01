@@ -1,7 +1,4 @@
-import os
-import sys
 import json
-
 
 def read_file(file: str) -> str | None:
     with open(file, "r") as f:

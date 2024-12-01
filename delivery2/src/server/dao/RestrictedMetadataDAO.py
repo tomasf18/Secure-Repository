@@ -1,6 +1,6 @@
-from models.database_orm import RestrictedMetadata, Document
 from .BaseDAO import BaseDAO
 from sqlalchemy.exc import IntegrityError
+from models.database_orm import RestrictedMetadata, Document
 
 
 class RestrictedMetadataDAO(BaseDAO):

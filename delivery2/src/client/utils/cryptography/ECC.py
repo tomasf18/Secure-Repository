@@ -1,6 +1,7 @@
+from utils.file_operations import read_file
+
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
-from utils.file_operations import read_file
 
 class ECC:
     def __init__(self, curve=ec.SECP521R1()):

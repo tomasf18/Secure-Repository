@@ -1,11 +1,14 @@
+import base64
+
 from .BaseDAO import BaseDAO
 from .SubjectDAO import SubjectDAO
-from .OrganizationDAO import OrganizationDAO
 from .KeyStoreDAO import KeyStoreDAO
+from .OrganizationDAO import OrganizationDAO
+
 from models.database_orm import Session
-from sqlalchemy.exc import IntegrityError
+
 from sqlalchemy.orm import joinedload
-import base64
+from sqlalchemy.exc import IntegrityError
 
 class SessionDAO(BaseDAO):
     """DAO for managing Session entities."""

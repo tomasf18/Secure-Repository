@@ -1,5 +1,5 @@
-from models.database_orm import Subject
 from .BaseDAO import BaseDAO
+from models.database_orm import Subject
 from sqlalchemy.exc import IntegrityError
 
 class SubjectDAO(BaseDAO):

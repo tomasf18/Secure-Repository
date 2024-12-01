@@ -1,15 +1,17 @@
 import sys
 import json
 import base64
+import logging
 import requests
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from utils.constants.return_code import ReturnCode
-from utils.signing import sign_document, verify_doc_sign
-from utils.cryptography.ECDH import ECDH
+
 from utils.cryptography.AES import AES
+from utils.cryptography.ECDH import ECDH
+from utils.constants.return_code import ReturnCode
 from utils.digest import calculateDigest, verifyDigest
-import logging
+from utils.signing import sign_document, verify_doc_sign
 
 logging.basicConfig(
     filename='project.log',

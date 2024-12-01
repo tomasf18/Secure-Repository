@@ -1,5 +1,5 @@
-from models.database_orm import Role
 from .BaseDAO import BaseDAO
+from models.database_orm import Role
 from sqlalchemy.exc import IntegrityError
 
 class RoleDAO(BaseDAO):

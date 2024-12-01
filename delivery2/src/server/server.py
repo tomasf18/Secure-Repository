@@ -1,8 +1,10 @@
 from flask import Flask, g
+
+from dao.Database import Database
+
 from controllers.organization_controller import organization_blueprint
 from controllers.session_controller import session_blueprint
 from controllers.file_controller import file_blueprint
-from dao.Database import Database
 
 app = Flask(__name__)
 

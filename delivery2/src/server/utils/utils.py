@@ -1,12 +1,12 @@
-import base64
 import json
+import base64
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-
-from utils.cryptography.ECDH import ECDH
-from utils.cryptography.AES import AES
 from utils.cryptography.ECC import ECC
+from utils.cryptography.AES import AES
+from utils.cryptography.ECDH import ECDH
 from utils.digest import calculate_digest, verifyDigest
 from utils.signing import sign_document, verify_doc_sign
 

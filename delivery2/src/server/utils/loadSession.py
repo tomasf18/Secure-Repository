@@ -1,8 +1,10 @@
 import json
+import base64
+
 from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
+
 from utils.utils import encrypt_payload, decrypt_payload, verify_message_order
-import base64
 
 def load_session(data: dict, session_dao: SessionDAO, organization_name: str) -> tuple[dict, bytes]:
     """

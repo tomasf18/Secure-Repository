@@ -1,8 +1,9 @@
-from sqlalchemy import Column, ForeignKey, String, Table, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
-from sqlalchemy.orm import DeclarativeBase
 from models.status import Status
+
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Column, ForeignKey, String, Table, UniqueConstraint
 
 class Base(DeclarativeBase):
     pass
