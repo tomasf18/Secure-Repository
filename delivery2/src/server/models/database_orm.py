@@ -50,6 +50,7 @@ class Repository(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     public_key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  
     private_key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  
+    iv_encrypted_private_key: Mapped[str] = mapped_column(nullable=False)
     
     # Relationships
     public_key: Mapped["KeyStore"] = relationship(foreign_keys=[public_key_id])

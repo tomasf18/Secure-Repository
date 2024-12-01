@@ -3,7 +3,6 @@ import secrets
 from dao.OrganizationDAO import OrganizationDAO, SessionDAO
 from dao.DocumentDAO import DocumentDAO
 # from dao.SessionDAO import SessionDAO
-from dao.KeyStoreDAO import KeyStoreDAO
 from utils.utils import encrypt_payload
 from utils.loadSession import load_session
 from dao.DocumentDAO import DocumentDAO
@@ -13,6 +12,25 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import json
 import base64
+
+
+def create_organization(data, db_session: Session):
+    '''Handles POST requests to /organizations'''
+    
+    organization_dao = OrganizationDAO(db_session)
+    data = data.get("data")
+    org_name: str = data.get('organization')
+    username: str = data.get('username')
+    name: str = data.get('name')
+    email: str = data.get('email')
+    public_key: str = base64.b64decode(data.get('public_key')).decode()
+
+    try:
+        organization_dao.create(org_name, username, name, email, public_key)
+    except IntegrityError:
+        return json.dumps(f"Organization with name '{org_name}' already exists."), 400
+    
+    return json.dumps(f'Organization {org_name} created successfully'), 201
 
 def list_organizations(db_session: Session):
     '''Handles GET requests to /organizations'''
@@ -24,24 +42,6 @@ def list_organizations(db_session: Session):
             "name": org.name
         })
     return json.dumps(serializable_organizations), 200
-
-def create_organization(data, db_session: Session):
-    '''Handles POST requests to /organizations'''
-    organization_dao = OrganizationDAO(db_session)
-    data = data.get("data")
-    org_name = data.get('organization')
-    username = data.get('username')
-    name = data.get('name')
-    email = data.get('email')
-    public_key: bytes = base64.b64decode(data.get('public_key'))
-
-    try:
-        organization_dao.create(org_name, username, name, email, public_key)
-    except IntegrityError:
-        return json.dumps(f"Organization with name '{org_name}' already exists."), 400
-    
-    
-    return json.dumps(f'Organization {org_name} created successfully'), 201
 
 def add_organization_subject(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/subjects'''

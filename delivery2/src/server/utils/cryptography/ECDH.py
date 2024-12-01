@@ -7,13 +7,23 @@ from cryptography.hazmat.primitives import serialization
 # Generate a private key for use in the exchange.
 class ECDH:
     def generate_keys(self) -> bytes:
+        """ Generates a private key and returns the public key
+
+        Returns:
+            bytes: public key in PEM format
+        """
+        
         self.private_key = ec.generate_private_key(
             ec.SECP521R1()
         )
-        return self.private_key.public_key().public_bytes(
+        
+        public_key = self.private_key.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
+        
+        return public_key
+        
 
     def generate_shared_secret(self, peer_public_key: bytes):
         """ Returns derived key """

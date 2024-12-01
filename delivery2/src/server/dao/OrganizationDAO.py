@@ -1,26 +1,26 @@
+import os
+import base64
 import hashlib
-import secrets
+
+from datetime import datetime
+from dotenv import load_dotenv
+
 from .BaseDAO import BaseDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
 from .RoleDAO import RoleDAO
 from .OrganizationACLDAO import OrganizationACLDAO
+from .DocumentDAO import DocumentDAO
+from .RestrictedMetadataDAO import RestrictedMetadataDAO
+
 from server.models.database_orm import Organization, Subject, OrganizationSubjects, Permission, Role, KeyStore, Session, DocumentACL
+from server.models.database_orm import Document, RestrictedMetadata
+
+from server.utils.file_operations import write_file
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from server.models.database_orm import Document, RestrictedMetadata
-from datetime import datetime
-import os
 
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives import hashes
-import base64
-from ..utils.cryptography import Cryptography
-
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -247,6 +247,8 @@ class OrganizationDAO(BaseDAO):
             # Step 1: Obtain the session details
             session_dao = SessionDAO(self.session)
             key_store_dao = KeyStoreDAO(self.session)
+            document_dao = DocumentDAO(self.session)
+            restricted_metadata_dao = RestrictedMetadataDAO(self.session)
             session = session_dao.get_by_id(session_id)
             creator = session.subject
             organization = session.organization
@@ -257,25 +259,17 @@ class OrganizationDAO(BaseDAO):
             # Step 2: Generate creation date
             creation_date = datetime.now()
 
-            # Step 3: Generate a digest for the encrypted data
-            digest = hashlib.sha256(encrypted_data).hexdigest()
-            document_handle = digest
-            file_handle = f"{organization.name}_{digest}"
+            # Step 3: Generate the document handle and file handle
+            data_digest = hashlib.sha256(encrypted_data).hexdigest()
+            document_handle = data_digest
+            file_handle = f"{organization.name}_{data_digest}"
             file_path = os.path.join("data", organization.name, file_handle)
 
-            # Step 4: Encrypt the data and store it in a file
-            self._store_encrypted_data(file_path, encrypted_data)
+            # Step 4: Store the data of the encrypted document file in a system file
+            write_file(file_path, encrypted_data)
 
             # Step 5: Create the Document entity
-            document = Document(
-                document_handle=document_handle,
-                name=name,
-                create_date=creation_date,
-                file_handle=file_handle,
-                creator_username=creator.username,
-                org_name=organization.name
-            )
-            self.session.add(document)
+            document = document_dao.create(document_handle, name, creation_date, file_handle, creator.username, organization.name)
 
             # Step 6: Create the DocumentACL and link it to the Manager role of the organization
             role_dao = RoleDAO(self.session)
@@ -290,21 +284,18 @@ class OrganizationDAO(BaseDAO):
             # Step 7: Create the RestrictedMetadata entity
             algorithm, mode = alg.split("-")
             
-
             print("DECRYPTED METADATA KEY: ", key)
-            encrypted_key, iv_encrypted_key = self.encrypt_metadata_key(key)
-            encrypted_metadata_key = key_store_dao.create(encrypted_key, "symmetric")
-            print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key.hex())
-    
-            metadata = RestrictedMetadata(
-                document=document,
-                alg=algorithm,
-                mode=mode,
-                key_id=encrypted_metadata_key.id,
-                iv=iv,
-                iv_encrypted_key=iv_encrypted_key
+            encrypted_metadata_key, iv_encrypted_key = key_store_dao.create(key, "symmetric")
+            print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key)
+
+            metadata = restricted_metadata_dao.create(
+                document=document, 
+                algorithm=algorithm, 
+                mode=mode, 
+                encrypted_metadata_key_id=encrypted_metadata_key.id,    # Store the key encrypted (used to encrypt the document file)
+                iv=iv,                                                  # Store the IV used to encrypt the document file
+                iv_encrypted_key=iv_encrypted_key                       # Store the IV used to encrypt the metadata key
             )
-            self.session.add(metadata)
 
             # Commit all changes
             self.session.commit()
@@ -316,56 +307,8 @@ class OrganizationDAO(BaseDAO):
             self.session.rollback()
             raise ValueError("Error while creating the document or its associated entities.")
 
-    def _store_encrypted_data(self, file_path: str, data: bytes):
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        # Write the encrypted data to the file
-        with open(file_path, "wb") as f:
-            f.write(data)
-    
-    
-    def encrypt_metadata_key(self, metadata_key: str) -> bytes:
-        """
-        Encrypt the metadata key using AES256 with a derived key from the repository password.
-        """
-        # Generate a random IV
-        iv = os.urandom(16)
-        
-        # Derive AES key from the repository password
-        repository_password = os.getenv("REPOSITORY_PASSWORD")
-        aes_key = self.derive_aes_key(repository_password)
-
-        encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(metadata_key.encode(), iv, aes_key)
-
-        return encrypted_key, iv
-
-
-    def derive_aes_key(self, password: str) -> bytes:
-        """
-        Derive a secure AES key from the repository password using PBKDF2.
-        """
-        # Generate a salt (e.g., from a secure source)
-        salt = 'salt'.encode()
-
-        # Use PBKDF2 to derive the AES key
-        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
-        return kdf.derive(password.encode())
-
-
-    def decrypt_metadata_key(self, encrypted_key: bytes, iv: bytes) -> str:
-        """
-        Decrypt the metadata key using AES256 with a derived key from the repository password.
-        """
-        # Derive AES key from the repository password
-        repository_password = os.getenv("REPOSITORY_PASSWORD")
-        aes_key = self.derive_aes_key(repository_password)
-        decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
-
-        return decrypted_key
-
-
-    def get_encrypted_key(self, document_id: int) -> bytes:
+    def get_encrypted_metadata_key(self, document_id: int) -> bytes:
         """
         Retrieve the encrypted restricted_metadata key.
         """
@@ -375,14 +318,14 @@ class OrganizationDAO(BaseDAO):
         return restricted_metadata.key.key
     
     
-    def get_decrypted_key(self, document_id: int) -> str:
+    def get_decrypted_metadata_key(self, document_id: int) -> str:
         """
         Retrieve the decrypted restricted_metadata key. 
         """
         restricted_metadata = self.session.query(RestrictedMetadata).filter_by(document_id=document_id).first()
         if not restricted_metadata:
             raise ValueError(f"Session with ID '{document_id}' does not exist.")
-        encrypted_key = self.get_encrypted_key(document_id)
+        encrypted_key = self.get_encrypted_metadata_key(document_id)
         iv = restricted_metadata.iv_encrypted_key
         return self.decrypt_metadata_key(encrypted_key, iv)
 
@@ -455,45 +398,45 @@ class SessionDAO(BaseDAO):
         return session.key_iv
         
         
-    def encrypt_session_key(self, session_key: str | bytes) -> bytes:
-        """
-        Encrypt the session key using AES256 with a derived key from the repository password.
-        """
-        # Generate a random IV
-        iv = os.urandom(16)
+    # def encrypt_session_key(self, session_key: str | bytes) -> bytes:
+    #     """
+    #     Encrypt the session key using AES256 with a derived key from the repository password.
+    #     """
+    #     # Generate a random IV
+    #     iv = os.urandom(16)
         
-        # Derive AES key from the repository password
-        repository_password = os.getenv("REPOSITORY_PASSWORD")
-        aes_key = self.derive_aes_key(repository_password)
+    #     # Derive AES key from the repository password
+    #     repository_password = os.getenv("REPOSITORY_PASSWORD")
+    #     aes_key = self.derive_aes_key(repository_password)
 
-        session_key = session_key.encode() if isinstance(session_key, str) else session_key
-        encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key, iv, aes_key)
+    #     session_key = session_key.encode() if isinstance(session_key, str) else session_key
+    #     encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key, iv, aes_key)
 
-        return encrypted_key, iv
-
-
-    def derive_aes_key(self, password: str) -> bytes:
-        """
-        Derive a secure AES key from the repository password using PBKDF2.
-        """
-        # Generate a salt (e.g., from a secure source)
-        salt = 'salt'.encode()
-
-        # Use PBKDF2 to derive the AES key
-        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
-        return kdf.derive(password.encode())
+    #     return encrypted_key, iv
 
 
-    def decrypt_session_key(self, encrypted_key: bytes, iv: bytes) -> bytes:
-        """
-        Decrypt the session key using AES256 with a derived key from the repository password.
-        """
-        # Derive AES key from the repository password
-        repository_password = os.getenv("REPOSITORY_PASSWORD")
-        aes_key = self.derive_aes_key(repository_password)
-        decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
+    # def derive_aes_key(self, password: str) -> bytes:
+    #     """
+    #     Derive a secure AES key from the repository password using PBKDF2.
+    #     """
+    #     # Generate a salt (e.g., from a secure source)
+    #     salt = 'salt'.encode()
 
-        return decrypted_key
+    #     # Use PBKDF2 to derive the AES key
+    #     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
+    #     return kdf.derive(password.encode())
+
+
+    # def decrypt_session_key(self, encrypted_key: bytes, iv: bytes) -> bytes:
+    #     """
+    #     Decrypt the session key using AES256 with a derived key from the repository password.
+    #     """
+    #     # Derive AES key from the repository password
+    #     repository_password = os.getenv("REPOSITORY_PASSWORD")
+    #     aes_key = self.derive_aes_key(repository_password)
+    #     decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
+
+    #     return decrypted_key
 
 
     def get_by_id(self, session_id: int) -> Session:

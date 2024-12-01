@@ -6,13 +6,13 @@ import logging
 import datetime
 import argparse
 from dotenv import load_dotenv
-
+from api.api_consumer import ApiConsumer
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES, AESModes
-from api.api_consumer import ApiConsumer
-from utils.constants.httpMethod import httpMethod
+from utils.constants.http_method import HTTPMethod
 from utils.constants.return_code import ReturnCode
-from utils.files import read_file, read_public_key, read_private_key
+from utils.cryptography.ECC import ECC
+from utils.file_operations import read_file
 
 from cryptography.hazmat.primitives import serialization
 
@@ -22,7 +22,6 @@ load_dotenv()
 
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 def load_state():
     state = {}
@@ -53,9 +52,9 @@ def parse_env(state):
     if 'REP_PUB_KEY' in os.environ:
         rep_pub_key = os.getenv('REP_PUB_KEY')
     else:
-        rep_pub_key = "./rep_pub_key.pem"
-    
-    logger.debug('Loading REP_PUB_KEY fron: ' + rep_pub_key)
+        rep_pub_key = "../keys/rep_pub_key.pem"
+
+    logger.debug('Loading REP_PUB_KEY from: ' + rep_pub_key)
     
     if os.path.exists(rep_pub_key):
         with open(rep_pub_key, 'r') as f:
@@ -158,6 +157,7 @@ apiConsumer = ApiConsumer(
     rep_pub_key = state["REP_PUB_KEY"],
     rep_address = state["REP_ADDRESS"]
 )
+# --------------------------------------------------------------------------- #
 
 
 # ****************************************************
@@ -180,24 +180,33 @@ def rep_subject_credentials(password, credentials_file):
     the public key in a file for verification (e.g. if using ECC).
     """
     
-    keys_dir = "./keys"
-    
+    client_pub_key_path = os.getenv("CLIENT_PUB_KEY_PATH")
+    client_priv_key_path = os.getenv("CLIENT_PRIV_KEY_PATH")
+
     try:
-        ecc = ECC()
-        
-        # Generate the key pair
+
+        ecc = ECC() 
         private_key, public_key = ecc.generate_keypair(password)
-        
-        # Save both keys in the credentials file
-        with open(credentials_file, "wb") as priv, open("pub_"+credentials_file, "wb") as pub:
+
+        # Save private key
+        private_key_path = client_priv_key_path + f"{credentials_file}.pem"
+        with open(private_key_path, "wb") as priv:
             priv.write(private_key)
+            logger.info(f"Saved private key to {private_key_path}")
+
+        # Save public key
+        public_key_path = client_pub_key_path + f"{credentials_file}.pub"
+        with open(public_key_path, "wb") as pub:
             pub.write(public_key)
-        
-        logger.info(f"Key pair generated and saved public key to {credentials_file}")
+            logger.info(f"Saved public key to {public_key_path}")
+
+        logger.info("Key pair successfully generated and saved.")
         sys.exit(ReturnCode.SUCCESS)
+
     except Exception as e:
         logger.error(f"Error generating key pair: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
+
 
 def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     """
@@ -208,6 +217,7 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     with the encryption metadata, that must contain the algorithms 
     used to encrypt its contents and the encryption key.
     """
+    
     with open(encrypted_file, "rb") as file:
         file_contents = file.read()
     
@@ -226,9 +236,14 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     key = base64.b64decode(metadata['key'])
     iv = base64.b64decode(metadata['iv'])
 
-    if algorithm == "AES256" and mode == "CBC":
-        aes = AES(AESModes.CBC)
-        decrypted_file = aes.decrypt_data(file_contents, iv, key)
+    if algorithm == "AES256":
+        if mode == "CBC":
+            aes = AES(AESModes.CBC)
+            decrypted_file = aes.decrypt_data(encrypted_data=file_contents, key=key, iv=iv)
+        # elif mode == "GCM":
+        #     aes = AES(AESModes.GCM)
+        #     nonce = base64.b64decode(metadata['nonce'])
+        #     decrypted_file = aes.decrypt_data(encrypted_data=file_contents, key=key, nonce=nonce)
     
     if exiting:
         print(decrypted_file.decode())
@@ -245,17 +260,23 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
 # ****************************************************
 
 
-def rep_create_org(org, username, name, email, pubkey_file):
+def rep_create_org(org, username, name, email, pub_key_file):
     """
-    rep_create_org <org> <username> <name> <email> <pubkey_file> 
+    rep_create_org <org> <username> <name> <email> <pub_key_file> 
     - This command creates an organization in a Repository and defines 
     its first subject.
     - Calls POST /organizations endpoint
     """
-        
-    pubKey = read_public_key(pubkey_file)
-    if pubKey is None:
-        logger.error(f"Error reading public key file: {pubkey_file}")
+
+    client_pub_key_path = os.getenv("CLIENT_PUB_KEY_PATH") + f"{pub_key_file}.pub"
+    pub_key = ECC.read_public_key(client_pub_key_path)
+    pub_key_str = base64.b64encode(pub_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )).decode('utf-8')
+    
+    if pub_key is None:
+        logger.error(f"Error reading public key file: {pub_key_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     endpoint = "/organizations"
@@ -265,13 +286,10 @@ def rep_create_org(org, username, name, email, pubkey_file):
         "username": username,
         "name": name,
         "email": email,
-        "public_key": base64.b64encode(pubKey.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )).decode('utf-8')
+        "public_key": pub_key_str
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.POST, data=data)
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data)
     
     if result is None:
         logger.error("Error creating organization")
@@ -279,6 +297,7 @@ def rep_create_org(org, username, name, email, pubkey_file):
     
     print(result)
     sys.exit(ReturnCode.SUCCESS)
+
 
 def rep_list_org():
     """
@@ -289,7 +308,7 @@ def rep_list_org():
     
     endpoint = "/organizations"
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET)
     
     if result is None:
         logger.error("Error listing organizations")
@@ -306,7 +325,7 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     try:
-        private_key = read_private_key(credentials_file, password)
+        private_key = ECC.read_private_key(credentials_file, password)
         
     except Exception as e:
         logger.error(f"Error loading private key: {e}")
@@ -323,7 +342,7 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    # result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data)
+    # result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data)
     logging.debug(f"Session created with sessionId: {session_data['session_id']}, derivedKey: {derived_key}")
 
     with open(session_file, "w") as file:
@@ -351,7 +370,7 @@ def rep_get_file(file_handle, output_file=None, exiting=True):
     
     endpoint = f"/files/{file_handle}"
     
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET)
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET)
     
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
@@ -437,7 +456,7 @@ def rep_list_subjects(session_file, username=None):
         "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
 
     if result is None or result.get("error") is not None:
         print("Error: " + result["error"])
@@ -532,7 +551,7 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
         "nonce": session_context["nonce"],
     }
         
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
     
@@ -573,7 +592,7 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     session_key = base64.b64decode(session_context["session_key"])
     
     try:
-        public_key = read_public_key(credentials_file)
+        public_key = ECC.read_public_key(credentials_file)
     except Exception as e:
         logger.error(f"Error loading public key: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
@@ -594,7 +613,7 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     }
 
     
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.POST, data=data, 
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data, 
                                       sessionKey=session_key, sessionId=session_id)
     saveContext(session_file, session_context, result)
     
@@ -631,7 +650,7 @@ def rep_suspend_subject(session_file, username):
         "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.DELETE, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data,
                                     sessionId=session_id, sessionKey=session_key)
     
     if result is None:
@@ -667,7 +686,7 @@ def rep_activate_subject(session_file, username):
         "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.PUT, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data,
                                      sessionId=session_id, sessionKey=session_key)
     
     if result is None:
@@ -775,7 +794,7 @@ def rep_add_doc(session_file, document_name, file):
         "nonce": session_context["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.POST, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data,
                                      sessionId=session_id, sessionKey=session_key)
     
     if result is None:
@@ -812,7 +831,7 @@ def rep_get_doc_metadata(session_file, document_name):
     }
     
 
-    result = apiConsumer.send_request(endpoint=endpoint,  method=httpMethod.GET, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
     if result is None:
@@ -848,7 +867,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
         "nonce": session_context["nonce"],
     }
         
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.GET, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
 
@@ -916,7 +935,7 @@ def rep_delete_doc(session_file, document_name):
         "nonce": session_context["nonce"],
     }
         
-    result = apiConsumer.send_request(endpoint=endpoint, method=httpMethod.DELETE, data=data,
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data,
                                       sessionId=session_id, sessionKey=session_key)
     
 
@@ -978,8 +997,8 @@ elif args["command"] == "rep_decrypt_file":
     rep_decrypt_file(args["arg0"], args["arg1"])
     
 elif args["command"]  == "rep_create_org":
-    usage = "<org> <username> <name> <email> <pubkey_file>"
-    validate_args("rep_create_org", {"org": args["arg0"], "username": args["arg1"], "name": args["arg2"], "email": args["arg3"], "pubkey_file": args["arg4"]}, usage)
+    usage = "<org> <username> <name> <email> <pub_key_file>"
+    validate_args("rep_create_org", {"org": args["arg0"], "username": args["arg1"], "name": args["arg2"], "email": args["arg3"], "pub_key_file": args["arg4"]}, usage)
     rep_create_org(args["arg0"], args["arg1"], args["arg2"], args["arg3"], args["arg4"])
     
 elif args["command"] == "rep_list_orgs":

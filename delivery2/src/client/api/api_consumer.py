@@ -1,21 +1,19 @@
-import base64
-import json
-import os
 import sys
+import json
+import base64
 import requests
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from utils.constants.return_code import ReturnCode
 from utils.signing import sign_document, verify_doc_sign
-from utils.files import read_private_key, read_public_key
 from utils.cryptography.ECDH import ECDH
 from utils.cryptography.AES import AES
 from utils.digest import calculateDigest, verifyDigest
 import logging
 
 logging.basicConfig(
-    # filename='project.log',
-    # filemode='a',
+    filename='project.log',
+    filemode='a',
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.DEBUG
 )
@@ -33,17 +31,18 @@ class ApiConsumer:
     def send_request(self, endpoint: str, method: str, data=None, sessionKey: bytes = None, sessionId: int = None):
         '''Function to send a request to the server'''
         try:
-            receivedMessage = None
+            received_message = None
+            
             if sessionKey:
-                messageKey, MACKey = sessionKey[:32], sessionKey[32:]
+                message_key, mac_key = sessionKey[:32], sessionKey[32:]
 
                 logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with data= \"{data}\"")
 
                 ## Create and encrypt Payload
-                body = self.encryptPayload(
+                body = self.encrypt_payload(
                     data = data,
-                    messageKey = messageKey,
-                    MACKey = MACKey
+                    message_key = message_key,
+                    mac_key = mac_key
                 )
                 body["session_id"] = sessionId
 
@@ -53,12 +52,12 @@ class ApiConsumer:
                 logging.debug(f"Server Response = {response.json()}")
 
                 try:
-                    receivedMessage = self.decryptPayload(
+                    received_message = self.decrypt_payload(
                         response = response.json(),
-                        messageKey = messageKey,
-                        MACKey = MACKey
+                        message_key = message_key,
+                        mac_key = mac_key
                     )
-                    logging.debug(f"Decrypted Server Response = {receivedMessage}")
+                    logging.debug(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
                     logging.error(f"Error decrypting server response: {e}")
 
@@ -68,12 +67,13 @@ class ApiConsumer:
                     "data": data
                 }
                 logging.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
-                response = requests.request(method, self.rep_address + endpoint, json=body)
+                final_endpoint = self.rep_address + endpoint
+                response = requests.request(method, final_endpoint, json=body)
 
 
             ## TODO: adicionar maneira de dar print error 404 (getOrganizationDocumentFile orgservices)
             if response.status_code in [200, 201, 403, 404]:
-                return receivedMessage if receivedMessage else response.json()
+                return received_message if received_message else response.json()
             else:
                 print(f'\nError: {response.status_code} - {response.json()}\n')
 
@@ -81,13 +81,13 @@ class ApiConsumer:
             print(f'\nError: {e}\n')
     
 
-    def encryptPayload(self, data, messageKey, MACKey):
+    def encrypt_payload(self, data, message_key, mac_key):
         ## Encrypt data
         if isinstance(data, dict):
             data = json.dumps(data)
 
         encryptor = AES()
-        encryptedData, dataIv = encryptor.encrypt_data(data, messageKey)
+        encryptedData, dataIv = encryptor.encrypt_data(data, message_key)
 
         message = {
             "message": base64.b64encode(encryptedData).decode(),
@@ -95,7 +95,7 @@ class ApiConsumer:
         }
 
         digest = calculateDigest(encryptedData)
-        mac, macIv = encryptor.encrypt_data(digest, MACKey)
+        mac, macIv = encryptor.encrypt_data(digest, mac_key)
 
         body = {
             "data": message,
@@ -106,7 +106,7 @@ class ApiConsumer:
         }
         return body
     
-    def decryptPayload(self, response, messageKey, MACKey):
+    def decrypt_payload(self, response, message_key, mac_key):
         encryptor = AES()
         receivedData = response["data"]
         receivedMac = response["digest"]
@@ -115,7 +115,7 @@ class ApiConsumer:
         receivedDigest = encryptor.decrypt_data(
             base64.b64decode(receivedMac["mac"]),
             base64.b64decode(receivedMac["iv"]),
-            MACKey
+            mac_key
         )
 
         encryptedMessage = base64.b64decode(receivedData["message"])
@@ -124,16 +124,16 @@ class ApiConsumer:
             return None
 
         ## Decrypt data
-        receivedMessage = encryptor.decrypt_data(
+        received_message = encryptor.decrypt_data(
             encrypted_data = base64.b64decode(receivedData["message"]),
             iv = base64.b64decode(receivedData["iv"]),
-            key = messageKey
+            key = message_key
         )
 
-        return json.loads(receivedMessage.decode())
+        return json.loads(received_message.decode())
 
 
-    def exchangeKeys(self, private_key: ec.EllipticCurvePrivateKey, data: dict):
+    def exchange_keys(self, private_key: ec.EllipticCurvePrivateKey, data: dict):
         ### HANDSHAKE ###
         KeyDerivation = ECDH()
 

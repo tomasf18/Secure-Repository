@@ -3,10 +3,29 @@ from server.models.database_orm import Document
 from datetime import datetime
 from .BaseDAO import BaseDAO
 from .OrganizationDAO import SessionDAO
+from sqlalchemy.exc import IntegrityError
 
 
 class DocumentDAO(BaseDAO):
     """DAO for managing Document entities."""
+
+    def create(self, document_handle: str, name: str, creation_date: datetime, file_handle: str, creator_username: str, org_name: str) -> Document:
+        """ Create a new Document entry. """
+        try:
+            new_document = Document(
+                document_handle=document_handle,
+                name=name,
+                create_date=creation_date,
+                file_handle=file_handle,
+                creator_username=creator_username,
+                org_name=org_name
+            )
+            self.session.add(new_document)
+            self.session.commit()
+            return new_document
+        except IntegrityError:
+            self.session.rollback()
+            raise ValueError(f"Document '{name}' already exists.")
 
     def get(self, sessionId: int, creator_username: str = None, date_filter: str = None, date: datetime = None) -> list[Document]:
         """
@@ -64,20 +83,6 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Document '{document_name}' not found in organization '{organization_name}'.")
         
         return document
-    
-    # def get_doc_file_handle(self, sessionId: int, document_name: str) -> str:
-    #     """
-    #     Fetches the file handle for a document.
-
-    #     :param sessionId: ID of the session.
-    #     :param document_name: Name of the document.
-    #     :return: File handle.
-    #     :raises ValueError: If the document is not found.
-    #     """
-    #     document = self.get_metadata(sessionId, document_name)
-    #     if not document.file_handle:
-    #         raise ValueError(f"Document '{document_name}' does not have an associated file handle.")
-    #     return document.file_handle
     
     def delete(self, sessionId: int, document_name: str) -> str:
         """

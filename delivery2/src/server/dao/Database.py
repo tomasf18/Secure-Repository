@@ -51,7 +51,6 @@ class Database:
         self.close_session()
     
     def create_session(self):
-        
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.session = SessionLocal()
     
@@ -60,15 +59,15 @@ class Database:
     
     def initialize_repository(self):
         # Create a new repository with the keys
-        key_store_DAO = KeyStoreDAO(self.session)
+        key_store_dao = KeyStoreDAO(self.session)
         
-        private_key = open(os.getenv("REP_PRIV_KEY_FILE")).read() # Encrypted
+        private_key = open(os.getenv("REP_PRIV_KEY_FILE")).read()
         public_key = open(os.getenv("REP_PUB_KEY_FILE")).read()
         
-        rep_pub_key = key_store_DAO.create(public_key, "public")
-        rep_priv_key = key_store_DAO.create(private_key, "private")
+        rep_pub_key = key_store_dao.create(public_key, "public")
+        rep_encrypted_priv_key, iv = key_store_dao.create(private_key, "private")
 
-        repository = Repository(public_key_id=rep_pub_key.id, private_key_id=rep_priv_key.id)
+        repository = Repository(public_key_id=rep_pub_key.id, private_key_id=rep_encrypted_priv_key.id, iv_encrypted_private_key=iv)
         self.session.add(repository)
         self.session.commit()
         print("Added the repository keys.")
