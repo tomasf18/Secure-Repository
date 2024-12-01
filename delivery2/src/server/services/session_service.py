@@ -5,10 +5,9 @@ import json
 import secrets
 import os
 from dao.RepositoryDAO import RepositoryDAO
-from dao.OrganizationDAO import OrganizationDAO, SessionDAO 
-#from dao.SessionDAO import SessionDAO
+from dao.OrganizationDAO import OrganizationDAO
+from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
-from server.models.database_orm import Session
 from utils.utils import exchange_keys
 from utils.signing import verify_doc_sign, sign_document
 from cryptography.hazmat.primitives import serialization

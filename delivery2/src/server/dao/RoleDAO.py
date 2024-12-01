@@ -1,4 +1,4 @@
-from server.models.database_orm import Role
+from models.database_orm import Role
 from .BaseDAO import BaseDAO
 from sqlalchemy.exc import IntegrityError
 

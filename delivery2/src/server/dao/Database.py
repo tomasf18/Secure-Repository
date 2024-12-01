@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
-from server.models.database_orm import Base, Permission, Repository
+from models.database_orm import Base, Permission, Repository
 from dotenv import load_dotenv
 from .KeyStoreDAO import KeyStoreDAO
 import os
@@ -65,9 +65,9 @@ class Database:
         public_key = open(os.getenv("REP_PUB_KEY_FILE")).read()
         
         rep_pub_key = key_store_dao.create(public_key, "public")
-        rep_encrypted_priv_key, iv = key_store_dao.create(private_key, "private")
+        rep_encrypted_priv_key = key_store_dao.create(private_key, "repository_private") # Already encrypted by the password
 
-        repository = Repository(public_key_id=rep_pub_key.id, private_key_id=rep_encrypted_priv_key.id, iv_encrypted_private_key=iv)
+        repository = Repository(public_key_id=rep_pub_key.id, private_key_id=rep_encrypted_priv_key.id)
         self.session.add(repository)
         self.session.commit()
         print("Added the repository keys.")

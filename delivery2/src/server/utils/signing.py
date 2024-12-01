@@ -2,8 +2,8 @@ import base64
 import logging
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
-from utils.encryption.ECC import ECC
-from utils.encryption.AES import AES
+from utils.cryptography.ECC import ECC
+from utils.cryptography.AES import AES
 
 def sign_document(
         data: str, 

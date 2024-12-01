@@ -1,5 +1,5 @@
 from .ACLDAO import ACLDAO
-from server.models.database_orm import DocumentACL
+from models.database_orm import DocumentACL
 from sqlalchemy.exc import IntegrityError
 
 class DocumentACLDAO(ACLDAO):  

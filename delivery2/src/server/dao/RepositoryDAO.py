@@ -1,5 +1,5 @@
 from .BaseDAO import BaseDAO
-from server.models.database_orm import Repository
+from models.database_orm import Repository
 
 class RepositoryDAO(BaseDAO):
     """DAO for accessing Repository data."""

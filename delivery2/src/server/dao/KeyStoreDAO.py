@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 from .BaseDAO import BaseDAO
-from server.models.database_orm import KeyStore
-from server.utils.cryptography.AES import AES, AESModes
+from models.database_orm import KeyStore
+from utils.cryptography.AES import AES, AESModes
 from sqlalchemy.exc import IntegrityError
 
 load_dotenv()

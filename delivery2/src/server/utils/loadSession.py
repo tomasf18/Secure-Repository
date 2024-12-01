@@ -1,5 +1,5 @@
 import json
-from dao.OrganizationDAO import SessionDAO
+from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
 from utils.utils import encrypt_payload, decrypt_payload, verify_message_order
 import base64
