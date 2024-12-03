@@ -3,6 +3,7 @@ from services.organization_service import *
 
 organization_blueprint = Blueprint("organizations", __name__)
 
+# -------------------------------
 
 @organization_blueprint.route("/organizations", methods=["GET", "POST"])
 def organizations():
@@ -12,6 +13,8 @@ def organizations():
     if request.method == 'POST':
         data = request.json
         return create_organization(data, db_session)
+
+# -------------------------------
 
 @organization_blueprint.route('/organizations/<organization_name>/subjects', methods=['GET', 'POST'])
 def organization_subjects(organization_name):

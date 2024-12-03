@@ -6,25 +6,34 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
-from utils.cryptography.ECDH import ECDH
-from utils.digest import calculate_digest, verifyDigest
-from utils.signing import sign_document, verify_doc_sign
+from server.utils.cryptography.integrity import calculate_digest, verifyDigest
+from server.utils.cryptography.auth import sign_document, verify_doc_sign
 
-def exchange_keys(client_session_key: bytes) -> tuple[bytes, bytes]:
+# -------------------------------
+
+def exchange_keys(client_session_public_key: bytes) -> tuple[bytes, bytes]:
+    """Exchange keys with the client
+    Generates the shared secret (session key) from the client's public key
+
+    Args:
+        client_session_public_key (bytes): _description_
+
+    Returns:
+        tuple[bytes, bytes]: _description_
     """
-    :param client_key: Client known public key in order to verify signature
-    :return (sessionKey, public_key): session key and public key in order for client to derive session key
-    """
+    
     ### HANDSHAKE ###
-    KeyDerivation: ECDH = ECDH()
+    ecdh = ECC()
 
-    ## Generate random private key
-    public_key: bytes = KeyDerivation.generate_keys()
+    # Generate random Private Key and obtain Public Key
+    _, session_server_public_key = ecdh.generate_keypair()
 
-    ## Generate shared secred
-    sessionKey: bytes = KeyDerivation.generate_shared_secret(client_session_key)
+    # Generate shared secred
+    session_key: bytes = ecdh.generate_shared_secret(client_session_public_key)
+    
+    return session_key, session_server_public_key
 
-    return sessionKey, public_key
+# -------------------------------
 
 
 def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[str, dict]:
@@ -55,7 +64,7 @@ def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[
 
     body = {
         "data": message,
-        "digest": {
+        "signature": {
             "mac": base64.b64encode(mac).decode(),
             "iv": base64.b64encode(macIv).decode(),
         }
@@ -71,7 +80,7 @@ def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
     """
     encryptor = AES()
     receivedData = response["data"]
-    receivedMac = response["digest"]
+    receivedMac = response["signature"]
 
     ## Decrypt Digest
     receivedDigest = encryptor.decrypt_data(

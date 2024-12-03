@@ -9,12 +9,14 @@ from dao.OrganizationDAO import OrganizationDAO
 from models.status import Status
 from models.database_orm import Organization, Subject, Document
 
-from utils.utils import encrypt_payload
+from server.utils.session_utils import encrypt_payload
 from utils.loadSession import load_session
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
+
+# -------------------------------
 
 def create_organization(data, db_session: Session):
     '''Handles POST requests to /organizations'''
@@ -34,6 +36,8 @@ def create_organization(data, db_session: Session):
     
     return json.dumps(f'Organization {org_name} created successfully'), 201
 
+# -------------------------------
+
 def list_organizations(db_session: Session):
     '''Handles GET requests to /organizations'''
     organization_dao = OrganizationDAO(db_session)
@@ -44,6 +48,8 @@ def list_organizations(db_session: Session):
             "name": org.name
         })
     return json.dumps(serializable_organizations), 200
+
+# -------------------------------
 
 def add_organization_subject(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/subjects'''

@@ -16,6 +16,8 @@ load_dotenv()
 class OrganizationDAO(BaseDAO):
     """DAO for managing Organization entities."""
 
+# -------------------------------
+
     def create(self, org_name: str, subject_username: str, subject_full_name: str, subject_email: str, subject_pub_key: str) -> Organization:
         """Create a new organization with the subject as the creator and include their public key."""
         subject_dao = SubjectDAO(self.session)
@@ -68,6 +70,14 @@ class OrganizationDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise ValueError("Error while creating the organization or associating the subject and key.")
+
+# -------------------------------
+
+    def get_all(self) -> list["Organization"]:
+        """Retrieve all Organizations."""
+        return self.session.query(Organization).all()
+
+# -------------------------------
         
     def add_subject_with_key(self, org: Organization, subject: Subject, key: KeyStore):
         org.subjects.append(subject)
@@ -95,6 +105,7 @@ class OrganizationDAO(BaseDAO):
             print(f"Organization: {org_subject.org_name}, Subject: {org_subject.username}, Key: {org_subject.pub_key_id}")
         else:
             print(f"Error: Subject '{subject.username}' not found in the organization '{org.name}' after update.")
+
             
     
     def add_subject_to_organization(self, org_name: str, subject_username: str, subject_full_name: str, subject_email: str, subject_pub_key: str) -> Subject:
@@ -117,10 +128,6 @@ class OrganizationDAO(BaseDAO):
         if not organization:
             raise ValueError(f"Organization with name '{name}' not found.")
         return organization
-
-    def get_all(self) -> list["Organization"]:
-        """Retrieve all Organizations."""
-        return self.session.query(Organization).all()
     
     # ==================== Retrieve Subjects and their data associated with an Organization =================== #
     
@@ -175,61 +182,56 @@ class OrganizationDAO(BaseDAO):
         self.session.commit()
         
         
-    def verify_creation(self, org_name: str, subject_username: str, pub_key: str):
-        # Verify the organization exists
-        org = self.session.query(Organization).filter_by(name=org_name).first()
-        if not org:
-            print("Organization not found!")
-            return False
+    # def verify_creation(self, org_name: str, subject_username: str, pub_key: str):
+    #     # Verify the organization exists
+    #     org = self.session.query(Organization).filter_by(name=org_name).first()
+    #     if not org:
+    #         print("Organization not found!")
+    #         return False
         
-        # Verify the subject is associated with the organization
-        subject = self.session.query(Subject).filter_by(username=subject_username).first()
-        if not subject:
-            print("Subject not found!")
-            return False
+    #     # Verify the subject is associated with the organization
+    #     subject = self.session.query(Subject).filter_by(username=subject_username).first()
+    #     if not subject:
+    #         print("Subject not found!")
+    #         return False
 
-        org_subject = self.session.query(OrganizationSubjects).filter_by(
-            org_name=org_name, username=subject_username
-        ).first()
-        if not org_subject:
-            print("Subject is not associated with the organization!")
-            return False
+    #     org_subject = self.session.query(OrganizationSubjects).filter_by(
+    #         org_name=org_name, username=subject_username
+    #     ).first()
+    #     if not org_subject:
+    #         print("Subject is not associated with the organization!")
+    #         return False
 
-        # Verify the public key is associated with the subject
-        key_store = self.session.query(KeyStore).filter_by(id=org_subject.pub_key_id).first()
-        if not key_store or key_store.key != pub_key:
-            print("Public key not found or mismatch!")
-            return False
+    #     # Verify the public key is associated with the subject
+    #     key_store = self.session.query(KeyStore).filter_by(id=org_subject.pub_key_id).first()
+    #     if not key_store or key_store.key != pub_key:
+    #         print("Public key not found or mismatch!")
+    #         return False
 
-        # Verify the "Manager" role exists and the subject is assigned to it
-        role = self.session.query(Role).filter_by(name="Manager", acl_id=org.acl.id).first()
-        if not role:
-            print("Manager role not found!")
-            return False
+    #     # Verify the "Manager" role exists and the subject is assigned to it
+    #     role = self.session.query(Role).filter_by(name="Manager", acl_id=org.acl.id).first()
+    #     if not role:
+    #         print("Manager role not found!")
+    #         return False
 
-        if subject not in role.subjects:
-            print("Subject not added to Manager role!")
-            return False
+    #     if subject not in role.subjects:
+    #         print("Subject not added to Manager role!")
+    #         return False
 
-        # Verify permissions are assigned to the "Manager" role
-        permissions = self.session.query(Permission).filter(
-            Permission.name.in_([
-                "DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", 
-                "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", 
-                "ROLE_UP", "ROLE_MOD"
-            ])
-        ).all()
+    #     # Verify permissions are assigned to the "Manager" role
+    #     permissions = self.session.query(Permission).filter(
+    #         Permission.name.in_([
+    #             "DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", 
+    #             "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", 
+    #             "ROLE_UP", "ROLE_MOD"
+    #         ])
+    #     ).all()
 
-        for permission in permissions:
-            if permission not in role.permissions:
-                print(f"Permission '{permission.name}' not assigned to Manager role!")
-                return False
+    #     for permission in permissions:
+    #         if permission not in role.permissions:
+    #             print(f"Permission '{permission.name}' not assigned to Manager role!")
+    #             return False
 
-        print("Organization creation and verifications passed!")
-        return True
-    
-    
-    
-
-# ============================================================================================================= #
+    #     print("Organization creation and verifications passed!")
+    #     return True
 

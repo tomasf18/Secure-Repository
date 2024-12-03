@@ -13,6 +13,8 @@ from sqlalchemy.exc import IntegrityError
 class SessionDAO(BaseDAO):
     """DAO for managing Session entities."""
 
+# -------------------------------
+
     def create(self, subject_username: str, organization_name: str, key: str, counter: int, nonce: str) -> Session:
         """
         Create a new session and optionally associate roles with it.
@@ -55,7 +57,7 @@ class SessionDAO(BaseDAO):
             self.session.add(new_session)
             self.session.commit()
 
-            # Optionally load relationships if needed
+            # Load relationships 
             self.session.refresh(new_session, attribute_names=['subject', 'organization', 'session_roles'])
 
             return new_session
@@ -63,6 +65,8 @@ class SessionDAO(BaseDAO):
         except IntegrityError as e:
             self.session.rollback()
             raise IntegrityError("Failed to create session due to a database constraint violation.") from e
+
+# -------------------------------
         
         
     def get_iv(self, session_id: int) -> str:

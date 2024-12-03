@@ -209,7 +209,9 @@ def rep_subject_credentials(password, credentials_file):
         logger.error(f"Error generating key pair: {e}")
         sys.exit(ReturnCode.INPUT_ERROR)
 
+# -------------------------------
 
+#TODO
 def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     """
     rep_decrypt_file <encrypted_file> <encryption_metadata>
@@ -300,6 +302,7 @@ def rep_create_org(org, username, name, email, pub_key_file):
     print(result)
     sys.exit(ReturnCode.SUCCESS)
 
+# -------------------------------
 
 def rep_list_org():
     """
@@ -318,6 +321,8 @@ def rep_list_org():
 
     print(result)
     sys.exit(ReturnCode.SUCCESS)
+
+# -------------------------------
 
 def rep_create_session(org, username, password, credentials_file, session_file):
     """
@@ -338,18 +343,18 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         "username": username,
     }
 
-    derived_key, session_data = apiConsumer.exchangeKeys(private_key=private_key, data=data)
+    shared_secret, session_data = apiConsumer.exchange_keys(private_key=private_key, data=data)
 
-    if derived_key is None:
+    if shared_secret is None:
         logger.error("Error creating session")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     # result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data)
-    logging.debug(f"Session created with sessionId: {session_data['session_id']}, derivedKey: {derived_key}")
+    logging.debug(f"Session created with sessionId: {session_data['session_id']}, session_key: {shared_secret}")
 
     with open(session_file, "w") as file:
         file.write(json.dumps({
-            "session_key": base64.b64encode(derived_key).decode('utf-8'),
+            "session_key": base64.b64encode(shared_secret).decode('utf-8'),
             "session_id": session_data["session_id"],
             "username": session_data["username"],
             "organization": session_data["organization"],

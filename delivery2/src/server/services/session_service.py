@@ -11,32 +11,43 @@ from dao.KeyStoreDAO import KeyStoreDAO
 from dao.RepositoryDAO import RepositoryDAO
 from dao.OrganizationDAO import OrganizationDAO
 
-from utils.utils import exchange_keys
-from utils.signing import verify_doc_sign, sign_document
+from server.utils.session_utils import exchange_keys
+from server.utils.cryptography.auth import sign, verify_signature
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+# -------------------------------
+
 def create_session(data, db_session: SQLAlchemySession):
-    '''Handles POST requests to /sessions'''
-    ## Init DAO's
+    """Handles the exchange of keys and the creation of the session between the client and the repository.
+
+    Args:
+        data (_type_): Data received from the client
+        db_session (SQLAlchemySession): Database session
+
+    Returns:
+        response: Response to be sent to the client
+    """
+    
+    # Init DAO's
     session_dao = SessionDAO(db_session)
     repository_dao = RepositoryDAO(db_session)
     organization_dao = OrganizationDAO(db_session)
     keystore_dao = KeyStoreDAO(db_session)
     
-    ## Get repository private key
+    # Get repository private key using the respective password to decrypt it
     rep_priv_key_password: str = os.getenv('REP_PRIV_KEY_PASSWORD')
     rep_priv_key: ec.EllipticCurvePrivateKey = serialization.load_pem_private_key(
         data=repository_dao.get_private_key().encode(), 
         password=rep_priv_key_password.encode()
     )
 
-    ## Read client data from request and load it
-    msgData = data.get("data")
-    client_session_pub_key = msgData.get("public_key")
-    org_name = msgData.get('organization')
-    username = msgData.get('username')
+    # Read client data from request and load it
+    msg_data = data.get("data")
+    client_session_pub_key = msg_data.get("public_key")
+    org_name = msg_data.get('organization')
+    username = msg_data.get('username')
 
     try:
         client = organization_dao.get_org_subj_association(
@@ -48,24 +59,19 @@ def create_session(data, db_session: SQLAlchemySession):
         return json.dumps({"error:": message}), 404
 
     if (client is None):
-        # No user found
-        return json.dumps(f"No user found!"), 404
+        return json.dumps(f"User not found!"), 404
     
-    ## Get client public key
+    # Get client public key
     client_pub_key = keystore_dao.get_by_id(client.pub_key_id).key
 
-    ## Verify Signature
-    if (not verify_doc_sign(data = data, pub_key = client_pub_key)):
-        # Send bad credentials
+    # Verify Signature
+    if (not verify_signature(data = data, pub_key = client_pub_key)):
         return json.dumps(f"Invalid signature!"), 400
 
-
-    ## Derive session key
-    sessionKey: bytes
-    public_key: bytes
-    sessionKey, public_key = exchange_keys(
-        client_session_key=base64.b64decode(client_session_pub_key),
-    )
+    # Derive session key
+    session_key: bytes
+    session_server_public_key: bytes
+    session_key, session_server_public_key = exchange_keys(client_session_key=base64.b64decode(client_session_pub_key))
 
     ## Create session
     nonce = secrets.token_hex(16)
@@ -73,7 +79,7 @@ def create_session(data, db_session: SQLAlchemySession):
         session = session_dao.create(
             username, 
             org_name, 
-            sessionKey,
+            session_key,
             counter = 0,
             nonce = nonce, 
         )
@@ -86,20 +92,21 @@ def create_session(data, db_session: SQLAlchemySession):
         "username": session.subject_username,
         "organization": session.organization_name,
         "roles": [role.name for role in session.session_roles],
-        "public_key": base64.b64encode(public_key).decode('utf-8'),
+        "public_key": base64.b64encode(session_server_public_key).decode('utf-8'), # So that the client can generate the shared secret (key for the session symmetric encryption)
         "nonce": nonce,
     }
 
-    ## Sign response
-    signature = sign_document(
+    # Sign response
+    signature = sign(
         data = str(result),
         private_key = rep_priv_key,
     )
 
-    ## Finish response packet
+    # Finish response packet
     result = json.dumps({
         "data": result,
-        "digest": base64.b64encode(signature).decode('utf-8')
+        "signature": base64.b64encode(signature).decode('utf-8')
     })
     
+    # Return response to the client
     return result, 201
