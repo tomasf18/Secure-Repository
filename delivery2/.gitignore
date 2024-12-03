@@ -1,5 +1,6 @@
 venv
-.venv
 __pycache__
-src/server/dao/database
+.pytest_cache
+src/server/dao/database/repo.db
+src/server/data/[^.]*
 project.log
