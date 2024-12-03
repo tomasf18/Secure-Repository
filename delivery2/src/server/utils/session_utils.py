@@ -31,24 +31,24 @@ def exchange_keys(client_session_public_key: bytes) -> tuple[bytes, bytes]:
 
 # -------------------------------
 
-
-def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[str, dict]:
+def encrypt_payload(data: dict | str, encryption_key: bytes, integrity_key: bytes) -> dict[str, dict]:
+    """Encrypts the payload to be sent to the client
+    
+    Args:
+        data (dict | str): Data to be sent
+        encryption_key (bytes): first part of session key, used to encrypt data
+        integrity_key (bytes): second part of session key, used to encrypt mac
+        
+    Returns:
+        dict[str, dict]: Encrypted payload
     """
-    :param data: Payload to be sent
-    :param messageKey: first part of session key, used to encrypt data
-    :param MACKey: second part of session key, used to encrypt mac
-
-    :return body: body to be sent, made of {
-        data: {message, iv},
-        digest: {mac, iv}
-    }
-    """
+    
     if isinstance(data, dict):
         data = json.dumps(data)
 
     ## Encrypt data
     encryptor = AES()
-    encryptedData, dataIv = encryptor.encrypt_data(data, messageKey)
+    encryptedData, dataIv = encryptor.encrypt_data(data, encryption_key)
 
     message = {
         "message": base64.b64encode(encryptedData).decode(),
@@ -56,7 +56,7 @@ def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[
     }
 
     digest = calculate_digest(encryptedData)
-    mac, macIv = encryptor.encrypt_data(digest, MACKey)
+    mac, macIv = encryptor.encrypt_data(digest, integrity_key)
 
     body = {
         "data": message,
@@ -67,13 +67,20 @@ def encrypt_payload(data: dict | str, messageKey: bytes, MACKey: bytes) -> dict[
     }
     return body
     
-def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
+# -------------------------------
+    
+def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
+    """ Decrypts the payload received from the client
+    
+    Args:
+        response: Response from the client
+        encryption_key: first part of session key, used to encrypt data
+        integrity_key: second part of session key, used to encrypt mac
+    
+    Returns:
+        dict: Decrypted payload
     """
-    :param data: Payload received
-    :param messageKey: first part of session key, used to encrypt data
-    :param MACKey: second part of session key, used to encrypt mac
-    :return receivedMessage: decrypted message sent
-    """
+    
     encryptor = AES()
     receivedData = response["data"]
     receivedMac = response["signature"]
@@ -82,7 +89,7 @@ def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
     receivedDigest = encryptor.decrypt_data(
         base64.b64decode(receivedMac["mac"]),
         base64.b64decode(receivedMac["iv"]),
-        MACKey
+        integrity_key
     )
 
     encryptedMessage = base64.b64decode(receivedData["message"])
@@ -94,15 +101,27 @@ def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
     receivedMessage = encryptor.decrypt_data(
         encrypted_data = base64.b64decode(receivedData["message"]),
         iv = base64.b64decode(receivedData["iv"]),
-        key = messageKey
+        key = encryption_key
     )
 
     return json.loads(receivedMessage.decode('utf-8'))
 
+# -------------------------------
+
 def verify_message_order(data: dict, counter: int, nonce: bytes) -> bool:
+    """Verify the order of the messages received from the client to prevent replay attacks
+    
+    Args:
+        data (dict): Data received from the client
+        counter (int): Counter of the last message received
+        nonce (bytes): Nonce of the last message received
+        
+    Returns:
+        bool: True if the message is valid, False otherwise
+    """
+    
     received_nonce = data["nonce"]
     received_counter = data["counter"]
-
 
     print(f"nonce: {received_nonce}, counter: {received_counter}, nonce: {nonce}, counter: {counter}")
     return all([

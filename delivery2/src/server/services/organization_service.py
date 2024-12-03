@@ -51,6 +51,90 @@ def list_organizations(db_session: Session):
 
 # -------------------------------
 
+def list_organization_subjects(organization_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/subjects'''
+    organization_dao = OrganizationDAO(db_session)
+    session_dao = SessionDAO(db_session)
+
+    ## Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        # eu ia para load session
+        # alterei coisas em session_utils do client, no decrypt and encrypt  payload
+        # alterar tmb no server
+        # se necessario rever processo do inicio
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    try:
+        subjects: list["Subject"] = organization_dao.get_subjects(organization_name)
+        serializable_subjects = []
+        for subject in subjects:
+            status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
+            serializable_subjects.append({
+                "username": subject.username,
+                "status": status
+            })
+    except Exception as e:
+        ## TODO: Fix error message
+        return encrypt_payload({
+                "error": str(e)
+            }, session_key[:32], session_key[32:]
+        ), 400
+    
+    ## Construct result
+    result = {
+        "nonce": secrets.token_hex(16),
+        "data": serializable_subjects
+    }
+
+    ## Update session
+    session_dao.update_nonce(session.id, result["nonce"])
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+
+    return json.dumps(encrypted_result), 200
+
+# -------------------------------
+
+def get_organization_subject(organization_name, username, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>'''
+    organization_dao = OrganizationDAO(db_session)
+    session_dao = SessionDAO(db_session)
+
+    ## Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    subject: "Subject" = organization_dao.get_subject_by_username(organization_name, username)
+    status = organization_dao.get_org_subj_association(org_name=organization_name, username=username).status
+
+    ## Create result
+    result = {
+        "nonce": secrets.token_hex(16),
+        "data": {
+            "username": subject.username,
+            "status": status
+        }
+    }
+    
+    ## Update session
+    session_dao.update_nonce(session.id, result["nonce"])
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+
+    return json.dumps(encrypted_result), 200
+
+# -------------------------------
+
 def add_organization_subject(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/subjects'''
     organization_dao = OrganizationDAO(db_session)
@@ -92,82 +176,6 @@ def add_organization_subject(organization_name, data, db_session: Session):
     return json.dumps(encrypted_result), 200
 
 
-def list_organization_subjects(organization_name, data, db_session: Session):
-    '''Handles GET requests to /organizations/<organization_name>/subjects'''
-    organization_dao = OrganizationDAO(db_session)
-    session_dao = SessionDAO(db_session)
-
-    ## Get session
-    try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
-    except ValueError as e:
-        message, code = e.args
-        return message, code
-
-    try:
-        subjects: list["Subject"] = organization_dao.get_subjects(organization_name)
-        serializable_subjects = []
-        for subject in subjects:
-            status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
-            serializable_subjects.append({
-                "username": subject.username,
-                "status": status
-            })
-    except Exception as e:
-        ## TODO: Fix error message
-        return encrypt_payload({
-                "error": str(e)
-            }, session_key[:32], session_key[32:]
-        ), 400
-    
-    ## Construct result
-    result = {
-        "nonce": secrets.token_hex(16),
-        "data": serializable_subjects
-    }
-
-    ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
-    session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-
-    return json.dumps(encrypted_result), 200
-
-
-def get_organization_subject(organization_name, username, data, db_session: Session):
-    '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>'''
-    organization_dao = OrganizationDAO(db_session)
-    session_dao = SessionDAO(db_session)
-
-    ## Get session
-    try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
-    except ValueError as e:
-        message, code = e.args
-        return message, code
-
-    subject: "Subject" = organization_dao.get_subject_by_username(organization_name, username)
-    status = organization_dao.get_org_subj_association(org_name=organization_name, username=username).status
-
-    ## Create result
-    result = {
-        "nonce": secrets.token_hex(16),
-        "data": {
-            "username": subject.username,
-            "status": status
-        }
-    }
-    
-    ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
-    session_dao.update_counter(session.id, decrypted_data["counter"])
-
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-
-    return json.dumps(encrypted_result), 200
     
 def activate_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''

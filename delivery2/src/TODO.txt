@@ -1,0 +1,18 @@
+rep_decrypt_file <encrypted file> <encryption metadata>
+rep_get_file <file handle> [file]
+
+rep_assume_role <session file> <role>
+rep_drop_role <session file> <role>
+rep_list_roles <session file> <role>
+rep_list_role_subjects <session file> <role>
+rep_list_subject_roles <session file> <username>
+rep_list_role_permissions <session file> <role>
+rep_list_permission_roles <session file> <permission>
+rep_add_role <session file> <role>
+rep_suspend_role <session file> <role>
+rep_reactivate_role <session file> <role>
+rep_add_permission <session file> <role> <username>
+rep_remove_permission <session file> <role> <username>
+rep_add_permission <session file> <role> <permission>
+rep_remove_permission <session file> <role> <permission>
+rep_acl_doc <session file> <document name> [+/-] <role> <permission>

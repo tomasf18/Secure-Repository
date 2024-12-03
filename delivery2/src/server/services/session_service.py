@@ -80,8 +80,8 @@ def create_session(data, db_session: SQLAlchemySession):
             username, 
             org_name, 
             session_key,
-            counter = 0,
-            nonce = nonce, 
+            counter = 0,    # for replay attack prevention
+            nonce = nonce,  # for unique packet identification
         )
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), 400

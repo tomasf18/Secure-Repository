@@ -77,54 +77,77 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     
 # -------------------------------
 
-def encrypt_payload(data, message_key, mac_key):
-    ## Encrypt data
+def encrypt_payload(data: dict | str, encryption_key: bytes, integrity_key: bytes) -> dict[str, dict]:
+    """Encrypts the payload to be sent to the server
+    
+    Args:
+        data (dict | str): Data to be sent
+        encryption_key (bytes): first part of session key, used to encrypt data
+        integrity_key (bytes): second part of session key, used to encrypt mac
+        
+    Returns:
+        dict[str, dict]: Encrypted payload
+    """
+    
+    # Encrypt data
     if isinstance(data, dict):
         data = json.dumps(data)
 
     encryptor = AES()
-    encryptedData, dataIv = encryptor.encrypt_data(data, message_key)
+    encryptedData, dataIv = encryptor.encrypt_data(data, encryption_key)
 
     message = {
-        "message": base64.b64encode(encryptedData).decode(),
-        "iv" : base64.b64encode(dataIv).decode(),
+        "message": base64.b64encode(encryptedData).decode(),    # Data to be sent to the server
+        "iv" : base64.b64encode(dataIv).decode(),               # IV used to encrypt the data
     }
 
     digest = calculate_digest(encryptedData)
-    mac, macIv = encryptor.encrypt_data(digest, mac_key)
+    mac, macIv = encryptor.encrypt_data(digest, integrity_key)
 
     body = {
         "data": message,
         "signature": {
-            "mac": base64.b64encode(mac).decode(),
-            "iv": base64.b64encode(macIv).decode(),
+            "mac": base64.b64encode(mac).decode(),              # MAC of the data
+            "iv": base64.b64encode(macIv).decode(),             # IV used to encrypt the MAC
         }
     }
     return body
 
 # -------------------------------
     
-def decrypt_payload(response, message_key, mac_key):
+def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
+    """ Decrypts the payload received from the client
+    
+    Args:
+        response: Response from the client
+        encryption_key: first part of session key, used to encrypt data
+        integrity_key: second part of session key, used to encrypt mac
+    
+    Returns:
+        dict: Decrypted payload
+    """
+    
     encryptor = AES()
     receivedData = response["data"]
     receivedMac = response["signature"]
     
-    ## Decrypt Digest
+    #~# Decrypt Digest
     receivedDigest = encryptor.decrypt_data(
-        base64.b64decode(receivedMac["mac"]),
-        base64.b64decode(receivedMac["iv"]),
-        mac_key
+        encrypted_data=base64.b64decode(receivedMac["mac"]),
+        key=integrity_key,
+        iv=base64.b64decode(receivedMac["iv"])
     )
     
     encryptedMessage = base64.b64decode(receivedData["message"])
-    ## Verify digest of received data
+    
+    # Verify digest of received data and check integrity
     if ( not verify_digest(encryptedMessage, receivedDigest) ):
         return None
     
-    ## Decrypt data
+    # Decrypt data
     received_message = encryptor.decrypt_data(
-        encrypted_data = base64.b64decode(receivedData["message"]),
-        iv = base64.b64decode(receivedData["iv"]),
-        key = message_key
+        encrypted_data=base64.b64decode(receivedData["message"]),
+        key=encryption_key,
+        iv=base64.b64decode(receivedData["iv"])
     )
-    return json.loads(received_message.decode())
+    return json.loads(received_message)

@@ -48,28 +48,29 @@ class ApiConsumer:
             received_message = None
             
             if sessionKey:
-                message_key, mac_key = sessionKey[:32], sessionKey[32:]
+                encryption_key, integrity_key = sessionKey[:32], sessionKey[32:]
 
                 logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with data= \"{data}\"")
 
-                ## Create and encrypt Payload
+                # Create and encrypt Payload
                 body = self.encrypt_payload(
                     data = data,
-                    message_key = message_key,
-                    mac_key = mac_key
+                    encryption_key = encryption_key,
+                    integrity_key = integrity_key
                 )
                 body["session_id"] = sessionId
 
                 logging.debug(f"Encrypted payload = {body}")
-                ## Send Encrypted Payload
+                
+                # Send Encrypted Payload
                 response = requests.request(method, self.rep_address + endpoint, json=body)
                 logging.debug(f"Server Response = {response.json()}")
 
                 try:
                     received_message = self.decrypt_payload(
-                        response = response.json(),
-                        message_key = message_key,
-                        mac_key = mac_key
+                        response=response.json(),
+                        encryption_key=encryption_key,
+                        integrity_key=integrity_key
                     )
                     logging.debug(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
@@ -101,10 +102,10 @@ class ApiConsumer:
     
 # -------------------------------
 
-    def encrypt_payload(self, data, message_key, mac_key):
-        return encrypt_payload_utils(data, message_key, mac_key)
+    def encrypt_payload(self, data, encryption_key, integrity_key):
+        return encrypt_payload_utils(data, encryption_key, integrity_key)
 
 # -------------------------------
     
-    def decrypt_payload(self, response, message_key, mac_key):
-        return decrypt_payload_utils(response, message_key, mac_key)
+    def decrypt_payload(self, response, encryption_key, integrity_key):
+        return decrypt_payload_utils(response, encryption_key, integrity_key)
