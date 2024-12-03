@@ -11,8 +11,8 @@ from dao.KeyStoreDAO import KeyStoreDAO
 from dao.RepositoryDAO import RepositoryDAO
 from dao.OrganizationDAO import OrganizationDAO
 
-from server.utils.session_utils import exchange_keys
-from server.utils.cryptography.auth import sign, verify_signature
+from utils.session_utils import exchange_keys
+from utils.cryptography.auth import sign, verify_signature
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -65,13 +65,13 @@ def create_session(data, db_session: SQLAlchemySession):
     client_pub_key = keystore_dao.get_by_id(client.pub_key_id).key
 
     # Verify Signature
-    if (not verify_signature(data = data, pub_key = client_pub_key)):
+    if (not verify_signature(data=data, pub_key=client_pub_key)):
         return json.dumps(f"Invalid signature!"), 400
 
     # Derive session key
     session_key: bytes
     session_server_public_key: bytes
-    session_key, session_server_public_key = exchange_keys(client_session_key=base64.b64decode(client_session_pub_key))
+    session_key, session_server_public_key = exchange_keys(client_session_public_key=base64.b64decode(client_session_pub_key))
 
     ## Create session
     nonce = secrets.token_hex(16)
@@ -109,4 +109,5 @@ def create_session(data, db_session: SQLAlchemySession):
     })
     
     # Return response to the client
+    print(f"\n\nResult: {result}\n\n")
     return result, 201

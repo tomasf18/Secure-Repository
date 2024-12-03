@@ -1,6 +1,7 @@
 venv
 __pycache__
 .pytest_cache
+src/client/sessions/[^.]*
 src/server/dao/database/repo.db
 src/server/data/[^.]*
 project.log

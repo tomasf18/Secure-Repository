@@ -332,7 +332,8 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     - Calls POST /sessions endpoint
     """
     try:
-        private_key = ECC.read_private_key(credentials_file, password)
+        client_priv_key_file = os.getenv("CLIENT_PRIV_KEY_PATH") + f"{credentials_file}.pem" # For private key
+        private_key = ECC.read_private_key(client_priv_key_file, password)
         
     except Exception as e:
         logger.error(f"Error loading private key: {e}")
@@ -352,7 +353,8 @@ def rep_create_session(org, username, password, credentials_file, session_file):
     # result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data)
     logging.debug(f"Session created with sessionId: {session_data['session_id']}, session_key: {shared_secret}")
 
-    with open(session_file, "w") as file:
+    session_file_path = os.getenv("CLIENT_SESSION_FILE_PATH") + session_file + ".json"
+    with open(session_file_path, "w") as file:
         file.write(json.dumps({
             "session_key": base64.b64encode(shared_secret).decode('utf-8'),
             "session_id": session_data["session_id"],

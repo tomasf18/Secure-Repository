@@ -9,7 +9,7 @@ from dao.OrganizationDAO import OrganizationDAO
 from models.status import Status
 from models.database_orm import Organization, Subject, Document
 
-from server.utils.session_utils import encrypt_payload
+from utils.session_utils import encrypt_payload
 from utils.loadSession import load_session
 
 from sqlalchemy.orm import Session

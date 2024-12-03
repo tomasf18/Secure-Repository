@@ -3,6 +3,7 @@ import logging
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 # -------------------------------
@@ -34,20 +35,21 @@ def sign(data: dict, private_key: ec.EllipticCurvePrivateKey) -> bytes:
 
 # -------------------------------
 
-def verify_signature(response: dict[str, str], public_key: ec.EllipticCurvePublicKey) -> bool:
+def verify_signature(data: dict[str, str], pub_key: str) -> bool:
     """Verifies the signature of a document using the provided public key.
     
     Args:
-        response (dict): Response from the server containing the data and signature
-        public_key (ec.EllipticCurvePublicKey): Public key to verify the signature
+        data (dict): Data from the client containing the data and signature
+        pub_key (str): Public key to verify the signature
         
     Returns:
         bool: True if the signature is valid, False otherwise 
     
     """
     
-    data_str = str(response["data"])
-    signature = base64.b64decode(response["signature"])
+    data_str = str(data["data"])
+    signature = base64.b64decode(data["signature"])
+    public_key = serialization.load_pem_public_key(pub_key.encode())
 
     try:
         public_key.verify(signature, data_str.encode(), ec.ECDSA(hashing_algorithm))

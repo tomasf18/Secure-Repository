@@ -1,4 +1,5 @@
 import os
+import base64
 from dotenv import load_dotenv
 
 from .BaseDAO import BaseDAO
@@ -14,8 +15,9 @@ class KeyStoreDAO(BaseDAO):
         try:
             if type in ["symmetric", "private"]:
                 encrypted_key, iv = self.encrypt_key(key)
-                key = encrypted_key.decode()
-                iv = iv.decode()
+                key = base64.b64encode(encrypted_key).decode('utf-8')
+                iv = base64.b64encode(iv).decode('utf-8')
+                
                 
             new_key = KeyStore(key=key, type=type)
             self.session.add(new_key)

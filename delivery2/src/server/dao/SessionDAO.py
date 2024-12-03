@@ -16,15 +16,17 @@ class SessionDAO(BaseDAO):
 # -------------------------------
 
     def create(self, subject_username: str, organization_name: str, key: str, counter: int, nonce: str) -> Session:
-        """
-        Create a new session and optionally associate roles with it.
-
-        :param subject_username: The username of the subject creating the session.
-        :param organization_name: The name of the organization associated with the session.
-        :param key: The key associated with this session.
-        :return: The created Session object.
-        :raises ValueError: If any of the parameters are invalid.
-        :raises IntegrityError: If a database constraint is violated.
+        """ Create a new session for a subject and an organization
+        
+        Args:
+            subject_username (str): Username of the subject
+            organization_name (str): Name of the organization
+            key (str): Session key
+            counter (int): Counter value
+            nonce (str): Nonce value
+            
+        Returns:
+            Session: Created session    
         """
         
         subject_dao = SubjectDAO(self.session)
@@ -42,14 +44,14 @@ class SessionDAO(BaseDAO):
             if not organization:
                 raise ValueError(f"Organization with name '{organization_name}' does not exist.")
 
-            encrypted_key, iv = self.encrypt_session_key(key)
-            encrypted_session_key = key_store_dao.create(encrypted_key, "symmetric")
+            encrypted_session_key, iv = key_store_dao.create(key, "symmetric")
+            
             # Create the session
             new_session = Session(
                 subject_username=subject_username,
                 organization_name=organization_name,
                 key_id=encrypted_session_key.id,
-                key_iv=base64.b64encode(iv).decode('utf-8'),
+                key_iv=iv,
                 nonce=nonce,
                 counter=counter
             )
@@ -77,46 +79,6 @@ class SessionDAO(BaseDAO):
         if not session:
             raise ValueError(f"Session with ID '{session_id}' does not exist.")
         return session.key_iv
-    
-    # def encrypt_session_key(self, session_key: str | bytes) -> bytes:
-    #     """
-    #     Encrypt the session key using AES256 with a derived key from the repository password.
-    #     """
-    #     # Generate a random IV
-    #     iv = os.urandom(16)
-        
-    #     # Derive AES key from the repository password
-    #     repository_password = os.getenv("REPOSITORY_PASSWORD")
-    #     aes_key = self.derive_aes_key(repository_password)
-
-    #     session_key = session_key.encode() if isinstance(session_key, str) else session_key
-    #     encrypted_key, key, iv = Cryptography.aes_cbc_encrypt(session_key, iv, aes_key)
-
-    #     return encrypted_key, iv
-
-
-    # def derive_aes_key(self, password: str) -> bytes:
-    #     """
-    #     Derive a secure AES key from the repository password using PBKDF2.
-    #     """
-    #     # Generate a salt (e.g., from a secure source)
-    #     salt = 'salt'.encode()
-
-    #     # Use PBKDF2 to derive the AES key
-    #     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
-    #     return kdf.derive(password.encode())
-
-
-    # def decrypt_session_key(self, encrypted_key: bytes, iv: bytes) -> bytes:
-    #     """
-    #     Decrypt the session key using AES256 with a derived key from the repository password.
-    #     """
-    #     # Derive AES key from the repository password
-    #     repository_password = os.getenv("REPOSITORY_PASSWORD")
-    #     aes_key = self.derive_aes_key(repository_password)
-    #     decrypted_key = Cryptography.aes_cbc_decrypt(encrypted_key, iv, aes_key)
-
-    #     return decrypted_key
 
 
     def get_by_id(self, session_id: int) -> Session:
@@ -128,6 +90,7 @@ class SessionDAO(BaseDAO):
             joinedload(Session.organization)
         ).filter_by(id=session_id).one_or_none()
 
+
     def get_all(self) -> list[Session]:
         """
         Retrieve all sessions.
@@ -137,6 +100,7 @@ class SessionDAO(BaseDAO):
             joinedload(Session.organization)
         ).all()
 
+
     def get_by_subject(self, subject_username: str) -> list[Session]:
         """
         Retrieve all sessions associated with a given subject.
@@ -145,6 +109,7 @@ class SessionDAO(BaseDAO):
             joinedload(Session.organization)
         ).filter_by(subject_username=subject_username).all()
 
+
     def get_by_organization(self, organization_name: str) -> list[Session]:
         """
         Retrieve all sessions associated with a given organization.
@@ -152,6 +117,7 @@ class SessionDAO(BaseDAO):
         return self.session.query(Session).options(
             joinedload(Session.subject)
         ).filter_by(organization_name=organization_name).all()
+
 
     def delete_by_id(self, session_id: int) -> bool:
         """
@@ -167,6 +133,7 @@ class SessionDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise
+
 
     def update_key(self, session_id: int, new_key: str) -> Session:
         """

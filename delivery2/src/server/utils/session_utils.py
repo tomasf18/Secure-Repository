@@ -1,13 +1,9 @@
 import json
 import base64
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
-from server.utils.cryptography.integrity import calculate_digest, verifyDigest
-from server.utils.cryptography.auth import sign_document, verify_doc_sign
+from utils.cryptography.integrity import calculate_digest, verify_digest
 
 # -------------------------------
 
@@ -91,7 +87,7 @@ def decrypt_payload(response, messageKey: bytes, MACKey: bytes):
 
     encryptedMessage = base64.b64decode(receivedData["message"])
     ## Verify digest of received data
-    if ( not verifyDigest(encryptedMessage, receivedDigest) ):
+    if ( not verify_digest(encryptedMessage, receivedDigest) ):
         return None
     
     ## Decrypt data

@@ -9,8 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from utils.cryptography.AES import AES
 from utils.cryptography.ECC import ECC
 from utils.constants.return_code import ReturnCode
-from client.utils.cryptography.auth import sign, verify_signature
-from client.utils.cryptography.integrity import calculateDigest, verifyDigest
+from utils.cryptography.auth import sign, verify_signature
+from utils.cryptography.integrity import calculate_digest, verify_digest
 
 # -------------------------------
 
@@ -58,8 +58,10 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     response = requests.request("post", rep_address + "/sessions", json=body)
         
     if response.status_code not in [201]:
-        logging.error(f"Error: Invalid repository response: {response.json()}")
+        logging.error(f"Error: Invalid repository response: {response}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    logging.debug(f"Response from repository: {response}")
 
     # Verify if signature is valid from repository
     response = response.json()
@@ -88,7 +90,7 @@ def encrypt_payload(data, message_key, mac_key):
         "iv" : base64.b64encode(dataIv).decode(),
     }
 
-    digest = calculateDigest(encryptedData)
+    digest = calculate_digest(encryptedData)
     mac, macIv = encryptor.encrypt_data(digest, mac_key)
 
     body = {
@@ -116,7 +118,7 @@ def decrypt_payload(response, message_key, mac_key):
     
     encryptedMessage = base64.b64decode(receivedData["message"])
     ## Verify digest of received data
-    if ( not verifyDigest(encryptedMessage, receivedDigest) ):
+    if ( not verify_digest(encryptedMessage, receivedDigest) ):
         return None
     
     ## Decrypt data
