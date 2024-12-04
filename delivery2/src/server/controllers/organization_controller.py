@@ -45,11 +45,11 @@ def organization_subject(organization_name, username):
         return get_organization_subject(organization_name, username, data, db_session)
     elif request.method == 'PUT':
         data = request.json
-        print(f"SERVER: Received data: {data}. Updating subject {username} from organization {organization_name}")
+        print(f"SERVER: Received data: {data}. Activating subject {username} from organization {organization_name}")
         return activate_organization_subject(organization_name, username, data, db_session)
     elif request.method == 'DELETE':
         data = request.json
-        print(f"SERVER: Received data: {data}. Deleting subject {username} from organization {organization_name}")
+        print(f"SERVER: Received data: {data}. Suspending subject {username} from organization {organization_name}")
         return suspend_organization_subject(organization_name, username, data, db_session)
     
 # -------------------------------

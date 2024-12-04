@@ -174,39 +174,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
 
     return json.dumps(encrypted_result), 200
 
-
-    
-def activate_organization_subject(organization_name, username, data, db_session: Session):
-    '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
-    organization_dao = OrganizationDAO(db_session)
-    session_dao = SessionDAO(db_session)
-
-    try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
-    except ValueError as e:
-        message, code = e.args
-        return message, code
-    
-    try:
-        organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
-    except Exception as e:
-        return encrypt_payload({
-                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), 403
-    
-    ## Construct result
-    result = {
-        "data": f"Subject '{username}' in the organization '{organization_name}' has been activated."
-    }
-
-    ## Update session
-    session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return json.dumps(encrypted_result), 200
-    
+# -------------------------------
 
 def suspend_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/subjects/<subject_name>'''
@@ -239,7 +207,43 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
     return json.dumps(encrypted_result), 200
+    
+# -------------------------------
+    
+def activate_organization_subject(organization_name, username, data, db_session: Session):
+    '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
+    organization_dao = OrganizationDAO(db_session)
+    session_dao = SessionDAO(db_session)
 
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    try:
+        organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    except Exception as e:
+        return encrypt_payload({
+                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
+            }, session_key[:32], session_key[32:]
+        ), 403
+    
+    ## Construct result
+    result = {
+        "data": f"Subject '{username}' in the organization '{organization_name}' has been activated."
+    }
+
+    ## Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    ## Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return json.dumps(encrypted_result), 200
+    
+# -------------------------------
+    
 def create_organization_document(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/documents'''
     organization_dao = OrganizationDAO(db_session)

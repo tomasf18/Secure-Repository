@@ -471,7 +471,6 @@ def rep_list_subjects(session_file, username=None):
     
     logger.debug(f"NOUNCE: {session_file_content['nonce']}")
     
-    saveContext(session_file, session_file_content)
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
 
@@ -479,6 +478,7 @@ def rep_list_subjects(session_file, username=None):
         print("Error: " + result["error"])
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
+    saveContext(session_file, session_file_content)
     
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
@@ -631,7 +631,6 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
         "nonce": session_file_content["nonce"],
     }
 
-    saveContext(session_file, session_file_content)
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data, sessionKey=session_key, sessionId=session_id)
     
@@ -639,6 +638,8 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     if result is None:
         logger.error("Error adding subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    saveContext(session_file, session_file_content)
     
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
@@ -653,14 +654,14 @@ def rep_suspend_subject(session_file, username):
     - Calls DELETE /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
         
+    session_file = get_session_file(session_file)
     session_file_content = read_file(session_file)
     if session_file_content is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
     session_id = session_file_content['session_id']
-    session_key = base64.b64decode(session_file_content["session_key"])
-
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
     
     endpoint = f"/organizations/{session_file_content['organization']}/subjects/{username}"
     
@@ -670,16 +671,18 @@ def rep_suspend_subject(session_file, username):
         "nonce": session_file_content["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data,
-                                    sessionId=session_id, sessionKey=session_key)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error suspending subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    saveContext(session_file, session_file_content, result)
+    saveContext(session_file, session_file_content)
+    
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
+
+# -------------------------------
 
 def rep_activate_subject(session_file, username):
     """
@@ -688,15 +691,15 @@ def rep_activate_subject(session_file, username):
     - This commands requires a SUBJECT_UP permission.
     - Calls PUT /organizations/{organization_name}/subjects/{subject_username} endpoint
     """
-        
+    
+    session_file = get_session_file(session_file)    
     session_file_content = read_file(session_file)
     if session_file_content is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
     session_id = session_file_content['session_id']
-    session_key = base64.b64decode(session_file_content["session_key"])
-
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
     
     endpoint = f"/organizations/{session_file_content['organization']}/subjects/{username}"
     
@@ -706,16 +709,18 @@ def rep_activate_subject(session_file, username):
         "nonce": session_file_content["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data,
-                                     sessionId=session_id, sessionKey=session_key)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error activating subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    saveContext(session_file, session_file_content, result)
+    saveContext(session_file, session_file_content)
+    
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
+
+# -------------------------------
 
 def rep_add_role(session_file, role):
     """
