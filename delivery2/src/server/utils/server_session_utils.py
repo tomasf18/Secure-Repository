@@ -129,7 +129,7 @@ def verify_message_order(data: dict, counter: int, nonce: bytes) -> bool:
     received_counter = data["counter"]
 
     print(f"Received counter: {received_counter}, Received nonce: {received_nonce}\
-        \nExpected counter: {counter}, Expected nonce: {nonce}")
+        \nExpected counter: >{counter}, Expected nonce: {nonce}")
     
     return all([
         received_nonce == nonce,

@@ -125,23 +125,23 @@ class SessionDAO(BaseDAO):
     
 # -------------------------------    
 
-    def update_nonce(self, session_id: int, new_nonce: str) -> Session:
-        """
-        Update the nonce associated with a session.
-        """
-        try:
-            session = self.get_by_id(session_id)
-            if not session:
-                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+    # def update_nonce(self, session_id: int, new_nonce: str) -> Session:
+    #     """
+    #     Update the nonce associated with a session.
+    #     """
+    #     try:
+    #         session = self.get_by_id(session_id)
+    #         if not session:
+    #             raise ValueError(f"Session with ID '{session_id}' does not exist.")
 
-            session.nonce = new_nonce
-            self.session.commit()
-            self.session.refresh(session)
+    #         session.nonce = new_nonce
+    #         self.session.commit()
+    #         self.session.refresh(session)
 
-            return session
-        except IntegrityError:
-            self.session.rollback()
-            raise
+    #         return session
+    #     except IntegrityError:
+    #         self.session.rollback()
+    #         raise
     
 # -------------------------------    
     

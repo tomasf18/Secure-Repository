@@ -2,10 +2,29 @@ import pytest
 import os
 import subprocess
 
-# ./rep_create_org org1 user1 User1 user1@gmail.com cred_file
-# ./rep_create_session org1 user1 123 cred_file session_file
-# ./rep_list_subjects session_file
-# ./rep_list_subjects session_file user1
+# ./rep_subject_credentials 123 user1_cred_file
+# ./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
+# ./rep_list_orgs
+# ./rep_create_session org1 user1 123 user1_cred_file user1_session_file
+# ./rep_list_subjects user1_session_file
+
+# ./rep_subject_credentials 456 user2_cred_file
+# ./rep_add_subject user1_session_file user2 User2 user2@gmail.com user2_cred_file
+
+# ./rep_subject_credentials 789 user3_cred_file
+# ./rep_add_subject user1_session_file user3 User3 user3@gmail.com user3_cred_file
+
+# ./rep_subject_credentials 101112 user4_cred_file
+# ./rep_add_subject user1_session_file user4 User4 user4@gmail.com user4_cred_file
+
+# ./rep_list_subjects user1_session_file
+# ./rep_list_subjects user1_session_file user2
+
+# ---
+
+
+
+
 
 def test_create_org():
     orgname1='org1'

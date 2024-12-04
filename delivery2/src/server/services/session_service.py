@@ -76,14 +76,14 @@ def create_session(data, db_session: SQLAlchemySession):
     print(f"\n\nSERVER: SHARED SECRET: {session_key}\n\n")
     
     ## Create session
-    nonce = secrets.token_hex(16)
+    nonce = secrets.token_hex(16) 
     try:
         session = session_dao.create(
             username, 
             org_name, 
             session_key,
             counter = 0,    # for replay attack prevention
-            nonce = nonce,  # for unique packet identification
+            nonce = nonce,  # for unique session identification
         )
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), 400

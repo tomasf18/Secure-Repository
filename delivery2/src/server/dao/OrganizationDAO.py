@@ -100,6 +100,7 @@ class OrganizationDAO(BaseDAO):
 # -------------------------------
     
     def add_subject_with_key(self, org: Organization, subject: Subject, key: KeyStore):
+        """ Add a Subject to an Organization with their public key. """
         org.subjects.append(subject)
         self.session.commit()
         print(f"Subject '{subject.username}' added to organization '{org.name}'.")
@@ -140,6 +141,7 @@ class OrganizationDAO(BaseDAO):
         key = key_store_dao.create(subject_pub_key, "public")
         self.add_subject_with_key(org, new_subject, key)
         
+# -------------------------------
             
     def get_by_name(self, name: str) -> "Organization":
         """Retrieve an Organization by name."""
@@ -148,7 +150,6 @@ class OrganizationDAO(BaseDAO):
             raise ValueError(f"Organization with name '{name}' not found.")
         return organization
     
-    # ==================== Retrieve Subjects and their data associated with an Organization =================== #
     
     def get_org_subj_association(self, org_name: str, username: str):
         """Retrieve the Organization-Subject association."""

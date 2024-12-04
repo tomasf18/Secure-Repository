@@ -13,6 +13,8 @@ from models.database_orm import Organization, Subject, Document
 from utils.server_session_utils import encrypt_payload
 from utils.server_session_utils import load_session
 
+from utils.utils import convert_bytes_to_str, convert_str_to_bytes
+
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -30,7 +32,7 @@ def create_organization(data, db_session: Session):
     username: str = data.get('username')
     name: str = data.get('name')
     email: str = data.get('email')
-    public_key: bytes = base64.b64decode(data.get('public_key').encode()) 
+    public_key: bytes = convert_str_to_bytes(data.get('public_key'))
     # This is how the client sends the public key (must be converted to string to be sent by the internet):
     # base64.b64encode(<what i want t obtain>).decode('utf-8')
     # The reverse is: base64.b64decode(<what i want to decode>.encode())
@@ -87,12 +89,10 @@ def list_organization_subjects(organization_name, data, db_session: Session):
     
     # Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": serializable_subjects
     }
 
     # Update session
-    session_dao.update_nonce(session.id, result["nonce"]) ## TODO: DONT UPDATE NONCE
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     # Encrypt result
@@ -119,7 +119,6 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
 
     ## Create result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": {
             "username": subject.username,
             "status": status
@@ -127,7 +126,6 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
     }
     
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
 
     ## Encrypt result
@@ -139,10 +137,11 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
 
 def add_organization_subject(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/subjects'''
+    
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -164,12 +163,10 @@ def add_organization_subject(organization_name, data, db_session: Session):
 
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": f'Subject {username} added to organization {organization_name} successfully'
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -200,12 +197,10 @@ def activate_organization_subject(organization_name, username, data, db_session:
     
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": f"Subject '{username}' in the organization '{organization_name}' has been activated."
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -234,12 +229,10 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": f"Subject '{username}' in the organization '{organization_name}' has been suspended."
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -269,12 +262,10 @@ def create_organization_document(organization_name, data, db_session: Session):
 
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": f"Document '{document_name}' uploaded in the organization '{organization_name}' successfully."
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -309,12 +300,10 @@ def list_organization_documents(organization_name, data, username, date_filter, 
 
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": serializable_documents
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -366,12 +355,10 @@ def get_organization_document_metadata(organization_name, document_name, data, d
 
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": serializable_document
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -406,12 +393,10 @@ def get_organization_document_file(organization_name, document_name, data, db_se
 
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": serializable_document
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
@@ -441,12 +426,10 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     
     ## Construct result
     result = {
-        "nonce": secrets.token_hex(16),
         "data": f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."
     }
 
     ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
     ## Encrypt result
