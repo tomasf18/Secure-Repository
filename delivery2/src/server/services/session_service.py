@@ -11,7 +11,7 @@ from dao.KeyStoreDAO import KeyStoreDAO
 from dao.RepositoryDAO import RepositoryDAO
 from dao.OrganizationDAO import OrganizationDAO
 
-from utils.session_utils import exchange_keys
+from utils.server_session_utils import exchange_keys
 from utils.cryptography.auth import sign, verify_signature
 
 from cryptography.hazmat.primitives import serialization
@@ -39,7 +39,7 @@ def create_session(data, db_session: SQLAlchemySession):
     # Get repository private key using the respective password to decrypt it
     rep_priv_key_password: str = os.getenv('REP_PRIV_KEY_PASSWORD')
     rep_priv_key: ec.EllipticCurvePrivateKey = serialization.load_pem_private_key(
-        data=repository_dao.get_private_key().encode(), 
+        data=repository_dao.get_private_key(), 
         password=rep_priv_key_password.encode()
     )
 
@@ -73,6 +73,8 @@ def create_session(data, db_session: SQLAlchemySession):
     session_server_public_key: bytes
     session_key, session_server_public_key = exchange_keys(client_session_public_key=base64.b64decode(client_session_pub_key))
 
+    print(f"\n\nSERVER: SHARED SECRET: {session_key}\n\n")
+    
     ## Create session
     nonce = secrets.token_hex(16)
     try:

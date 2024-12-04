@@ -12,10 +12,16 @@ from sqlalchemy.exc import IntegrityError
 
 class SessionDAO(BaseDAO):
     """DAO for managing Session entities."""
+    
+    def __init__(self, session):
+        super().__init__(session)
+        self.subject_dao = SubjectDAO(session)
+        self.key_store_dao = KeyStoreDAO(session)
+        self.organization_dao = OrganizationDAO(session)
 
 # -------------------------------
 
-    def create(self, subject_username: str, organization_name: str, key: str, counter: int, nonce: str) -> Session:
+    def create(self, subject_username: str, organization_name: str, key: bytes, counter: int, nonce: str) -> Session:
         """ Create a new session for a subject and an organization
         
         Args:
@@ -29,22 +35,25 @@ class SessionDAO(BaseDAO):
             Session: Created session    
         """
         
-        subject_dao = SubjectDAO(self.session)
-        organization_dao = OrganizationDAO(self.session)
-        key_store_dao = KeyStoreDAO(self.session)
+
         
         try:
             # Check if the subject exists
-            subject = subject_dao.get_by_username(subject_username)
+            subject = self.subject_dao.get_by_username(subject_username)
             if not subject:
                 raise ValueError(f"Subject with username '{subject_username}' does not exist.")
 
             # Check if the organization exists
-            organization = organization_dao.get_by_name(organization_name)
+            organization = self.organization_dao.get_by_name(organization_name)
             if not organization:
                 raise ValueError(f"Organization with name '{organization_name}' does not exist.")
 
-            encrypted_session_key, iv = key_store_dao.create(key, "symmetric")
+            encrypted_session_key, iv = self.key_store_dao.create(key, "symmetric")
+            
+            print(f"\n\nSession key iv: {iv} with length {len(iv)}")
+            print(f"Decrypted session key: {key}")
+            print(f"Encrypted session key: {encrypted_session_key.key}")
+            print(f'Again, decrypted session key: {self.key_store_dao.decrypt_key(encrypted_session_key.key, iv)}\n\n')
             
             # Create the session
             new_session = Session(
@@ -69,17 +78,6 @@ class SessionDAO(BaseDAO):
             raise IntegrityError("Failed to create session due to a database constraint violation.") from e
 
 # -------------------------------
-        
-        
-    def get_iv(self, session_id: int) -> str:
-        """
-        Retrieve the IV associated with a session.
-        """
-        session = self.get_by_id(session_id)
-        if not session:
-            raise ValueError(f"Session with ID '{session_id}' does not exist.")
-        return session.key_iv
-
 
     def get_by_id(self, session_id: int) -> Session:
         """
@@ -90,6 +88,7 @@ class SessionDAO(BaseDAO):
             joinedload(Session.organization)
         ).filter_by(id=session_id).one_or_none()
 
+# -------------------------------
 
     def get_all(self) -> list[Session]:
         """
@@ -99,6 +98,81 @@ class SessionDAO(BaseDAO):
             joinedload(Session.subject),
             joinedload(Session.organization)
         ).all()
+        
+# -------------------------------
+            
+    def get_encrypted_key(self, session_id: int) -> bytes:
+        """
+        Retrieve the encrypted session key.
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        return session.key.key
+    
+# -------------------------------
+    
+    def get_decrypted_key(self, session_id: int) -> str:
+        """
+        Retrieve the decrypted session key. 
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        encrypted_key = self.get_encrypted_key(session_id)
+        iv = session.key_iv
+        return self.key_store_dao.decrypt_key(encrypted_key, iv)
+    
+# -------------------------------    
+
+    def update_nonce(self, session_id: int, new_nonce: str) -> Session:
+        """
+        Update the nonce associated with a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+
+            session.nonce = new_nonce
+            self.session.commit()
+            self.session.refresh(session)
+
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise
+    
+# -------------------------------    
+    
+    def update_counter(self, session_id: int, new_counter: int) -> Session:
+        """
+        Update the counter associated with a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+
+            session.counter = new_counter
+            self.session.commit()
+            self.session.refresh(session)
+
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise
+       
+# -------------------------------    
+        
+    def get_iv(self, session_id: int) -> str:
+        """
+        Retrieve the IV associated with a session.
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        return session.key_iv
 
 
     def get_by_subject(self, subject_username: str) -> list[Session]:
@@ -135,80 +209,21 @@ class SessionDAO(BaseDAO):
             raise
 
 
-    def update_key(self, session_id: int, new_key: str) -> Session:
+    def update_key(self, session_id: int, new_key: bytes) -> Session:
         """
         Update the key associated with a session.
         """
-        key_store_dao = KeyStoreDAO(self.session)
+        self.key_store_dao = KeyStoreDAO(self.session)
         try:
             session = self.get_by_id(session_id)
             if not session:
                 raise ValueError(f"Session with ID '{session_id}' does not exist.")
 
             # Update key in KeyStore
-            session_key = key_store_dao.update(session.key_id, new_key)
+            session_key = self.key_store_dao.update(session.key_id, new_key)
 
             # Reflect updated key in session
             session.key_id = session_key.id
-            self.session.commit()
-            self.session.refresh(session)
-
-            return session
-        except IntegrityError:
-            self.session.rollback()
-            raise
-        
-        
-    def get_encrypted_key(self, session_id: int) -> bytes:
-        """
-        Retrieve the encrypted session key.
-        """
-        session = self.get_by_id(session_id)
-        if not session:
-            raise ValueError(f"Session with ID '{session_id}' does not exist.")
-        return session.key.key
-    
-    
-    def get_decrypted_key(self, session_id: int) -> str:
-        """
-        Retrieve the decrypted session key. 
-        """
-        session = self.get_by_id(session_id)
-        if not session:
-            raise ValueError(f"Session with ID '{session_id}' does not exist.")
-        encrypted_key = self.get_encrypted_key(session_id)
-        iv = base64.b64decode(session.key_iv)
-        return self.decrypt_session_key(encrypted_key, iv)
-    
-
-    def update_nonce(self, session_id: int, new_nonce: str) -> Session:
-        """
-        Update the nonce associated with a session.
-        """
-        try:
-            session = self.get_by_id(session_id)
-            if not session:
-                raise ValueError(f"Session with ID '{session_id}' does not exist.")
-
-            session.nonce = new_nonce
-            self.session.commit()
-            self.session.refresh(session)
-
-            return session
-        except IntegrityError:
-            self.session.rollback()
-            raise
-    
-    def update_counter(self, session_id: int, new_counter: int) -> Session:
-        """
-        Update the counter associated with a session.
-        """
-        try:
-            session = self.get_by_id(session_id)
-            if not session:
-                raise ValueError(f"Session with ID '{session_id}' does not exist.")
-
-            session.counter = new_counter
             self.session.commit()
             self.session.refresh(session)
 

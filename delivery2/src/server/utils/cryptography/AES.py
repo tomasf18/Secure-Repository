@@ -20,12 +20,12 @@ class AES:
       
 # -------------------------------
         
-    def cbc_encrypt(self, data: str, key: str) -> tuple[bytes, bytes]:
+    def cbc_encrypt(self, data: bytes, key: bytes) -> tuple[bytes, bytes]:
         """ Encrypts data using AES in CBC mode
         
         Args:
-            data (str): data to be encrypted
-            key (str): key to encrypt data
+            data (bytes): data to be encrypted
+            key (bytes): key to encrypt data
             
         Returns:
             tuple[bytes, bytes]: (encrypted_data, initialization_vector)
@@ -37,8 +37,7 @@ class AES:
         encryptor = cipher.encryptor()
 
         padder = padding.PKCS7(algorithms.AES256.block_size).padder()
-        if (type(data) == str):
-            data = data.encode()
+
         padded_data = padder.update(data)
         padded_data += padder.finalize()
 
@@ -46,16 +45,16 @@ class AES:
         
 # -------------------------------
         
-    def cbc_decrypt(self, encrypted_data: str, key: str, iv: bytes) -> str:
+    def cbc_decrypt(self, encrypted_data: bytes, key: bytes, iv: bytes) -> bytes:
         """ Decrypts data using AES in CBC mode
         
         Args:
-            encrypted_data (str): data to be decrypted
-            key (str): key to decrypt data
+            encrypted_data (bytes): data to be decrypted
+            key (bytes): key to decrypt data
             iv (bytes): initialization vector
 
         Returns:
-            str: decrypted data
+            bytes: decrypted data
         """
         
         cipher = Cipher(algorithms.AES256(key), self.mode(iv))
@@ -68,16 +67,17 @@ class AES:
     
 # -------------------------------
 
-    def encrypt_data(self, data: str, key: str) -> tuple[bytes, bytes]:
+    def encrypt_data(self, data: bytes, key: bytes) -> tuple[bytes, bytes]:
         """ Encrypts data using AES in the selected mode
 
         Args:
-            data (str): Data to be encrypted
-            key (str): Key to encrypt data
+            data (bytes): Data to be encrypted
+            key (bytes): Key to encrypt data
 
         Returns:
             tuple[bytes, bytes]: (encrypted_data, initialization_vector) 
         """
+            
         if self.mode == AESModes.CBC:
             return self.cbc_encrypt(data, key)
         # elif self.mode == AESModes.GCM:
@@ -88,17 +88,17 @@ class AES:
 
 # -------------------------------
 
-    def decrypt_data(self, encrypted_data: str, key: str, iv: bytes = None, nonce: bytes = None) -> str:
+    def decrypt_data(self, encrypted_data: bytes, key: bytes, iv: bytes = None, nonce: bytes = None) -> bytes:
         """ Decrypts data using AES in the selected mode
         
         Args:
-            encrypted_data (str): Data to be decrypted
-            key (str): Key to decrypt data
+            encrypted_data (bytes): Data to be decrypted
+            key (bytes): Key to decrypt data
             iv (bytes): Initialization vector
             nonce (bytes): Nonce
         
         Returns:
-            str: Decrypted data
+            bytes: Decrypted data
         """
         
         if self.mode == AESModes.CBC:

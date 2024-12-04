@@ -38,7 +38,7 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Document '{name}' already exists.")
         
         
-    def create_document(self, name: str, session_id: str, encrypted_data: bytes, alg: str, key: str, iv: str) -> Document:
+    def create_document(self, name: str, session_id: str, encrypted_data: bytes, alg: str, key: bytes, iv: str) -> Document:
         """Create a new document, its ACL, and metadata, and store the encrypted file."""
 
         try:

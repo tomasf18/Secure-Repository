@@ -2,6 +2,11 @@ import pytest
 import os
 import subprocess
 
+# ./rep_create_org org1 user1 User1 user1@gmail.com cred_file
+# ./rep_create_session org1 user1 123 cred_file session_file
+# ./rep_list_subjects session_file
+# ./rep_list_subjects session_file user1
+
 def test_create_org():
     orgname1='org1'
     pub_key = 'pub_key.pem'

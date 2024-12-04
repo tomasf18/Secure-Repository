@@ -35,12 +35,12 @@ def sign(data: dict, private_key: ec.EllipticCurvePrivateKey) -> bytes:
 
 # -------------------------------
 
-def verify_signature(data: dict[str, str], pub_key: str) -> bool:
+def verify_signature(data: dict[str, str], pub_key: bytes) -> bool:
     """Verifies the signature of a document using the provided public key.
     
     Args:
         data (dict): Data from the client containing the data and signature
-        pub_key (str): Public key to verify the signature
+        pub_key (bytes): Public key to verify the signature
         
     Returns:
         bool: True if the signature is valid, False otherwise 
@@ -49,7 +49,7 @@ def verify_signature(data: dict[str, str], pub_key: str) -> bool:
     
     data_str = str(data["data"])
     signature = base64.b64decode(data["signature"])
-    public_key = serialization.load_pem_public_key(pub_key.encode())
+    public_key = serialization.load_pem_public_key(pub_key)
 
     try:
         public_key.verify(signature, data_str.encode(), ec.ECDSA(hashing_algorithm))

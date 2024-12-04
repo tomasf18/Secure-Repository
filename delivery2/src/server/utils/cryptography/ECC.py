@@ -73,11 +73,11 @@ class ECC:
 # ------------------------------- Static methods ------------------------------- #
     
     @staticmethod
-    def load_private_key(serialized_private_key: str, password: str = None) -> ec.EllipticCurvePrivateKey:
+    def load_private_key(serialized_private_key: bytes, password: str = None) -> ec.EllipticCurvePrivateKey:
         """ Loads a private key from a serialized string
         
         Args:
-            serialized_private_key (str): serialized private key
+            serialized_private_key (bytes): serialized private key
             password (str): password to decrypt the private key (if encrypted)
             
         Returns:
@@ -85,7 +85,7 @@ class ECC:
         """
         
         # Private key is a string, so we need to convert it to bytes
-        serialized_private_key = serialized_private_key.encode()
+        serialized_private_key = serialized_private_key
         password = password.encode() if password else None
         private_key = serialization.load_pem_private_key(
             serialized_private_key,
@@ -97,18 +97,18 @@ class ECC:
 # -------------------------------
     
     @staticmethod
-    def load_public_key(serialized_public_key: str) -> ec.EllipticCurvePublicKey:
+    def load_public_key(serialized_public_key: bytes) -> ec.EllipticCurvePublicKey:
         """ Loads a public key from a serialized string
         
         Args:
-            serialized_public_key (str): serialized public key
+            serialized_public_key (bytes): serialized public key
             
         Returns:
             ec.EllipticCurvePublicKey: public key object
         """
         
         # Public key is a string, so we need to convert it to bytes
-        public_key = serialization.load_pem_public_key(serialized_public_key.encode())
+        public_key = serialization.load_pem_public_key(serialized_public_key)
         return public_key
     
 # -------------------------------
@@ -125,7 +125,7 @@ class ECC:
         """
         
         serialized_public_key = read_file(key_file)
-        return ECC.load_public_key(serialized_public_key)
+        return ECC.load_public_key(serialized_public_key.encode())
 
 # -------------------------------
 
@@ -142,6 +142,6 @@ class ECC:
         """
         
         serialized_private_key = read_file(key_file)
-        return ECC.load_private_key(serialized_private_key, password)
+        return ECC.load_private_key(serialized_private_key.encode(), password)
     
          

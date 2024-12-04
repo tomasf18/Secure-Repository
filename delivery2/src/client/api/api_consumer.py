@@ -7,9 +7,9 @@ import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from utils.session_utils import exchange_keys as exchange_keys_utils
-from utils.session_utils import encrypt_payload as encrypt_payload_utils
-from utils.session_utils import decrypt_payload as decrypt_payload_utils
+from utils.client_session_utils import exchange_keys as exchange_keys_utils
+from utils.client_session_utils import encrypt_payload as encrypt_payload_utils
+from utils.client_session_utils import decrypt_payload as decrypt_payload_utils
 
 logging.basicConfig(
     filename='project.log',
@@ -18,13 +18,15 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
+logger = logging.getLogger()
+
 class ApiConsumer:
     def __init__(
             self,
             rep_address: str,
-            rep_pub_key: str,
+            rep_pub_key: bytes,
         ):
-        self.rep_pub_key = serialization.load_pem_public_key(rep_pub_key.encode())
+        self.rep_pub_key = serialization.load_pem_public_key(rep_pub_key)
         self.rep_address = rep_address
 
 # -------------------------------
@@ -50,21 +52,21 @@ class ApiConsumer:
             if sessionKey:
                 encryption_key, integrity_key = sessionKey[:32], sessionKey[32:]
 
-                logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with data= \"{data}\"")
+                logger.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
 
                 # Create and encrypt Payload
                 body = self.encrypt_payload(
-                    data = data,
-                    encryption_key = encryption_key,
-                    integrity_key = integrity_key
+                    data=data,
+                    encryption_key=encryption_key,
+                    integrity_key=integrity_key
                 )
                 body["session_id"] = sessionId
 
-                logging.debug(f"Encrypted payload = {body}")
+                logger.debug(f"Encrypted payload = {body}")
                 
                 # Send Encrypted Payload
                 response = requests.request(method, self.rep_address + endpoint, json=body)
-                logging.debug(f"Server Response = {response.json()}")
+                logger.debug(f"Server Response = {response.json()}")
 
                 try:
                     received_message = self.decrypt_payload(
@@ -72,16 +74,16 @@ class ApiConsumer:
                         encryption_key=encryption_key,
                         integrity_key=integrity_key
                     )
-                    logging.debug(f"Decrypted Server Response = {received_message}")
+                    logger.debug(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
-                    logging.error(f"Error decrypting server response: {e}")
+                    logger.error(f"Error decrypting server response: {e}")
 
             else:
-                logging.debug("Sending request")
+                logger.debug("Sending request")
                 body = {
                     "data": data
                 }
-                logging.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+                logger.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
                 final_endpoint = self.rep_address + endpoint
                 response = requests.request(method, final_endpoint, json=body)
 

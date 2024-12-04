@@ -1,6 +1,7 @@
 import json
 import base64
 import secrets
+import logging
 
 from dao.SessionDAO import SessionDAO
 from dao.DocumentDAO import DocumentDAO
@@ -9,11 +10,13 @@ from dao.OrganizationDAO import OrganizationDAO
 from models.status import Status
 from models.database_orm import Organization, Subject, Document
 
-from utils.session_utils import encrypt_payload
-from utils.loadSession import load_session
+from utils.server_session_utils import encrypt_payload
+from utils.server_session_utils import load_session
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+
+
 
 
 # -------------------------------
@@ -27,7 +30,10 @@ def create_organization(data, db_session: Session):
     username: str = data.get('username')
     name: str = data.get('name')
     email: str = data.get('email')
-    public_key: str = base64.b64decode(data.get('public_key')).decode()
+    public_key: bytes = base64.b64decode(data.get('public_key').encode()) 
+    # This is how the client sends the public key (must be converted to string to be sent by the internet):
+    # base64.b64encode(<what i want t obtain>).decode('utf-8')
+    # The reverse is: base64.b64decode(<what i want to decode>.encode())
 
     try:
         organization_dao.create(org_name, username, name, email, public_key)
@@ -59,10 +65,6 @@ def list_organization_subjects(organization_name, data, db_session: Session):
     ## Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
-        # eu ia para load session
-        # alterei coisas em session_utils do client, no decrypt and encrypt  payload
-        # alterar tmb no server
-        # se necessario rever processo do inicio
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -77,23 +79,23 @@ def list_organization_subjects(organization_name, data, db_session: Session):
                 "status": status
             })
     except Exception as e:
-        ## TODO: Fix error message
+        print(f"SERVER: Error getting subjects from organization {organization_name}. Error: {e}")
         return encrypt_payload({
-                "error": str(e)
+                "error": f"Organization '{organization_name}' doesn't exist."
             }, session_key[:32], session_key[32:]
-        ), 400
+        ), 404
     
-    ## Construct result
+    # Construct result
     result = {
         "nonce": secrets.token_hex(16),
         "data": serializable_subjects
     }
 
-    ## Update session
-    session_dao.update_nonce(session.id, result["nonce"])
+    # Update session
+    session_dao.update_nonce(session.id, result["nonce"]) ## TODO: DONT UPDATE NONCE
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
     return json.dumps(encrypted_result), 200

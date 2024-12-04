@@ -10,14 +10,13 @@ from utils.cryptography.AES import AES, AESModes
 load_dotenv()
 class KeyStoreDAO(BaseDAO):
     
-    def create(self, key: str, type: str) -> tuple[KeyStore, str] | KeyStore:
+# -------------------------------
+    
+    def create(self, key: bytes, type: str) -> tuple[KeyStore, bytes] | KeyStore:
         """Create a new KeyStore entry."""
         try:
             if type in ["symmetric", "private"]:
-                encrypted_key, iv = self.encrypt_key(key)
-                key = base64.b64encode(encrypted_key).decode('utf-8')
-                iv = base64.b64encode(iv).decode('utf-8')
-                
+                key, iv = self.encrypt_key(key)
                 
             new_key = KeyStore(key=key, type=type)
             self.session.add(new_key)
@@ -33,8 +32,9 @@ class KeyStoreDAO(BaseDAO):
         """Retrieve a KeyStore entry by its ID."""
         return self.session.query(KeyStore).get(key_id)
     
+# -------------------------------
     
-    def encrypt_key(self, key: str) -> tuple[bytes, bytes]:
+    def encrypt_key(self, key: bytes) -> tuple[bytes, bytes]:
         """
         Encrypt the key using AES256 with a derived key from the repository password.
         """
@@ -49,8 +49,9 @@ class KeyStoreDAO(BaseDAO):
 
         return (encrypted_key, iv)
 
+# -------------------------------
 
-    def decrypt_key(self, encrypted_key: bytes, iv: bytes) -> str:
+    def decrypt_key(self, encrypted_key: bytes, iv: bytes) -> bytes:
         """
         Decrypt the key using AES256 with a derived key from the repository password.
         """

@@ -12,6 +12,9 @@ from utils.constants.return_code import ReturnCode
 from utils.cryptography.auth import sign, verify_signature
 from utils.cryptography.integrity import calculate_digest, verify_digest
 
+logging.basicConfig(format='%(levelname)s\t- %(message)s')
+logger = logging.getLogger()
+
 # -------------------------------
 
 def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_address: str, rep_pub_key):
@@ -94,14 +97,14 @@ def encrypt_payload(data: dict | str, encryption_key: bytes, integrity_key: byte
         data = json.dumps(data)
 
     encryptor = AES()
-    encryptedData, dataIv = encryptor.encrypt_data(data, encryption_key)
+    encrypted_data, data_iv = encryptor.encrypt_data(data.encode(), encryption_key)
 
     message = {
-        "message": base64.b64encode(encryptedData).decode(),    # Data to be sent to the server
-        "iv" : base64.b64encode(dataIv).decode(),               # IV used to encrypt the data
+        "message": base64.b64encode(encrypted_data).decode(),    # Data to be sent to the server
+        "iv" : base64.b64encode(data_iv).decode(),               # IV used to encrypt the data
     }
 
-    digest = calculate_digest(encryptedData)
+    digest = calculate_digest(encrypted_data)
     mac, macIv = encryptor.encrypt_data(digest, integrity_key)
 
     body = {
@@ -111,6 +114,7 @@ def encrypt_payload(data: dict | str, encryption_key: bytes, integrity_key: byte
             "iv": base64.b64encode(macIv).decode(),             # IV used to encrypt the MAC
         }
     }
+    logger.debug(f"Encrypted payload: {body} with encryption key: {encryption_key} and integrity key: {integrity_key}")
     return body
 
 # -------------------------------
@@ -128,26 +132,27 @@ def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
     """
     
     encryptor = AES()
-    receivedData = response["data"]
-    receivedMac = response["signature"]
+    received_data = response["data"]
+    received_mac = response["signature"]
     
-    #~# Decrypt Digest
-    receivedDigest = encryptor.decrypt_data(
-        encrypted_data=base64.b64decode(receivedMac["mac"]),
+    # Decrypt Digest
+    received_digest = encryptor.decrypt_data(
+        encrypted_data=base64.b64decode(received_mac["mac"].encode()),
         key=integrity_key,
-        iv=base64.b64decode(receivedMac["iv"])
+        iv=base64.b64decode(received_mac["iv"].encode())
     )
     
-    encryptedMessage = base64.b64decode(receivedData["message"])
+    encrypted_message = base64.b64decode(received_data["message"].encode())
     
     # Verify digest of received data and check integrity
-    if ( not verify_digest(encryptedMessage, receivedDigest) ):
+    if ( not verify_digest(encrypted_message, received_digest) ):
+        print("Digest verification failed")
         return None
     
     # Decrypt data
     received_message = encryptor.decrypt_data(
-        encrypted_data=base64.b64decode(receivedData["message"]),
+        encrypted_data=encrypted_message,
         key=encryption_key,
-        iv=base64.b64decode(receivedData["iv"])
+        iv=base64.b64decode(received_data["iv"].encode())
     )
-    return json.loads(received_message)
+    return json.loads(received_message.decode('utf-8'))

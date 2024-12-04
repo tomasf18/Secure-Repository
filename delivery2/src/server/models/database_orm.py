@@ -108,10 +108,10 @@ class RestrictedMetadata(Base):
     alg: Mapped[str] = mapped_column(nullable=False)
     mode: Mapped[str] = mapped_column(nullable=True)
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
-    iv: Mapped[str] = mapped_column(nullable=True)
+    iv: Mapped[bytes] = mapped_column(nullable=True)
     
     # IV used to encrypt the encryption file key
-    iv_encrypted_key: Mapped[str] = mapped_column(nullable=False)
+    iv_encrypted_key: Mapped[bytes] = mapped_column(nullable=False)
     
     # Relationship
     document: Mapped["Document"] = relationship(back_populates="restricted_metadata")
@@ -228,7 +228,7 @@ class KeyStore(Base):
     __tablename__ = 'key_store'
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    key: Mapped[str] = mapped_column(nullable=False)
+    key: Mapped[bytes] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False) # public/private/symmetric
     
     def __repr__(self):
@@ -243,7 +243,7 @@ class Session(Base):
     subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
     organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
-    key_iv: Mapped[str] = mapped_column(nullable=False)
+    key_iv: Mapped[bytes] = mapped_column(nullable=False)
 
     nonce: Mapped[str] = mapped_column(nullable=True)
     counter: Mapped[int] = mapped_column(nullable=True)

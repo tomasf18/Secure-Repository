@@ -16,3 +16,6 @@ rep_remove_permission <session file> <role> <username>
 rep_add_permission <session file> <role> <permission>
 rep_remove_permission <session file> <role> <permission>
 rep_acl_doc <session file> <document name> [+/-] <role> <permission>
+
+
+

@@ -66,8 +66,8 @@ class Database:
         private_key = open(os.getenv("REP_PRIV_KEY_FILE")).read()
         public_key = open(os.getenv("REP_PUB_KEY_FILE")).read()
         
-        rep_pub_key = key_store_dao.create(public_key, "public")
-        rep_encrypted_priv_key = key_store_dao.create(private_key, "repository_private") # Already encrypted by the password
+        rep_pub_key = key_store_dao.create(public_key.encode(), "public")
+        rep_encrypted_priv_key = key_store_dao.create(private_key.encode(), "repository_private") # Already encrypted by the password
 
         repository = Repository(public_key_id=rep_pub_key.id, private_key_id=rep_encrypted_priv_key.id)
         self.session.add(repository)

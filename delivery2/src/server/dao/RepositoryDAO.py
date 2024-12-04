@@ -6,7 +6,7 @@ class RepositoryDAO(BaseDAO):
     
 # -------------------------------
 
-    def get_private_key(self) -> str:
+    def get_private_key(self) -> bytes:
         """Get the public key for the given repository."""
         repo = self.session.query(Repository).first()
         return repo.private_key.key
