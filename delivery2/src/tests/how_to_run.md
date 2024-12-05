@@ -1,5 +1,5 @@
-#!/bin/bash
-
+## Set the database:
+```bash
 ./rep_subject_credentials 123 user1_cred_file
 ./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
 ./rep_list_orgs
@@ -34,10 +34,21 @@
 
 ./rep_add_doc user1_session_file doc1 file1.txt
 ./rep_add_doc user1_session_file doc2 file2.txt
+```
 
-# ---
+## To get a decrypted file:
 
+### Get the document metadata associated with the file:
+```bash
 ./rep_get_doc_metadata user1_session_file doc1
-./rep_get_doc_metadata user1_session_file doc2
+```
 
-# ---
+### Knowing the file_handle, get the file (encrypted):
+```bash
+./rep_get_file <file_handle> <output_file_name(encrypted)>
+```
+
+### Decrypt the file:
+```bash
+./rep_decrypt_file <encrypted_file_name(encrypted)> <output_file_name(decrypted)>
+```

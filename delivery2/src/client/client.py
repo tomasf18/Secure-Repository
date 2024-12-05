@@ -211,7 +211,6 @@ def rep_subject_credentials(password, credentials_file):
 
 # -------------------------------
 
-#TODO
 def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     """
     rep_decrypt_file <encrypted_file> <encryption_metadata>
@@ -222,38 +221,47 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, exiting=True):
     used to encrypt its contents and the encryption key.
     """
     
-    with open(encrypted_file, "rb") as file:
-        file_contents = file.read()
+    encrypted_file = os.getenv("CLIENT_ENCRYPTED_FILES_PATH") + encrypted_file + ".enc"
+    encryption_metadata = os.getenv("CLIENT_METADATAS_PATH") + encryption_metadata + ".json"
     
-    if file_contents is None:
+    with open(encrypted_file, "rb") as file:
+        encrypted_file_content = file.read()
+    
+    if encrypted_file_content is None:
         logger.error(f"Error reading encrypted file: {encrypted_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
+    print("\n\n", encryption_metadata, "\n\n")
     metadata = read_file(encryption_metadata)
+    print("\n\n", metadata, "\n\n")
     if metadata is None:
         logger.error(f"Error reading metadata file: {encryption_metadata}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
-    print("\n\n", metadata)
-    algorithm = metadata['algorithm']
-    mode = metadata['mode']
-    key = base64.b64decode(metadata['key'].encode())
-    iv = base64.b64decode(metadata['iv'].encode())
+    doc_name = metadata['document_name']
+    encryption_data = metadata['encryption_data']
+    algorithm = encryption_data['algorithm']
+    mode = encryption_data['mode']
+    key = convert_str_to_bytes(encryption_data['key'])
+    iv = convert_str_to_bytes(encryption_data['iv'])
 
     if algorithm == "AES256":
+        aes = AES(AESModes.CBC)
         if mode == "CBC":
-            aes = AES(AESModes.CBC)
-            decrypted_file = aes.decrypt_data(encrypted_data=file_contents, key=key, iv=iv)
-        # elif mode == "GCM":
-        #     aes = AES(AESModes.GCM)
-        #     nonce = base64.b64decode(metadata['nonce'])
-        #     decrypted_file = aes.decrypt_data(encrypted_data=file_contents, key=key, nonce=nonce)
+            decrypted_file_contents = aes.decrypt_data(encrypted_data=encrypted_file_content, key=key, iv=iv)
+        # elif mode == "GCM": (...)
+    
+    decrypted_file_contents_str = decrypted_file_contents.decode()
+    decrypted_files_path = os.getenv("CLIENT_DECRYPTED_FILES_PATH") + doc_name + ".dec"
+    
+    with open(decrypted_files_path, "w") as file:
+        file.write(decrypted_file_contents_str)
     
     if exiting:
-        print(decrypted_file.decode())
+        print(decrypted_file_contents_str)
         sys.exit(ReturnCode.SUCCESS)
     else:
-        return decrypted_file.decode()
+        return decrypted_file_contents_str
 
 
 # ****************************************************
@@ -368,6 +376,8 @@ def rep_create_session(org, username, password, credentials_file, session_file):
 
     print(f"Session created and saved to {session_file}, sessionId={session_data['session_id']}")    
     sys.exit(ReturnCode.SUCCESS)
+       
+# -------------------------------
         
 def rep_get_file(file_handle, output_file=None, exiting=True):
     """
@@ -381,14 +391,15 @@ def rep_get_file(file_handle, output_file=None, exiting=True):
     endpoint = f"/files/{file_handle}"
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET)
-    
+    print(result)
     if result is None:
         sys.exit(ReturnCode.REPOSITORY_ERROR)
         
     file_contents = convert_str_to_bytes(result["data"])
 
     if output_file is not None:
-        with open('./' + output_file, "wb") as file:
+        encrypted_file_path = os.getenv("CLIENT_ENCRYPTED_FILES_PATH") + output_file + ".enc"
+        with open(encrypted_file_path, "wb") as file:
             file.write(file_contents)
     else:
         print(file_contents)
@@ -872,9 +883,19 @@ def rep_get_doc_metadata(session_file, document_name):
 
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    data = result["data"]
+    
+    print(data) # Criar uma pasta com todos os dados: files decrypted, encrypted, metadata.json, etc
+    
+    document_name = data["document_name"]
+    metadata_path = os.getenv("CLIENT_METADATAS_PATH") + f"{document_name}.json"
+    
+    with open(metadata_path, "w") as file:
+        file.write(json.dumps(data))
+    
     sys.exit(ReturnCode.SUCCESS)
 
+# -------------------------------
 
 def rep_get_doc_file(session_file, document_name, output_file=None):
     """

@@ -66,8 +66,8 @@ class DocumentDAO(BaseDAO):
             # Step 3: Generate the document handle and file handle
             data_digest = hashlib.sha256(encrypted_data).hexdigest()
             document_handle = data_digest
-            file_handle = f"{organization.name}_{data_digest}.enc"
-            file_path = os.path.join("data", organization.name, file_handle)
+            file_handle = f"{organization.name}_{data_digest}"
+            file_path = os.path.join("data", organization.name, file_handle) + ".enc"
 
             # Step 4: Store the data of the encrypted document file in a system file
             write_file(file_path, encrypted_data)
