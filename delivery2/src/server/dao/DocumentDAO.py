@@ -4,7 +4,7 @@ import hashlib
 from datetime import datetime
 from utils.file_operations import write_file
 
-from models.database_orm import DocumentACL, RestrictedMetadata, Document
+from models.database_orm import RestrictedMetadata, Document
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -16,12 +16,16 @@ from .KeyStoreDAO import KeyStoreDAO
 from .DocumentACLDAO import DocumentACLDAO
 from .RestrictedMetadataDAO import RestrictedMetadataDAO
 
-# remove
-from .ACLDAO import ACLDAO
-
-
 class DocumentDAO(BaseDAO):
     """DAO for managing Document entities."""
+    
+    def __init__(self, session):
+        super().__init__(session)
+        self.session_dao = SessionDAO(session)
+        self.role_dao = RoleDAO(session)
+        self.key_store_dao = KeyStoreDAO(session)
+        self.document_acl_dao = DocumentACLDAO(session)
+        self.restricted_metadata_dao = RestrictedMetadataDAO(session)
 
 # -------------------------------
 
@@ -49,12 +53,7 @@ class DocumentDAO(BaseDAO):
 
         try:
             # Step 1: Obtain the session details
-            session_dao = SessionDAO(self.session)
-            key_store_dao = KeyStoreDAO(self.session)
-            document_dao = DocumentDAO(self.session)
-            document_acl_dao = DocumentACLDAO(self.session)
-            restricted_metadata_dao = RestrictedMetadataDAO(self.session)
-            session = session_dao.get_by_id(session_id)
+            session = self.session_dao.get_by_id(session_id)
             creator = session.subject
             organization = session.organization
 
@@ -67,27 +66,27 @@ class DocumentDAO(BaseDAO):
             # Step 3: Generate the document handle and file handle
             data_digest = hashlib.sha256(encrypted_data).hexdigest()
             document_handle = data_digest
-            file_handle = f"{organization.name}_{data_digest}"
+            file_handle = f"{organization.name}_{data_digest}.enc"
             file_path = os.path.join("data", organization.name, file_handle)
 
             # Step 4: Store the data of the encrypted document file in a system file
             write_file(file_path, encrypted_data)
 
             # Step 5: Create the Document entity
-            document = document_dao.create(document_handle, name, creation_date, file_handle, creator.username, organization.name)
+            document = self.create(document_handle, name, creation_date, file_handle, creator.username, organization.name)
 
             # Step 6: Create the DocumentACL '''and link it to the Manager''' 
             ''' 
-            DON'T LINK! THE MANAGER ROLE IS AT ORGANIZATION LEVEL, AND HAS THE FULL SET OF POSSIBLE PERMISSIONS 
+            DO NOT LINK! THE MANAGER ROLE IS AT ORGANIZATION LEVEL, AND HAS THE FULL SET OF POSSIBLE PERMISSIONS 
             THERE'S ONLY ONE MANAGER ROLE PER ORGANIZATION, AND IT'S CREATED WHEN THE ORGANIZATION IS CREATED
             '''
             
-            # role_dao = RoleDAO(self.session)
-            # manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+            # self.role_dao = RoleDAO(self.session)
+            # manager_role = self.role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
             # if not manager_role:
             #     raise ValueError("Manager role not found for the organization.")
 
-            document_acl = document_acl_dao.create(document.id)
+            document_acl = self.document_acl_dao.create(document.id)
             # document_acl.roles.append(manager_role)
             self.session.add(document_acl)
 
@@ -95,10 +94,10 @@ class DocumentDAO(BaseDAO):
             algorithm, mode = alg.split("-")
             
             print("DECRYPTED METADATA KEY: ", key)
-            encrypted_metadata_key, iv_encrypted_key = key_store_dao.create(key, "symmetric")
+            encrypted_metadata_key, iv_encrypted_key = self.key_store_dao.create(key, "symmetric")
             print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key)
 
-            metadata = restricted_metadata_dao.create(
+            metadata = self.restricted_metadata_dao.create(
                 document=document, 
                 algorithm=algorithm, 
                 mode=mode, 
@@ -128,8 +127,9 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Session with ID '{document_id}' does not exist.")
         return restricted_metadata.key.key
     
+# -------------------------------
     
-    def get_decrypted_metadata_key(self, document_id: int) -> str:
+    def get_decrypted_metadata_key(self, document_id: int) -> bytes:
         """
         Retrieve the decrypted restricted_metadata key. 
         """
@@ -138,8 +138,9 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Session with ID '{document_id}' does not exist.")
         encrypted_key = self.get_encrypted_metadata_key(document_id)
         iv = restricted_metadata.iv_encrypted_key
-        return self.decrypt_metadata_key(encrypted_key, iv)
+        return self.key_store_dao.decrypt_key(encrypted_key, iv)
         
+# -------------------------------
 
     def get(self, sessionId: int, creator_username: str = None, date_filter: str = None, date: datetime = None) -> list[Document]:
         """
@@ -152,8 +153,7 @@ class DocumentDAO(BaseDAO):
         :return: List of matching Document objects.
         :raises ValueError: If the session is invalid or date_filter is invalid.
         """
-        session_dao = SessionDAO(self.session)
-        session = session_dao.get_by_id(sessionId)
+        session = self.session_dao.get_by_id(sessionId)
         if not session:
             raise ValueError(f"Session with ID {sessionId} not found.")
         organization_name = session.organization_name
@@ -183,8 +183,7 @@ class DocumentDAO(BaseDAO):
         :raises ValueError: If the session is invalid or the document is not found.
         """
         # Ensure session is valid
-        session_dao = SessionDAO(self.session)
-        session = session_dao.get_by_id(sessionId)
+        session = self.session_dao.get_by_id(sessionId)
         if not session:
             raise ValueError(f"Session with ID {sessionId} not found.")
         organization_name = session.organization_name
@@ -197,6 +196,7 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Document '{document_name}' not found in organization '{organization_name}'.")
         
         return document
+    
     
     def delete(self, sessionId: int, document_name: str) -> str:
         """
@@ -221,8 +221,7 @@ class DocumentDAO(BaseDAO):
         document.file_handle = None
         
         # Assign deleter
-        session_dao = SessionDAO(self.session)
-        session = session_dao.get_by_id(sessionId)
+        session = self.session_dao.get_by_id(sessionId)
         document.deleter_username = session.subject_username
         
         self.session.commit()

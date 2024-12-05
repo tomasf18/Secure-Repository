@@ -325,20 +325,24 @@ def list_organization_documents(organization_name, data, username, date_filter, 
 
 # =================================== Auxiliar Function =================================== #
 
-def get_serializable_document(document: "Document"):
-
+def get_serializable_document(document: "Document", document_dao: DocumentDAO):
+    
+    decrypted_key: bytes = document_dao.get_decrypted_metadata_key(document.id)
+    
     return {
+        "document_handle": document.document_handle,
         "document_name": document.name,
         "create_date": document.create_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "creator": document.creator.__repr__(),
         "file_handle": document.file_handle,
-        "creator_username": document.creator_username,
-        "deleter_username": document.deleter_username,
+        "acl": document.acl.__repr__(),
+        "deleter": document.deleter.__repr__(),
         "organization": document.org_name,
         "encryption_data": {
             "algorithm": document.restricted_metadata.alg,
             "mode": document.restricted_metadata.mode,
-            "key": None,
-            "iv": document.restricted_metadata.iv,
+            "key": convert_bytes_to_str(decrypted_key),
+            "iv": convert_bytes_to_str(document.restricted_metadata.iv),
         }
     }
 
@@ -364,7 +368,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
             }, session_key[:32], session_key[32:]
         ), 404
     
-    serializable_document = get_serializable_document(document)
+    serializable_document = get_serializable_document(document, document_dao)
 
     # Construct result
     result = {
@@ -374,8 +378,10 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
+    print("\n\n\n RESULT: ", result, "\n\n\n")
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
     return encrypted_result, 201
 
 def get_organization_document_file(organization_name, document_name, data, db_session: Session):
