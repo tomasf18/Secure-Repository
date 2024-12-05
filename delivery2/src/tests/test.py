@@ -34,6 +34,8 @@ import subprocess
 
 # ---
 
+# ./rep_add_doc user1_session_file doc1 file1.txt
+
 def test_create_org():
     orgname1='org1'
     pub_key = 'pub_key.pem'

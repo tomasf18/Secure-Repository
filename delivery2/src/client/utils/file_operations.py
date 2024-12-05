@@ -21,8 +21,9 @@ def read_file(file: str) -> str | None:
         
 # -------------------------------
         
-def write_file(file: str, content: str):
-    with open(file, "wb") as f:
+def write_file(file_path: str, content: str):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "wb") as f:
         f.write(content)
     
 

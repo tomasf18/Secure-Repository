@@ -53,9 +53,8 @@ class OrganizationDAO(BaseDAO):
 
             # Step 8: Add all Permissions for Manager
             permissions = self.session.query(Permission).filter(Permission.name.in_([
-                "DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", 
-                "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", 
-                "ROLE_UP", "ROLE_MOD"
+                "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", 
+                "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD", "DOC_ACL", "DOC_READ", "DOC_DELETE"
             ])).all()
 
             for permission in permissions:

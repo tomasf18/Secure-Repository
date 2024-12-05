@@ -3,6 +3,10 @@ from models.database_orm import ACL
 
 class ACLDAO(BaseDAO):
     """DAO for managing ACL entities."""
+    
+    def get_all(self) -> list["ACL"]:
+        """Retrieve all ACLs."""
+        return self.session.query(ACL).all()
 
     def get_by_id(self, acl_id: int) -> "ACL":
         """Retrieve an ACL by its ID."""

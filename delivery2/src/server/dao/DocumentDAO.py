@@ -13,11 +13,17 @@ from .BaseDAO import BaseDAO
 from .RoleDAO import RoleDAO
 from .SessionDAO import SessionDAO
 from .KeyStoreDAO import KeyStoreDAO
+from .DocumentACLDAO import DocumentACLDAO
 from .RestrictedMetadataDAO import RestrictedMetadataDAO
+
+# remove
+from .ACLDAO import ACLDAO
 
 
 class DocumentDAO(BaseDAO):
     """DAO for managing Document entities."""
+
+# -------------------------------
 
     def create(self, document_handle: str, name: str, creation_date: datetime, file_handle: str, creator_username: str, org_name: str) -> Document:
         """ Create a new Document entry. """
@@ -38,7 +44,7 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Document '{name}' already exists.")
         
         
-    def create_document(self, name: str, session_id: str, encrypted_data: bytes, alg: str, key: bytes, iv: str) -> Document:
+    def create_document(self, name: str, session_id: int, encrypted_data: bytes, alg: str, key: bytes, iv: bytes) -> Document:
         """Create a new document, its ACL, and metadata, and store the encrypted file."""
 
         try:
@@ -46,6 +52,7 @@ class DocumentDAO(BaseDAO):
             session_dao = SessionDAO(self.session)
             key_store_dao = KeyStoreDAO(self.session)
             document_dao = DocumentDAO(self.session)
+            document_acl_dao = DocumentACLDAO(self.session)
             restricted_metadata_dao = RestrictedMetadataDAO(self.session)
             session = session_dao.get_by_id(session_id)
             creator = session.subject
@@ -69,14 +76,19 @@ class DocumentDAO(BaseDAO):
             # Step 5: Create the Document entity
             document = document_dao.create(document_handle, name, creation_date, file_handle, creator.username, organization.name)
 
-            # Step 6: Create the DocumentACL and link it to the Manager role of the organization
-            role_dao = RoleDAO(self.session)
-            manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
-            if not manager_role:
-                raise ValueError("Manager role not found for the organization.")
+            # Step 6: Create the DocumentACL '''and link it to the Manager''' 
+            ''' 
+            DON'T LINK! THE MANAGER ROLE IS AT ORGANIZATION LEVEL, AND HAS THE FULL SET OF POSSIBLE PERMISSIONS 
+            THERE'S ONLY ONE MANAGER ROLE PER ORGANIZATION, AND IT'S CREATED WHEN THE ORGANIZATION IS CREATED
+            '''
+            
+            # role_dao = RoleDAO(self.session)
+            # manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+            # if not manager_role:
+            #     raise ValueError("Manager role not found for the organization.")
 
-            document_acl = DocumentACL(document=document)
-            document_acl.roles.append(manager_role)
+            document_acl = document_acl_dao.create(document.id)
+            # document_acl.roles.append(manager_role)
             self.session.add(document_acl)
 
             # Step 7: Create the RestrictedMetadata entity
@@ -105,6 +117,7 @@ class DocumentDAO(BaseDAO):
             self.session.rollback()
             raise ValueError("Error while creating the document or its associated entities.")
 
+# -------------------------------
 
     def get_encrypted_metadata_key(self, document_id: int) -> bytes:
         """
@@ -126,16 +139,6 @@ class DocumentDAO(BaseDAO):
         encrypted_key = self.get_encrypted_metadata_key(document_id)
         iv = restricted_metadata.iv_encrypted_key
         return self.decrypt_metadata_key(encrypted_key, iv)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
 
     def get(self, sessionId: int, creator_username: str = None, date_filter: str = None, date: datetime = None) -> list[Document]:

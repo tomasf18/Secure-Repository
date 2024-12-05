@@ -31,3 +31,8 @@
 ./rep_list_subjects user3_session_file user4
 
 # ---
+
+./rep_add_doc user1_session_file doc1 file1.txt
+./rep_add_doc user1_session_file doc2 file2.txt
+
+# ---

@@ -48,6 +48,7 @@ def create_organization(data, db_session: Session):
 
 def list_organizations(db_session: Session):
     '''Handles GET requests to /organizations'''
+    
     organization_dao = OrganizationDAO(db_session)
     organizations: list["Organization"] = organization_dao.get_all()
     serializable_organizations = []
@@ -61,10 +62,11 @@ def list_organizations(db_session: Session):
 
 def list_organization_subjects(organization_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
+    
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -104,10 +106,11 @@ def list_organization_subjects(organization_name, data, db_session: Session):
 
 def get_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>'''
+    
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -117,7 +120,7 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
     subject: "Subject" = organization_dao.get_subject_by_username(organization_name, username)
     status = organization_dao.get_org_subj_association(org_name=organization_name, username=username).status
 
-    ## Create result
+    # Create result
     result = {
         "data": {
             "username": subject.username,
@@ -125,10 +128,10 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
         }
     }
     
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
 
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
     return json.dumps(encrypted_result), 200
@@ -161,15 +164,15 @@ def add_organization_subject(organization_name, data, db_session: Session):
             }, session_key[:32], session_key[32:]
         ), 400
 
-    ## Construct result
+    # Construct result
     result = {
         "data": f'Subject {username} added to organization {organization_name} successfully'
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
     return json.dumps(encrypted_result), 200
@@ -178,6 +181,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
 
 def suspend_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/subjects/<subject_name>'''
+    
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
 
@@ -195,15 +199,15 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
             }, session_key[:32], session_key[32:]
         ), 403
     
-    ## Construct result
+    # Construct result
     result = {
         "data": f"Subject '{username}' in the organization '{organization_name}' has been suspended."
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
     return json.dumps(encrypted_result), 200
@@ -212,6 +216,7 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     
 def activate_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
+    
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
 
@@ -229,15 +234,15 @@ def activate_organization_subject(organization_name, username, data, db_session:
             }, session_key[:32], session_key[32:]
         ), 403
     
-    ## Construct result
+    # Construct result
     result = {
         "data": f"Subject '{username}' in the organization '{organization_name}' has been activated."
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
     return json.dumps(encrypted_result), 200
@@ -246,10 +251,11 @@ def activate_organization_subject(organization_name, username, data, db_session:
     
 def create_organization_document(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/documents'''
-    organization_dao = OrganizationDAO(db_session)
+    
+    document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -257,31 +263,34 @@ def create_organization_document(organization_name, data, db_session: Session):
         return message, code
     
     document_name = decrypted_data.get('document_name')
-    encrypted_data = base64.b64decode(decrypted_data.get('file'))
+    encrypted_file_content = convert_str_to_bytes(decrypted_data.get('file'))
     alg = decrypted_data.get('alg')
-    key = decrypted_data.get('key')
-    iv = decrypted_data.get('iv')
+    key = convert_str_to_bytes(decrypted_data.get('key'))
+    iv = convert_str_to_bytes(decrypted_data.get('iv'))
     
-    organization_dao.create_document(document_name, session.id, encrypted_data, alg, key, iv)
+    document_dao.create_document(document_name, session.id, encrypted_file_content, alg, key, iv)
 
-    ## Construct result
+    # Construct result
     result = {
         "data": f"Document '{document_name}' uploaded in the organization '{organization_name}' successfully."
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
     return encrypted_result, 201
+
+# -------------------------------
 
 def list_organization_documents(organization_name, data, username, date_filter, date, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents'''
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -302,15 +311,15 @@ def list_organization_documents(organization_name, data, username, date_filter, 
             "document_name": doc.name,
         })
 
-    ## Construct result
+    # Construct result
     result = {
         "data": serializable_documents
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     return encrypted_result, 201
 
@@ -340,7 +349,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -357,15 +366,15 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     
     serializable_document = get_serializable_document(document)
 
-    ## Construct result
+    # Construct result
     result = {
         "data": serializable_document
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     return encrypted_result, 201
 
@@ -375,7 +384,7 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     session_dao = SessionDAO(db_session)
     organization_dao = OrganizationDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -395,15 +404,15 @@ def get_organization_document_file(organization_name, document_name, data, db_se
         document.restricted_metadata.iv_encrypted_key
     ).decode()
 
-    ## Construct result
+    # Construct result
     result = {
         "data": serializable_document
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     return encrypted_result, 201
 
@@ -413,7 +422,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
 
-    ## Get session
+    # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
@@ -428,14 +437,14 @@ def delete_organization_document(organization_name, document_name, data, db_sess
             }, session_key[:32], session_key[32:]
         ), 400
     
-    ## Construct result
+    # Construct result
     result = {
         "data": f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."
     }
 
-    ## Update session
+    # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
+    # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     return encrypted_result, 200

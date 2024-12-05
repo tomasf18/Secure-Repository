@@ -16,7 +16,7 @@ from utils.constants.http_method import HTTPMethod
 from utils.constants.return_code import ReturnCode
 
 from utils.file_operations import read_file
-from utils.utils import get_private_key_file, get_public_key_file, get_session_file, convert_bytes_to_str, convert_str_to_bytes
+from utils.utils import get_private_key_file, get_public_key_file, get_session_file, convert_bytes_to_str, convert_str_to_bytes, get_client_file
 
 from cryptography.hazmat.primitives import serialization
 
@@ -779,6 +779,8 @@ def rep_remove_permission(session_file, role, target):
     print("rep_remove_permission")
     pass
 
+# -------------------------------
+
 def rep_add_doc(session_file, document_name, file):
     """
     rep_add_doc <session_file> <document_name> <file>
@@ -788,45 +790,49 @@ def rep_add_doc(session_file, document_name, file):
     - Calls POST /organizations/{organization_name}/documents endpoint
     """
         
+    session_file = get_session_file(session_file)
     session_file_content = read_file(session_file)
     if session_file_content is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
     session_id = session_file_content['session_id']
-    session_key = base64.b64decode(session_file_content["session_key"])
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
     
+    file = get_client_file(file)
     file_contents = read_file(file)
     if file_contents is None:
         logger.error(f"Error reading file: {file}")
         sys.exit(ReturnCode.INPUT_ERROR)
         
-    # encrypt file_contents using AES mode CBC
+    # Encrypt file_contents using AES mode CBC
+    algorithm = "AES256"
+    mode = "CBC"
     aes = AES(AESModes.CBC)
     random_key = aes.generate_random_key()
-    encrypted_file, iv = aes.encrypt_data(file_contents, random_key)
+    encrypted_file_content, iv = aes.encrypt_data(file_contents.encode(), random_key)
     
     endpoint = f"/organizations/{session_file_content['organization']}/documents"
     
     data = {
         "session_id": session_id,
         "document_name": document_name,
-        "file": base64.b64encode(encrypted_file).decode('utf-8'),
-        "alg": "AES256-CBC",
-        "key": base64.b64encode(random_key).decode('utf-8'),
-        "iv": base64.b64encode(iv).decode('utf-8'),
+        "file": convert_bytes_to_str(encrypted_file_content),
+        "alg": algorithm + "-" + mode,
+        "key": convert_bytes_to_str(random_key),
+        "iv": convert_bytes_to_str(iv),
         "counter": session_file_content["counter"] + 1,
         "nonce": session_file_content["nonce"],
     }
     
-    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data,
-                                     sessionId=session_id, sessionKey=session_key)
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
     
     if result is None:
         logger.error("Error adding document")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
-    saveContext(session_file, session_file_content, result)
+    saveContext(session_file, session_file_content)
+    
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
