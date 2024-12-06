@@ -161,6 +161,26 @@ class SessionDAO(BaseDAO):
             return role_object
         except IntegrityError:
             self.session.rollback()
+            
+# -------------------------------
+
+    def drop_session_role(self, session_id: int, role: str) -> Role:
+        """
+        Drop a role from a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+            
+            role_object = self.role_dao.get_by_name(role)
+            
+            session.session_roles.remove(role_object)
+            self.session.commit()
+            self.session.refresh(session)
+            return role_object
+        except IntegrityError:
+            self.session.rollback()
 
 # -------------------------------
  

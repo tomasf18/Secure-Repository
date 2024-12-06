@@ -20,6 +20,6 @@ def session_roles_role(organization_name, session_id, role):
     if request.method == 'PUT':
         print(f"SERVER: Received data: {data}. Adding role {role} to session {session_id} in organization {organization_name}")
         return session_assume_role(organization_name, session_id, role, data, db_session)
-    # elif request.method == 'DELETE':
-    #     print(f"SERVER: Received data: {data}. Creating document in organization {organization_name}")
-    #     return create_organization_document(organization_name, data, db_session)
+    elif request.method == 'DELETE':
+        print(f"SERVER: Received data: {data}. Dropping role {role} from session {session_id} in organization {organization_name}")
+        return session_drop_role(organization_name, session_id, role, data, db_session)

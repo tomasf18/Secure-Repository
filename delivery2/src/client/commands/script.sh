@@ -64,3 +64,16 @@
 ./rep_assume_role user1_session_file ROLE_3
 
 # ---
+
+./rep_drop_role user1_session_file ROLE_1
+./rep_drop_role user2_session_file ROLE_4
+./rep_assume_role user2_session_file ROLE_1
+./rep_add_role user2_session_file ROLE_5
+./rep_assume_role user2_session_file ROLE_5
+./rep_drop_role user1_session_file ROLE_3
+./rep_assume_role user1_session_file ROLE_2
+
+# User 1: [ROLE_2]
+# User 2: [ROLE_1, ROLE_5]
+
+# ---

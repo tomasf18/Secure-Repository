@@ -153,14 +153,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     result = {
         "roles": [role.name for role in session.session_roles],
         "data": f"Role '{role_added.__repr__()}' added the session with user '{session.subject_username}' in organization '{session.organization_name}'"
-    }
-    
-    # print session roles
-    print(f"\n\n\n\n Session roles: ")
-    for role in session.session_roles:
-        print(role.__repr__())
-    print("\n\n\n\n")
-    
+    }  
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
@@ -168,4 +161,60 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
+        # print session roles
+    print(f"\n\n\n\nSession roles: ")
+    for role in session.session_roles:
+        print(role.__repr__())
+    print("\n\n\n\n")
+    
+    return json.dumps(encrypted_result), 200
+
+# -------------------------------
+
+def session_drop_role(organization_name, session_id, role, data, db_session):
+    ''' Handles the addition of a role to a session. 
+    
+    Args:
+        role (str): The role to be added to the session
+        data (_type_): Data received from the client
+        db_session (SQLAlchemySession): Database session
+        
+    Returns:
+        response: Response to be sent to the client
+    '''
+    
+    session_dao = SessionDAO(db_session)
+
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    try:
+        role_removed = session_dao.drop_session_role(session.id, role)
+    except Exception as e:
+        return encrypt_payload({
+                "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
+            }, session_key[:32], session_key[32:]
+        ), 403
+    
+    # Construct result
+    result = {
+        "roles": [role.name for role in session.session_roles],
+        "data": f"Role '{role_removed.__repr__()}' removed from the session with user '{session.subject_username}' in organization '{session.organization_name}'"
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    # print session roles
+    print(f"\n\n\n\nSession roles: ")
+    for role in session.session_roles:
+        print(role.__repr__())
+    print("\n\n\n\n")
+        
     return json.dumps(encrypted_result), 200
