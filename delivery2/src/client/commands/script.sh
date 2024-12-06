@@ -48,3 +48,6 @@
 # ---
 
 ./rep_delete_doc user1_session_file doc1
+./rep_get_doc_metadata user1_session_file doc1
+
+# ---

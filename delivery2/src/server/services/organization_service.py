@@ -1,11 +1,10 @@
 import json
 import base64
-import secrets
-import logging
 
 from dao.SessionDAO import SessionDAO
 from dao.DocumentDAO import DocumentDAO
 from dao.OrganizationDAO import OrganizationDAO
+from dao.RoleDAO import RoleDAO
 
 from models.status import Status
 from models.database_orm import Organization, Subject, Document
@@ -458,3 +457,48 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
     return encrypted_result, 200
+
+
+# ==================================== Second Delivery ==================================== #
+
+def create_organization_role(organization_name, data, db_session: Session):
+    '''Handles POST requests to /organizations/<organization_name>/documents'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    # Get organization, acl_id and new_role
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+    new_role = decrypted_data.get('new_role')
+
+    # Create role
+    role = role_dao.create(new_role, acl_id)
+
+    # Construct result
+    result = {
+        "data": f"Role '{role.__repr__()}' created in the organization '{organization_name}' successfully."
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 201
+
+
+
+
+
+# ========================================================================================= #
+

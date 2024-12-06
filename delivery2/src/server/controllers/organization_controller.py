@@ -92,3 +92,54 @@ def organization_document(organization_name, document_name):
 #     data = request.json
 #     print(f"SERVER: Received data: {data}. Getting file from document {document_name} from organization {organization_name}")
 #     return get_organization_document_file(organization_name, document_name, data, db_session)
+
+# -------------------------------
+
+@organization_blueprint.route('/organizations/<organization_name>/roles', methods=['GET', 'POST'])
+def organization_roles(organization_name):
+    db_session = g.db_session
+    if request.method == 'GET':
+        data = request.json
+        # print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
+        # username = request.args.get('subject')
+        # date_filter = request.args.get('date_filter')
+        # date = request.args.get('date')
+        # return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
+    elif request.method == 'POST':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Creating role in organization {organization_name}")
+        return create_organization_role(organization_name, data, db_session)
+    
+# -------------------------------
+
+@organization_blueprint.route('/organizations/<organization_name>/roles/<role>', methods=['PUT', 'DELETE'])
+def organization_role(organization_name, role):
+    db_session = g.db_session
+    # if request.method == 'GET':
+    #     data = request.json
+    #     print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
+    #     username = request.args.get('subject')
+    #     date_filter = request.args.get('date_filter')
+    #     date = request.args.get('date')
+    #     return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
+    # elif request.method == 'POST':
+    #     data = request.json
+    #     print(f"SERVER: Received data: {data}. Creating document in organization {organization_name}")
+    #     return create_organization_document(organization_name, data, db_session)
+    
+# -------------------------------
+
+@organization_blueprint.route('/organizations/<organization_name>/roles/<role>/permissions', methods=['GET', 'PUT', 'DELETE'])
+def organization_role_permissions(organization_name, role):
+    db_session = g.db_session
+    # if request.method == 'GET':
+    #     data = request.json
+    #     print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
+    #     username = request.args.get('subject')
+    #     date_filter = request.args.get('date_filter')
+    #     date = request.args.get('date')
+    #     return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
+    # elif request.method == 'POST':
+    #     data = request.json
+    #     print(f"SERVER: Received data: {data}. Creating document in organization {organization_name}")
+    #     return create_organization_document(organization_name, data, db_session)

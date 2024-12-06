@@ -738,8 +738,37 @@ def rep_add_role(session_file, role):
     - Calls POST /organizations/{organization_name}/roles endpoint
     """
     
-    print("rep_add_role")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+    
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/roles"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+        "new_role": role,
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error suspending subject")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    saveContext(session_file, session_file_content)
+    
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
+    
+# -------------------------------
 
 def rep_suspend_role(session_file, role):
     """
