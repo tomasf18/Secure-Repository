@@ -2,6 +2,23 @@ import pytest
 import os
 import subprocess
 
+# ======================== Clear all data ========================
+
+# NOTE: setup_module is a special function that pytest will run before any tests.
+def setup_module(module):
+    """Run the clear_all_data.sh script before the tests."""
+    try:
+        print("Clearing data...")
+        subprocess.run(["bash", "clear_all_data.sh"], check=True)
+    except subprocess.CalledProcessError as e:
+        print("Error clearing data:", e)
+
+# ======================== Test cases ========================
+
+def test_simple():
+    """A simple test to ensure the setup works."""
+    assert 0 == 0
+
 # ./rep_subject_credentials 123 user1_cred_file
 # ./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
 # ./rep_list_orgs
