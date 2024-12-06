@@ -31,12 +31,13 @@ class RoleDAO(BaseDAO):
     
 # -------------------------------
     
-    def get_by_name(self, name: str) -> "Role":
-        """Retrieve a Role by name."""
-        role = self.session.query(Role).filter_by(name=name).first()
-        if not role:
-            raise ValueError(f"Role with name '{name}' not found.")
-        return role
+    # NOT GOOD -> The same name can exist in different ACLs
+    # def get_by_name(self, name: str) -> "Role":
+    #     """Retrieve a Role by name."""
+    #     role = self.session.query(Role).filter_by(name=name).first()
+    #     if not role:
+    #         raise ValueError(f"Role with name '{name}' not found.")
+    #     return role
     
 # -------------------------------
     

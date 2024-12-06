@@ -5,9 +5,11 @@ from dao.SessionDAO import SessionDAO
 from dao.DocumentDAO import DocumentDAO
 from dao.OrganizationDAO import OrganizationDAO
 from dao.RoleDAO import RoleDAO
+from dao.SubjectDAO import SubjectDAO
+from dao.PermissionDAO import PermissionDAO
 
 from models.status import Status
-from models.database_orm import Organization, Subject, Document
+from models.database_orm import Organization, Subject, Document, Permission
 
 from utils.server_session_utils import load_session
 from utils.server_session_utils import encrypt_payload
@@ -76,7 +78,8 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
     try:
         subjects: list["Subject"] = None
         if role:
-            role_object = role_dao.get_by_name(role)
+            organization = organization_dao.get_by_name(organization_name)
+            role_object = role_dao.get_by_name_and_acl_id(role, organization.acl.id)
             subjects = role_object.subjects
         else:
             subjects = organization_dao.get_subjects(organization_name)
@@ -635,6 +638,193 @@ def reactivate_role_subjects(organization_name, role_name, data, db_session: Ses
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
     return encrypted_result, 200
+
+# -------------------------------
+
+def get_role_permissions(organization_name, role_name, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/roles/<role>/subject-permissions'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+
+    # Get role
+    role = role_dao.get_by_name_and_acl_id(role_name, acl_id)
+
+    # Get role permissions
+    permissions = role.permissions
+    
+    # Construct result
+    result = {
+        "data": [permission.__repr__() for permission in permissions]
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
+
+# -------------------------------
+    # data = {
+    #     "session_id": session_id,
+    #     "counter": session_file_content["counter"] + 1,
+    #     "nonce": session_file_content["nonce"],
+    #     "object": object, -> Object: username or permission ID/name (e.g. DOC_READ, DOC_WRITE, ...)
+    # }
+
+def add_subject_or_permission_to_role(organization_name, role_name, data, db_session: Session):
+    '''Handles PUT requests to /organizations/<organization_name>/roles/<role>/subject-permissions'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+    subject_dao = SubjectDAO(db_session)
+    permission_dao = PermissionDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+
+    # Get role
+    role = role_dao.get_by_name_and_acl_id(role_name, acl_id)
+
+    # Add subject or permission to role
+    object = decrypted_data.get('object')
+    
+    subject: Subject = None
+    permission: Permission = None
+
+    try:
+        subject = subject_dao.get_by_username(object)
+    except ValueError:
+        try:
+            permission = permission_dao.get_by_name(object)
+        except ValueError:
+            return encrypt_payload({
+                    "error": f"Subject '{object}' or Permission '{object}' doesn't exist."
+                }, session_key[:32], session_key[32:]
+            ), 400
+    
+    result = None
+    
+    if subject:
+        role.subjects.append(subject)
+        result = {
+            "data": f"Subject '{subject.username}' added to role '{role_name}' in organization '{organization_name}' successfully."
+        }
+        
+    if permission:
+        role.permissions.append(permission)
+        result = {
+            "data": f"Permission '{permission.name}' added to role '{role_name}' in organization '{organization_name}' successfully."
+        }
+        
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
+
+# -------------------------------
+
+def remove_subject_or_permission_from_role(organization_name, role_name, data, db_session: Session):
+    '''Handles DELETE requests to /organizations/<organization_name>/roles/<role>/subject-permissions'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+    subject_dao = SubjectDAO(db_session)
+    permission_dao = PermissionDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+
+    # Get role
+    role = role_dao.get_by_name_and_acl_id(role_name, acl_id)
+
+    # Remove subject or permission from role
+    object = decrypted_data.get('object')
+    
+    subject: Subject = None
+    permission: Permission = None
+
+    try:
+        subject = subject_dao.get_by_username(object)
+    except ValueError:
+        try:
+            permission = permission_dao.get_by_name(object)
+        except ValueError:
+            return encrypt_payload({
+                    "error": f"Subject '{object}' or Permission '{object}' doesn't exist."
+                }, session_key[:32], session_key[32:]
+            ), 400
+    
+    result = None
+    
+    if subject:
+        try:
+            role.subjects.remove(subject)
+            result = {
+                "data": f"Subject '{subject.username}' removed from role '{role_name}' in organization '{organization_name}' successfully."
+            }
+        except ValueError:
+            return encrypt_payload({
+                    "error": f"Subject '{subject.username}' is not associated with role '{role_name}' in organization '{organization_name}'."
+                }, session_key[:32], session_key[32:]
+            ), 400
+        
+    if permission:
+        try:
+            role.permissions.remove(permission)
+            result = {
+                "data": f"Permission '{permission.name}' removed from role '{role_name}' in organization '{organization_name}' successfully."
+            }
+        except ValueError:
+            return encrypt_payload({
+                    "error": f"Permission '{permission.name}' is not associated with role '{role_name}' in organization '{organization_name}'."
+                }, session_key[:32], session_key[32:]
+            ), 400
+        
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
+     
+    
 
 
 # ========================================================================================= #

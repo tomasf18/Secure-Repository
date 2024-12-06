@@ -678,11 +678,44 @@ def rep_list_role_permissions(session_file, role):
     rep_list_role_permissions <session_file> <role>
     - This command lists the permissions of a role of the organization 
     with which I have currently a session.
-    - Calls GET /organizations/{organization_name}/roles/{role}/permissions endpoint
+    - Calls GET /organizations/{organization_name}/roles/{role}/subject-permissions endpoint
     """
     
-    print("rep_list_role_permissions")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/roles/{role}/subject-permissions"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None or result.get("error") is not None:
+        logger.error("Error listing subject roles")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    saveContext(session_file, session_file_content)
+    
+    permissions = result["data"]
+    
+    print("Role Permissions:")
+    for permission in permissions:
+        print(" -> ", permission)
+    
+    sys.exit(ReturnCode.SUCCESS)
+    
+    
 
 def rep_list_permission_roles(session_file, permission):
     """
@@ -1017,19 +1050,50 @@ def rep_reactivate_role(session_file, role):
 
 # -------------------------------
 
-def rep_add_permission(session_file, role, target):
+def rep_add_permission(session_file, role, object):
     """
     rep_add_permission <session_file> <role> <username/permission>
     - This command change the properties of a role of the organization with which I have currently a session,
     by adding a subject/permission. 
     - This commands requires a ROLE_MOD permission.
-    - Calls ... endpoint
+    - Calls PUT /organizations/{organization_name}/roles/{role}/subject-permissions endpoint
+    
+    - Object: username or permission ID (e.g. DOC_READ, DOC_WRITE, ...)
     """
     
-    print("rep_add_permission")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+    
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/roles/{role}/subject-permissions"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+        "object": object,
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error adding permission or subject to role")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    saveContext(session_file, session_file_content)
+    
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
 
-def rep_remove_permission(session_file, role, target):
+# -------------------------------
+
+def rep_remove_permission(session_file, role, object):
     """
     rep_remove_permission <session_file> <role> <username/permission>
     - This command change the properties of a role of the organization with which I have currently a session,
@@ -1038,8 +1102,35 @@ def rep_remove_permission(session_file, role, target):
     - Calls ... endpoint
     """
     
-    print("rep_remove_permission")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+    
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/roles/{role}/subject-permissions"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+        "object": object,
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None or result.get("error") is not None:
+        logger.error("Error adding permission or subject to role")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    saveContext(session_file, session_file_content)
+    
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
 

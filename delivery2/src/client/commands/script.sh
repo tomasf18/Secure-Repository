@@ -210,6 +210,53 @@
 ./rep_suspend_role user2_org1_session_file ROLE_3
 ./rep_suspend_role user9_org2_session_file ROLE_4
 
+
 # Reactivate roles
 ./rep_reactivate_role user2_org1_session_file ROLE_3
 ./rep_reactivate_role user9_org2_session_file ROLE_4
+
+
+# List role permissions
+./rep_list_role_permissions user2_org1_session_file Manager
+./rep_list_role_permissions user2_org1_session_file ROLE_2
+./rep_list_role_permissions user9_org2_session_file ROLE_5
+
+
+# Add permissions to roles
+./rep_add_permission user2_org1_session_file ROLE_2 DOC_ACL
+./rep_add_permission user2_org1_session_file ROLE_2 DOC_READ
+./rep_add_permission user2_org1_session_file ROLE_2 DOC_DELETE
+./rep_add_permission user2_org1_session_file ROLE_2 ROLE_ACL
+./rep_add_permission user2_org1_session_file ROLE_3 DOC_NEW
+./rep_add_permission user2_org1_session_file ROLE_3 ROLE_NEW
+./rep_add_permission user2_org1_session_file ROLE_3 ROLE_MOD
+./rep_add_permission user2_org1_session_file ROLE_1 DOC_READ
+./rep_add_permission user2_org1_session_file ROLE_1 DOC_DELETE
+./rep_add_permission user2_org1_session_file ROLE_1 DOC_NEW
+
+./rep_add_permission user9_org2_session_file ROLE_5 DOC_ACL
+./rep_add_permission user9_org2_session_file ROLE_5 DOC_READ
+./rep_add_permission user9_org2_session_file ROLE_5 DOC_DELETE
+./rep_add_permission user9_org2_session_file ROLE_4 DOC_NEW
+./rep_add_permission user9_org2_session_file ROLE_4 ROLE_NEW
+./rep_add_permission user9_org2_session_file ROLE_4 ROLE_MOD
+./rep_add_permission user9_org2_session_file ROLE_6 DOC_READ
+./rep_add_permission user9_org2_session_file ROLE_6 DOC_DELETE
+./rep_add_permission user9_org2_session_file ROLE_6 DOC_NEW
+
+# List role permissions
+./rep_list_role_permissions user2_org1_session_file ROLE_1
+./rep_list_role_permissions user2_org1_session_file ROLE_2
+./rep_list_role_permissions user2_org1_session_file ROLE_3
+
+./rep_list_role_permissions user9_org2_session_file ROLE_4
+./rep_list_role_permissions user9_org2_session_file ROLE_5
+./rep_list_role_permissions user9_org2_session_file ROLE_6
+
+# ROLE_1: [DOC_READ, DOC_DELETE, DOC_NEW]
+# ROLE_2: [DOC_ACL, DOC_READ, DOC_DELETE, ROLE_ACL]
+# ROLE_3: [DOC_NEW, ROLE_NEW, ROLE_MOD]
+
+# ROLE_4: [DOC_NEW, ROLE_NEW, ROLE_MOD]
+# ROLE_5: [DOC_ACL, DOC_READ, DOC_DELETE]
+# ROLE_6: [DOC_READ, DOC_DELETE, DOC_NEW]
