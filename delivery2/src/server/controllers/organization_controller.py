@@ -93,7 +93,8 @@ def organization_document(organization_name, document_name):
 #     print(f"SERVER: Received data: {data}. Getting file from document {document_name} from organization {organization_name}")
 #     return get_organization_document_file(organization_name, document_name, data, db_session)
 
-# -------------------------------
+
+# ==================================== Second Delivery ==================================== #
 
 @organization_blueprint.route('/organizations/<organization_name>/roles', methods=['GET', 'POST'])
 def organization_roles(organization_name):

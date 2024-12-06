@@ -1,10 +1,10 @@
-import base64
-
 from .BaseDAO import BaseDAO
+from .RoleDAO import RoleDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
 from .OrganizationDAO import OrganizationDAO
 
+from models.database_orm import Role
 from models.database_orm import Session
 
 from sqlalchemy.orm import joinedload
@@ -18,6 +18,7 @@ class SessionDAO(BaseDAO):
         self.subject_dao = SubjectDAO(session)
         self.key_store_dao = KeyStoreDAO(session)
         self.organization_dao = OrganizationDAO(session)
+        self.role_dao = RoleDAO(session)
 
 # -------------------------------
 
@@ -34,8 +35,6 @@ class SessionDAO(BaseDAO):
         Returns:
             Session: Created session    
         """
-        
-
         
         try:
             # Check if the subject exists
@@ -124,26 +123,6 @@ class SessionDAO(BaseDAO):
         return self.key_store_dao.decrypt_key(encrypted_key, iv)
     
 # -------------------------------    
-
-    # def update_nonce(self, session_id: int, new_nonce: str) -> Session:
-    #     """
-    #     Update the nonce associated with a session.
-    #     """
-    #     try:
-    #         session = self.get_by_id(session_id)
-    #         if not session:
-    #             raise ValueError(f"Session with ID '{session_id}' does not exist.")
-
-    #         session.nonce = new_nonce
-    #         self.session.commit()
-    #         self.session.refresh(session)
-
-    #         return session
-    #     except IntegrityError:
-    #         self.session.rollback()
-    #         raise
-    
-# -------------------------------    
     
     def update_counter(self, session_id: int, new_counter: int) -> Session:
         """
@@ -163,7 +142,28 @@ class SessionDAO(BaseDAO):
             self.session.rollback()
             raise
        
-# -------------------------------    
+# -------------------------------   
+
+    def add_session_role(self, session_id: int, role: str) -> Role:
+        """
+        Add a role to a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+            
+            role_object = self.role_dao.get_by_name(role)
+            
+            session.session_roles.append(role_object)
+            self.session.commit()
+            self.session.refresh(session)
+            return role_object
+        except IntegrityError:
+            self.session.rollback()
+
+# -------------------------------
+ 
         
     def get_iv(self, session_id: int) -> str:
         """

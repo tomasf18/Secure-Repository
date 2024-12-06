@@ -17,6 +17,11 @@ from utils.cryptography.auth import sign, verify_signature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from utils.server_session_utils import load_session
+from utils.server_session_utils import encrypt_payload
+
+from utils.utils import convert_bytes_to_str, convert_str_to_bytes
+
 # -------------------------------
 
 def create_session(data, db_session: SQLAlchemySession):
@@ -88,7 +93,7 @@ def create_session(data, db_session: SQLAlchemySession):
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), 400
 
-    ## Create response
+    # Create response
     result = {
         "session_id": session.id,
         "username": session.subject_username,
@@ -113,3 +118,54 @@ def create_session(data, db_session: SQLAlchemySession):
     # Return response to the client
     print(f"\n\nResult: {result}\n\n")
     return result, 201
+
+# -------------------------------
+
+def session_assume_role(organization_name, session_id, role, data, db_session):
+    ''' Handles the addition of a role to a session. 
+    
+    Args:
+        role (str): The role to be added to the session
+        data (_type_): Data received from the client
+        db_session (SQLAlchemySession): Database session
+        
+    Returns:
+        response: Response to be sent to the client
+    '''
+    
+    session_dao = SessionDAO(db_session)
+
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    try:
+        role_added = session_dao.add_session_role(session.id, role)
+    except Exception as e:
+        return encrypt_payload({
+                "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
+            }, session_key[:32], session_key[32:]
+        ), 403
+    
+    # Construct result
+    result = {
+        "roles": [role.name for role in session.session_roles],
+        "data": f"Role '{role_added.__repr__()}' added the session with user '{session.subject_username}' in organization '{session.organization_name}'"
+    }
+    
+    # print session roles
+    print(f"\n\n\n\n Session roles: ")
+    for role in session.session_roles:
+        print(role.__repr__())
+    print("\n\n\n\n")
+    
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return json.dumps(encrypted_result), 200

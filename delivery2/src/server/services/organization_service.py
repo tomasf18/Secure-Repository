@@ -9,8 +9,8 @@ from dao.RoleDAO import RoleDAO
 from models.status import Status
 from models.database_orm import Organization, Subject, Document
 
-from utils.server_session_utils import encrypt_payload
 from utils.server_session_utils import load_session
+from utils.server_session_utils import encrypt_payload
 
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 
