@@ -129,8 +129,8 @@ def organization_role(organization_name, role):
     db_session = g.db_session
     if request.method == 'PUT':
         data = request.json
-        # print(f"SERVER: Received data: {data}. Activating role {role} in organization {organization_name}")
-        # return reactivate_role_subjects(organization_name, role, data, db_session)
+        print(f"SERVER: Received data: {data}. Reactivating role {role} in organization {organization_name}")
+        return reactivate_role_subjects(organization_name, role, data, db_session)
     elif request.method == 'DELETE':
         data = request.json
         print(f"SERVER: Received data: {data}. Suspending role {role} in organization {organization_name}")

@@ -589,6 +589,52 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
     
     return encrypted_result, 200
 
+# -------------------------------
+
+def reactivate_role_subjects(organization_name, role_name, data, db_session: Session):
+    '''Handles PUT requests to /organizations/<organization_name>/roles/<role>'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+
+    # Reactivate role subjects
+    subjects_to_be_reactivated = role_dao.get_role_subjects(role_name, acl_id)
+    
+    for subject in subjects_to_be_reactivated:
+        organization_dao.update_org_subj_association_status(organization_name, subject.username, Status.ACTIVE.value)
+
+    serializable_reactivated_subjects = []
+    for subject in subjects_to_be_reactivated:
+        status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
+        serializable_reactivated_subjects.append({
+            "username": subject.username,
+            "status": status
+        })
+    
+    # Construct result
+    result = {
+        "data": serializable_reactivated_subjects
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
 
 
 # ========================================================================================= #
