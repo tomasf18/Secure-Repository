@@ -53,12 +53,12 @@
 
         /sessions
             /{session_id}
-            /roles
-                (GET) - List assumed roles [Authenticated API]
+                /roles
+                    (GET) - List assumed roles [Authenticated API]
 
-                /{role}
-                    (PUT) - Assume session Roles: Update Session File [Authenticated API]
-                    (DELETE) - Release session Roles: Update Session File [Authenticated API]
+                    /{role}
+                        (PUT) - Assume session Roles: Update Session File [Authenticated API]
+                        (DELETE) - Release session Roles: Update Session File [Authenticated API]
 
 
 /files

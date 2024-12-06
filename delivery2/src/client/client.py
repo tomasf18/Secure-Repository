@@ -498,16 +498,47 @@ def rep_drop_role(session_file, role):
     
 # -------------------------------
 
-def rep_list_roles(session_file, role):
+def rep_list_roles(session_file):
     """
-    rep_list_roles <session_file> <role>
+    rep_list_roles <session_file>
     - This command lists the current session roles.
-    - Calls GET /sessions/roles endpoint
+    - Calls GET /organizations/{organization_name}/sessions/{session_id}/roles endpoint
     """
     
-    print("rep_list_roles")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
 
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/sessions/{session_id}/roles"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"]
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error listing roles")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    roles = result["data"]
+    
+    saveContext(session_file, session_file_content)
+
+    print("Session Roles:")
+    for role in roles:
+        print(" -> ", role)
+        
+    sys.exit(ReturnCode.SUCCESS)
+    
 # -------------------------------
 
 def rep_list_subjects(session_file, username=None):
@@ -1127,9 +1158,9 @@ elif args["command"] == "rep_drop_role":
     rep_drop_role(args["arg0"], args["arg1"])
     
 elif args["command"] == "rep_list_roles":
-    usage = "<session_file> <role>"
-    validate_args("rep_list_roles", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
-    rep_list_roles(args["arg0"], args["arg1"])
+    usage = "<session_file>"
+    validate_args("rep_list_roles", {"session_file": args["arg0"]}, usage)
+    rep_list_roles(args["arg0"])
     
 elif args["command"] == "rep_list_subjects":
     usage = "<session_file> [username]"

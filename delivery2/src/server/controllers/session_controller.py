@@ -23,3 +23,10 @@ def session_roles_role(organization_name, session_id, role):
     elif request.method == 'DELETE':
         print(f"SERVER: Received data: {data}. Dropping role {role} from session {session_id} in organization {organization_name}")
         return session_drop_role(organization_name, session_id, role, data, db_session)
+    
+@session_blueprint.route('/organizations/<organization_name>/sessions/<session_id>/roles', methods=['GET'])
+def session_roles(organization_name, session_id):
+    db_session = g.db_session
+    data = request.json
+    print(f"SERVER: Received data: {data}. Getting roles from session {session_id} in organization {organization_name}")
+    return list_session_roles(organization_name, session_id, data, db_session)

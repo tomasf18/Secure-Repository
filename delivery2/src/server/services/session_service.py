@@ -218,3 +218,37 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
     print("\n\n\n\n")
         
     return json.dumps(encrypted_result), 200
+
+# -------------------------------
+
+def list_session_roles(organization_name, session_id, data, db_session):
+    ''' Handles the listing of roles from a session. 
+    
+    Args:
+        data (_type_): Data received from the client
+        db_session (SQLAlchemySession): Database session
+        
+    Returns:
+        response: Response to be sent to the client
+    '''
+    
+    session_dao = SessionDAO(db_session)
+
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    # Construct result
+    result = {
+        "data": [role.name for role in session.session_roles],
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return json.dumps(encrypted_result), 200
