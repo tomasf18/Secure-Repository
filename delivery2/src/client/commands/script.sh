@@ -91,6 +91,13 @@
 ./rep_list_role_subjects user3_org1_session_file ROLE_3
 ./rep_list_role_subjects user3_org1_session_file ROLE_4
 ./rep_list_role_subjects user3_org1_session_file ROLE_5
+./rep_list_role_subjects user3_org1_session_file Manager
+
+# ---
+
+./rep_list_subject_roles user3_org1_session_file user1
+./rep_list_subject_roles user1_org1_session_file user2
+./rep_list_subject_roles user2_org1_session_file user3
 
 # ---
 

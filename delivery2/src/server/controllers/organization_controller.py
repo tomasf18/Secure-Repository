@@ -114,6 +114,17 @@ def organization_roles(organization_name):
     
 # -------------------------------
 
+@organization_blueprint.route('/organizations/<organization_name>/subjects/<username>/roles', methods=['GET'])
+def organization_subject_roles(organization_name, username):
+    db_session = g.db_session
+    if request.method == 'GET':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Getting roles from subject {username} in organization {organization_name}")
+        return list_subject_roles(organization_name, username, data, db_session)
+    
+
+# -------------------------------
+
 @organization_blueprint.route('/organizations/<organization_name>/roles/<role>', methods=['PUT', 'DELETE'])
 def organization_role(organization_name, role):
     db_session = g.db_session

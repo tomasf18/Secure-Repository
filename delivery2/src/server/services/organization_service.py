@@ -503,7 +503,44 @@ def create_organization_role(organization_name, data, db_session: Session):
     
     return encrypted_result, 201
 
+# -------------------------------
 
+def list_subject_roles(organization_name, username, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>/roles'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+
+    # Get subject
+    subject = organization_dao.get_subject_by_username(organization_name, username)
+
+    # Get roles
+    roles = role_dao.get_by_username_and_acl_id(username, acl_id)
+
+    # Construct result
+    result = {
+        "data": [role.__repr__() for role in roles]
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
 
 
 
