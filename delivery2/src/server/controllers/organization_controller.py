@@ -28,7 +28,8 @@ def organization_subjects(organization_name):
     if request.method == 'GET':
         data = request.json
         print(f"SERVER: Received data: {data}. Getting subjects from organization {organization_name}")
-        return list_organization_subjects(organization_name, data, db_session)
+        role = request.args.get('role')
+        return list_organization_subjects(organization_name, role, data, db_session)
     elif request.method == 'POST':
         data = request.json
         print(f"SERVER: Received data: {data}. Adding subject to organization {organization_name}")

@@ -156,8 +156,13 @@ class SessionDAO(BaseDAO):
             role_object = self.role_dao.get_by_name(role)
             
             session.session_roles.append(role_object)
+            role_object.subjects.append(session.subject)
+            
             self.session.commit()
+            
+            self.session.refresh(role_object)
             self.session.refresh(session)
+            
             return role_object
         except IntegrityError:
             self.session.rollback()
@@ -176,8 +181,13 @@ class SessionDAO(BaseDAO):
             role_object = self.role_dao.get_by_name(role)
             
             session.session_roles.remove(role_object)
+            role_object.subjects.remove(session.subject)
+            
             self.session.commit()
+            
+            self.session.refresh(role_object)
             self.session.refresh(session)
+            
             return role_object
         except IntegrityError:
             self.session.rollback()

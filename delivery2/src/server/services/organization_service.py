@@ -59,11 +59,12 @@ def list_organizations(db_session: Session):
 
 # -------------------------------
 
-def list_organization_subjects(organization_name, data, db_session: Session):
+def list_organization_subjects(organization_name, role, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
     
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
+    role_dao = RoleDAO(db_session)
 
     # Get session
     try:
@@ -73,7 +74,13 @@ def list_organization_subjects(organization_name, data, db_session: Session):
         return message, code
 
     try:
-        subjects: list["Subject"] = organization_dao.get_subjects(organization_name)
+        subjects: list["Subject"] = None
+        if role:
+            role_object = role_dao.get_by_name(role)
+            subjects = role_object.subjects
+        else:
+            subjects = organization_dao.get_subjects(organization_name)
+            
         serializable_subjects = []
         for subject in subjects:
             status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status

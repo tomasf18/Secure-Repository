@@ -21,13 +21,14 @@
 # ---
 
 ./rep_create_session org1 user2 456 user2_cred_file user2_org1_session_file
+./rep_suspend_subject user2_org1_session_file user3
 ./rep_suspend_subject user2_org1_session_file user4
 ./rep_list_subjects user2_org1_session_file user4
 
 # ---
 
 ./rep_create_session org1 user3 789 user3_cred_file user3_org1_session_file
-./rep_activate_subject user3_org1_session_file user4
+./rep_activate_subject user1_org1_session_file user3
 ./rep_list_subjects user3_org1_session_file user4
 
 # ---
@@ -75,5 +76,22 @@
 
 # User 1: [ROLE_2]
 # User 2: [ROLE_1, ROLE_5]
+# User 3: []
 
 # ---
+
+./rep_list_roles user1_org1_session_file
+./rep_list_roles user2_org1_session_file
+./rep_list_roles user3_org1_session_file
+
+# ---
+
+./rep_list_role_subjects user3_org1_session_file ROLE_1
+./rep_list_role_subjects user3_org1_session_file ROLE_2
+./rep_list_role_subjects user3_org1_session_file ROLE_3
+./rep_list_role_subjects user3_org1_session_file ROLE_4
+./rep_list_role_subjects user3_org1_session_file ROLE_5
+
+# ---
+
+
