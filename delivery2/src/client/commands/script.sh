@@ -41,3 +41,10 @@
 ./rep_get_doc_metadata user1_session_file doc2
 
 # ---
+
+./rep_get_doc_file user2_session_file doc1
+./rep_get_doc_file user1_session_file doc2
+
+# ---
+
+./rep_delete_doc user1_session_file doc1

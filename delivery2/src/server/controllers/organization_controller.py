@@ -86,9 +86,9 @@ def organization_document(organization_name, document_name):
     
 # -------------------------------
     
-@organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>/file', methods=['GET'])
-def organization_document_file(organization_name, document_name):
-    db_session = g.db_session
-    data = request.json
-    print(f"SERVER: Received data: {data}. Getting file from document {document_name} from organization {organization_name}")
-    return get_organization_document_file(organization_name, document_name, data, db_session)
+# @organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>/file', methods=['GET'])
+# def organization_document_file(organization_name, document_name):
+#     db_session = g.db_session
+#     data = request.json
+#     print(f"SERVER: Received data: {data}. Getting file from document {document_name} from organization {organization_name}")
+#     return get_organization_document_file(organization_name, document_name, data, db_session)

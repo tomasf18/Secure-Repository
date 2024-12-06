@@ -387,44 +387,47 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     
     return encrypted_result, 201
 
-def get_organization_document_file(organization_name, document_name, data, db_session: Session):
-    '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
-    
-    document_dao = DocumentDAO(db_session)
-    session_dao = SessionDAO(db_session)
 
-    # Get session
-    try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
-    except ValueError as e:
-        message, code = e.args
-        return message, code
+# def get_organization_document_file(organization_name, document_name, data, db_session: Session):
+#     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
     
-    document: "Document" = document_dao.get_metadata(session.id, document_name)
-    if not document.file_handle:
-        return encrypt_payload({
-                "error": f"ERROR 404 - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), 404
-    
-    serializable_document = get_serializable_document(document)
+#     document_dao = DocumentDAO(db_session)
+#     session_dao = SessionDAO(db_session)
 
-    # Construct result
-    result = {
-        "data": serializable_document
-    }
-
-    # Update session
-    session_dao.update_counter(session.id, decrypted_data["counter"])
+#     # Get session
+#     try:
+#         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+#     except ValueError as e:
+#         message, code = e.args
+#         return message, code
     
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+#     document: "Document" = document_dao.get_metadata(session.id, document_name)
+#     if not document.file_handle:
+#         return encrypt_payload({
+#                 "error": f"ERROR 404 - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
+#             }, session_key[:32], session_key[32:]
+#         ), 404
     
-    return encrypted_result, 201
+#     serializable_document = get_serializable_document(document)
 
+#     # Construct result
+#     result = {
+#         "data": serializable_document
+#     }
+
+#     # Update session
+#     session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+#     # Encrypt result
+#     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+#     return encrypted_result, 201
+
+# -------------------------------
 
 def delete_organization_document(organization_name, document_name, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/documents/<document_name>'''
+    
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
 
@@ -453,4 +456,5 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
     return encrypted_result, 200

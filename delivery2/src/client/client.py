@@ -394,13 +394,14 @@ def rep_get_file(file_handle, output_file=None, get_doc_file=False):
         
     file_contents = convert_str_to_bytes(result["data"])
 
+    if output_file is not None:
+        encrypted_file_path = get_encrypted_file_path(output_file)
+        with open(encrypted_file_path, "wb") as file:
+            file.write(file_contents)
+    else:
+        print(file_contents)
+            
     if not get_doc_file:
-        if output_file is not None:
-            encrypted_file_path = get_encrypted_file_path(output_file)
-            with open(encrypted_file_path, "wb") as file:
-                file.write(file_contents)
-        else:
-            print(file_contents)
         sys.exit(ReturnCode.SUCCESS)
     else:
         return file_contents
@@ -928,6 +929,7 @@ def rep_delete_doc(session_file, document_name):
     - Calls DELETE /organizations/{organization_name}/documents/{document_name} endpoint
     """
     
+    session_file = get_session_file(session_file)
     session_file_content = read_file(session_file)
     if session_file_content is None:
         logger.error(f"Error reading session file: {session_file}")
@@ -936,7 +938,7 @@ def rep_delete_doc(session_file, document_name):
     endpoint = f"/organizations/{session_file_content['organization']}/documents/{document_name}"
 
     session_id = session_file_content['session_id']
-    session_key = base64.b64decode(session_file_content["session_key"])
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
 
     data = {
         "session_id": session_id,
@@ -944,16 +946,13 @@ def rep_delete_doc(session_file, document_name):
         "nonce": session_file_content["nonce"],
     }
         
-    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data,
-                                      sessionId=session_id, sessionKey=session_key)
-    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
 
-    print("\n\n", result)
     if result is None:
         logger.error("Error deleting document")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
-    saveContext(session_file, session_file_content, result)
+    saveContext(session_file, session_file_content)
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 

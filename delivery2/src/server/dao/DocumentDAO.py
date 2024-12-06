@@ -212,6 +212,7 @@ class DocumentDAO(BaseDAO):
         :return: The cleared file_handle.
         :raises ValueError: If the session or document is invalid or the file_handle is already None.
         """
+        
         # Fetch document metadata
         document = self.get_metadata(sessionId, document_name)
 
