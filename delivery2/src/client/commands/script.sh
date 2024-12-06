@@ -244,6 +244,7 @@
 ./rep_add_permission user9_org2_session_file ROLE_6 DOC_DELETE
 ./rep_add_permission user9_org2_session_file ROLE_6 DOC_NEW
 
+
 # List role permissions
 ./rep_list_role_permissions user2_org1_session_file ROLE_1
 ./rep_list_role_permissions user2_org1_session_file ROLE_2
@@ -260,3 +261,36 @@
 # ROLE_4: [DOC_NEW, ROLE_NEW, ROLE_MOD]
 # ROLE_5: [DOC_ACL, DOC_READ, DOC_DELETE]
 # ROLE_6: [DOC_READ, DOC_DELETE, DOC_NEW]
+
+
+# Add subjects to roles
+./rep_list_subject_roles user1_org1_session_file user5
+./rep_add_permission user2_org1_session_file ROLE_1 user5
+./rep_list_subject_roles user1_org1_session_file user5
+./rep_list_roles user5_org1_session_file
+
+./rep_list_subject_roles user6_org2_session_file user8
+./rep_add_permission user9_org2_session_file ROLE_5 user8
+./rep_list_subject_roles user6_org2_session_file user8
+./rep_list_roles user8_org2_session_file
+
+
+# Remove subjects from roles
+./rep_remove_permission user2_org1_session_file ROLE_1 user5
+./rep_list_subject_roles user1_org1_session_file user5
+./rep_list_roles user5_org1_session_file
+
+./rep_remove_permission user9_org2_session_file ROLE_5 user8
+./rep_list_subject_roles user6_org2_session_file user8
+./rep_list_roles user8_org2_session_file
+
+
+# Remove permissions from roles
+./rep_remove_permission user2_org1_session_file ROLE_3 DOC_NEW
+./rep_list_role_permissions user2_org1_session_file ROLE_3
+
+./rep_remove_permission user9_org2_session_file ROLE_6 DOC_DELETE
+./rep_list_role_permissions user9_org2_session_file ROLE_6
+
+# ROLE_3: [ROLE_NEW, ROLE_MOD]
+# ROLE_6: [DOC_READ, DOC_NEW]

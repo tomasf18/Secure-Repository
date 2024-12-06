@@ -1124,7 +1124,7 @@ def rep_remove_permission(session_file, role, object):
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
     
     if result is None or result.get("error") is not None:
-        logger.error("Error adding permission or subject to role")
+        logger.error("Error removing permission or subject from role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     saveContext(session_file, session_file_content)
