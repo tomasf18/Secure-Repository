@@ -491,6 +491,7 @@ def rep_list_subjects(session_file, username=None):
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
         
+# -------------------------------
 
 def rep_list_roles_subject(session_file, role):
     """
@@ -955,6 +956,8 @@ def rep_delete_doc(session_file, document_name):
     saveContext(session_file, session_file_content)
     print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
+
+# -------------------------------
 
 def rep_acl_doc(session_file, document_name, operator, role, permission):
     """
