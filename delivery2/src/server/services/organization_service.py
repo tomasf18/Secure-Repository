@@ -297,7 +297,6 @@ def list_organization_documents(organization_name, data, username, date_filter, 
         message, code = e.args
         return message, code
     
-
     documents: list["Document"] = document_dao.get(session.id, username, date_filter, date)
     if not documents:
         return encrypt_payload({
@@ -305,10 +304,12 @@ def list_organization_documents(organization_name, data, username, date_filter, 
             }, session_key[:32], session_key[32:]
         ), 404
 
+    i = 0
     serializable_documents = []
     for doc in documents:
+        i += 1
         serializable_documents.append({
-            "document_name": doc.name,
+            "document" + str(i): doc.__repr__(),
         })
 
     # Construct result
@@ -321,6 +322,7 @@ def list_organization_documents(organization_name, data, username, date_filter, 
     
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
     return encrypted_result, 201
 
 # =================================== Auxiliar Function =================================== #
@@ -350,6 +352,7 @@ def get_serializable_document(document: "Document", document_dao: DocumentDAO):
 
 def get_organization_document_metadata(organization_name, document_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>'''
+    
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
 
@@ -386,9 +389,9 @@ def get_organization_document_metadata(organization_name, document_name, data, d
 
 def get_organization_document_file(organization_name, document_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
+    
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
-    organization_dao = OrganizationDAO(db_session)
 
     # Get session
     try:
@@ -405,10 +408,6 @@ def get_organization_document_file(organization_name, document_name, data, db_se
         ), 404
     
     serializable_document = get_serializable_document(document)
-    serializable_document["encryption_data"]["key"] = organization_dao.decrypt_metadata_key(
-        document.restricted_metadata.key.key,
-        document.restricted_metadata.iv_encrypted_key
-    ).decode()
 
     # Construct result
     result = {
@@ -420,6 +419,7 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
     return encrypted_result, 201
 
 

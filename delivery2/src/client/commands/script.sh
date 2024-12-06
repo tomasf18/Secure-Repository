@@ -33,7 +33,7 @@
 # ---
 
 ./rep_add_doc user1_session_file doc1 file1.txt
-./rep_add_doc user1_session_file doc2 file2.txt
+./rep_add_doc user2_session_file doc2 file2.txt
 
 # ---
 

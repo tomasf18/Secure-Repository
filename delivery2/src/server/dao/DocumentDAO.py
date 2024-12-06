@@ -141,6 +141,32 @@ class DocumentDAO(BaseDAO):
         return self.key_store_dao.decrypt_key(encrypted_key, iv)
         
 # -------------------------------
+    
+    def get_metadata(self, sessionId: int, document_name: str) -> Document:
+        """
+        Fetches metadata for a document.
+
+        :param sessionId: ID of the session.
+        :param document_name: Name of the document.
+        :return: Document object.
+        :raises ValueError: If the session is invalid or the document is not found.
+        """
+        # Ensure session is valid
+        session = self.session_dao.get_by_id(sessionId)
+        if not session:
+            raise ValueError(f"Session with ID {sessionId} not found.")
+        organization_name = session.organization_name
+
+        # Fetch document metadata
+        query = self.session.query(Document).filter(Document.org_name == organization_name, Document.name == document_name)
+        document = query.first()
+
+        if not document:
+            raise ValueError(f"Document '{document_name}' not found in organization '{organization_name}'.")
+        
+        return document
+    
+# -------------------------------
 
     def get(self, sessionId: int, creator_username: str = None, date_filter: str = None, date: datetime = None) -> list[Document]:
         """
@@ -173,30 +199,7 @@ class DocumentDAO(BaseDAO):
 
         return query.all()
     
-    def get_metadata(self, sessionId: int, document_name: str) -> Document:
-        """
-        Fetches metadata for a document.
-
-        :param sessionId: ID of the session.
-        :param document_name: Name of the document.
-        :return: Document object.
-        :raises ValueError: If the session is invalid or the document is not found.
-        """
-        # Ensure session is valid
-        session = self.session_dao.get_by_id(sessionId)
-        if not session:
-            raise ValueError(f"Session with ID {sessionId} not found.")
-        organization_name = session.organization_name
-
-        # Fetch document metadata
-        query = self.session.query(Document).filter(Document.org_name == organization_name, Document.name == document_name)
-        document = query.first()
-
-        if not document:
-            raise ValueError(f"Document '{document_name}' not found in organization '{organization_name}'.")
-        
-        return document
-    
+# -------------------------------
     
     def delete(self, sessionId: int, document_name: str) -> str:
         """

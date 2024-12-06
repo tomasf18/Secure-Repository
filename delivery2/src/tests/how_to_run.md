@@ -50,5 +50,7 @@
 
 ### Decrypt the file:
 ```bash
-./rep_decrypt_file <encrypted_file_name(encrypted)> <output_file_name(decrypted)>
+./rep_decrypt_file <encrypted_file_name(encrypted)> <metadata_file_name>
 ```
+
+**Note:** You don't need to specify the path or the extension of the file. The program will automatically append the path and the extension.
