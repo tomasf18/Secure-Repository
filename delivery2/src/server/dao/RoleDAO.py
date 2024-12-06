@@ -1,5 +1,5 @@
 from .BaseDAO import BaseDAO
-from models.database_orm import Role
+from models.database_orm import Role, Subject
 from sqlalchemy.exc import IntegrityError
 
 class RoleDAO(BaseDAO):
@@ -79,3 +79,11 @@ class RoleDAO(BaseDAO):
         """Retrieve all Roles associated with a given username and ACL ID."""
         subject_roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.subjects).filter_by(username=username).all()
         return subject_roles
+    
+# -------------------------------
+
+    def get_role_subjects(self, role_name, acl_id) -> list["Subject"]:
+        """Suspend all Subjects associated with a given Role."""
+        role = self.get_by_name_and_acl_id(role_name, acl_id)
+        return role.subjects
+

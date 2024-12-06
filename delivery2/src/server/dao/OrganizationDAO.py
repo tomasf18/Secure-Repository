@@ -149,7 +149,6 @@ class OrganizationDAO(BaseDAO):
             raise ValueError(f"Organization with name '{name}' not found.")
         return organization
     
-    
     def get_org_subj_association(self, org_name: str, username: str):
         """Retrieve the Organization-Subject association."""
         org_subject = self.session.query(OrganizationSubjects).filter_by(org_name=org_name, username=username).first()
