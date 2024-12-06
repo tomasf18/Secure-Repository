@@ -8,6 +8,8 @@ from utils.cryptography.integrity import calculate_digest, verify_digest
 
 from dao.SessionDAO import SessionDAO
 
+from models.database_orm import Session
+
 
 # -------------------------------
 
@@ -138,7 +140,7 @@ def verify_message_order(data: dict, counter: int, nonce: bytes) -> bool:
     
 # -------------------------------
 
-def load_session(data: dict, session_dao: SessionDAO, organization_name: str) -> tuple[dict, bytes]:
+def load_session(data: dict, session_dao: SessionDAO, organization_name: str) -> tuple[dict, Session, bytes]:
     """Load the session from the received data and make the necessary verifications: 
         - organization
         - message order 

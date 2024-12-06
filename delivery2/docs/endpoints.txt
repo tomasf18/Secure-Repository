@@ -1,12 +1,6 @@
 /sessions
 	(POST) - Create a new session [Anonymous API]
 
-    /roles
-        (GET) - List assumed roles [Authenticated API]
-
-        /{role}
-            (PUT) - Assume session Roles: Update Session File [Authenticated API]
-            (DELETE) - Release session Roles: Update Session File [Authenticated API]
 
 /organizations
     (POST) - Create a new Organizations [Anonymous API]
@@ -17,7 +11,7 @@
             (GET ?role={role}) - List Subjects (with a Role) [Authenticated API]
             (POST) - Add a Subject to Organization [Authorized API]
 
-            /{subjectId}
+            /{subject_username}
                 (GET) - List Subject [Authenticated API]
                 (PUT) - Activate a subject: Update status do subject [Authorized API]
                 (DELETE) - Suspend a subject: Update status do subject [Authorized API]
@@ -43,7 +37,7 @@
                     (DELETE ?permission={permission}) - Remove Permission from Role [Authorized API]
 
         /documents
-            (GET ?minDate={minDate} & maxDate={maxDate} & creator={subjectId} & (...)) - Query Organization Documents [Authenticated API]
+            (GET ?minDate={minDate} & maxDate={maxDate} & creator={subject_username} & (...)) - Query Organization Documents [Authenticated API]
             (POST) - Add a Document [Authorized API]
 
             /{document_name}
@@ -56,6 +50,16 @@
                 /ACL
                     (PUT) - Update document ACL [Authorized API]
                     (DELETE) - Update document ACL [Authorized API]
+
+        /sessions
+            /{session_id}
+                /roles
+                    (GET) - List assumed roles [Authenticated API]
+
+                    /{role}
+                        (PUT) - Assume session Roles: Update Session File [Authenticated API]
+                        (DELETE) - Release session Roles: Update Session File [Authenticated API]
+
 
 /files
     /{file_handle}

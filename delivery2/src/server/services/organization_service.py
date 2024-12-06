@@ -1,17 +1,16 @@
 import json
 import base64
-import secrets
-import logging
 
 from dao.SessionDAO import SessionDAO
 from dao.DocumentDAO import DocumentDAO
 from dao.OrganizationDAO import OrganizationDAO
+from dao.RoleDAO import RoleDAO
 
 from models.status import Status
 from models.database_orm import Organization, Subject, Document
 
-from utils.server_session_utils import encrypt_payload
 from utils.server_session_utils import load_session
+from utils.server_session_utils import encrypt_payload
 
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 
@@ -60,11 +59,12 @@ def list_organizations(db_session: Session):
 
 # -------------------------------
 
-def list_organization_subjects(organization_name, data, db_session: Session):
+def list_organization_subjects(organization_name, role, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/subjects'''
     
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
+    role_dao = RoleDAO(db_session)
 
     # Get session
     try:
@@ -74,7 +74,13 @@ def list_organization_subjects(organization_name, data, db_session: Session):
         return message, code
 
     try:
-        subjects: list["Subject"] = organization_dao.get_subjects(organization_name)
+        subjects: list["Subject"] = None
+        if role:
+            role_object = role_dao.get_by_name(role)
+            subjects = role_object.subjects
+        else:
+            subjects = organization_dao.get_subjects(organization_name)
+            
         serializable_subjects = []
         for subject in subjects:
             status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
@@ -458,3 +464,85 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
     return encrypted_result, 200
+
+
+# ==================================== Second Delivery ==================================== #
+
+def create_organization_role(organization_name, data, db_session: Session):
+    '''Handles POST requests to /organizations/<organization_name>/documents'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+    
+    # Get organization, acl_id and new_role
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+    new_role = decrypted_data.get('new_role')
+
+    # Create role
+    role = role_dao.create(new_role, acl_id)
+
+    # Construct result
+    result = {
+        "data": f"Role '{role.__repr__()}' created in the organization '{organization_name}' successfully."
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 201
+
+# -------------------------------
+
+def list_subject_roles(organization_name, username, data, db_session: Session):
+    '''Handles GET requests to /organizations/<organization_name>/subjects/<subject_name>/roles'''
+    
+    role_dao = RoleDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    acl_id = organization.acl.id
+
+    # Get subject
+    subject = organization_dao.get_subject_by_username(organization_name, username)
+
+    # Get roles
+    roles = role_dao.get_by_username_and_acl_id(username, acl_id)
+
+    # Construct result
+    result = {
+        "data": [role.__repr__() for role in roles]
+    }
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
+
+
+
+# ========================================================================================= #
+

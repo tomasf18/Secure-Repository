@@ -52,7 +52,7 @@ class ApiConsumer:
             if sessionKey:
                 encryption_key, integrity_key = sessionKey[:32], sessionKey[32:]
 
-                logger.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
+                print(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
 
                 # Create and encrypt Payload
                 body = self.encrypt_payload(
@@ -62,11 +62,11 @@ class ApiConsumer:
                 )
                 body["session_id"] = sessionId
 
-                logger.debug(f"Encrypted payload = {body}")
+                print(f"Encrypted payload = {body}")
                 
                 # Send Encrypted Payload
                 response = requests.request(method, self.rep_address + endpoint, json=body)
-                logger.debug(f"Server Response = {response.json()}")
+                print(f"Server Response = {response.json()}")
 
                 try:
                     received_message = self.decrypt_payload(
@@ -74,16 +74,16 @@ class ApiConsumer:
                         encryption_key=encryption_key,
                         integrity_key=integrity_key
                     )
-                    logger.debug(f"Decrypted Server Response = {received_message}")
+                    print(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
-                    logger.error(f"Error decrypting server response: {e}")
+                    print(f"Error decrypting server response: {e}")
 
             else:
-                logger.debug("Sending request")
+                print("Sending request")
                 body = {
                     "data": data
                 }
-                logger.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
                 final_endpoint = self.rep_address + endpoint
                 response = requests.request(method, final_endpoint, json=body)
 

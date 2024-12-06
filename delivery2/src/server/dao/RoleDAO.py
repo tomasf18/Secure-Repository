@@ -4,6 +4,11 @@ from sqlalchemy.exc import IntegrityError
 
 class RoleDAO(BaseDAO):
     
+    def __init__(self, session):
+        super().__init__(session)
+        
+# -------------------------------
+    
     def create(self, name: str, acl_id: int) -> "Role":
         """Create a new Role instance."""
         try:
@@ -15,12 +20,16 @@ class RoleDAO(BaseDAO):
             self.session.rollback()
             raise ValueError(f"Role with name '{name}' already exists.")
     
+# -------------------------------
+    
     def get_by_id(self, role_id: int) -> "Role":
         """Retrieve a Role by ID."""
         role = self.session.query(Role).filter_by(id=role_id).first()
         if not role:
             raise ValueError(f"Role with ID '{role_id}' not found.")
         return role
+    
+# -------------------------------
     
     def get_by_name(self, name: str) -> "Role":
         """Retrieve a Role by name."""
@@ -29,9 +38,13 @@ class RoleDAO(BaseDAO):
             raise ValueError(f"Role with name '{name}' not found.")
         return role
     
+# -------------------------------
+    
     def get_all(self) -> list["Role"]:
         """Retrieve all Roles."""
         return self.session.query(Role).all()
+    
+# -------------------------------
     
     def update(self, role_id: int, name: str = None, acl_id: int = None) -> "Role":
         """Update an existing Role's details."""
@@ -43,11 +56,15 @@ class RoleDAO(BaseDAO):
         self.session.commit()
         return role
     
+# -------------------------------
+    
     def delete(self, role_id: int) -> None:
         """Delete a Role by ID."""
         role = self.get_by_id(role_id)
         self.session.delete(role)
         self.session.commit()
+        
+# -------------------------------
         
     def get_by_name_and_acl_id(self, name: str, acl_id: int) -> "Role":
         """Retrieve a Role by name and ACL ID."""
@@ -55,3 +72,10 @@ class RoleDAO(BaseDAO):
         if not role:
             raise ValueError(f"Role with name '{name}' and ACL ID '{acl_id}' not found.")
         return role
+    
+# -------------------------------
+    
+    def get_by_username_and_acl_id(self, username: str, acl_id: int) -> list["Role"]:
+        """Retrieve all Roles associated with a given username and ACL ID."""
+        subject_roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.subjects).filter_by(username=username).all()
+        return subject_roles

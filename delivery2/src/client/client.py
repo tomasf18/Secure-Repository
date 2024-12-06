@@ -416,37 +416,129 @@ def rep_get_file(file_handle, output_file=None, get_doc_file=False):
 #
 # ****************************************************
 
-
 def rep_assume_role(session_file, role):
     """
     rep_assume_role <session_file> <role>
     This command requests the given role for the session.
-    - Calls /sessions/roles/{role} endpoint
+    - Calls PUT /organizations/{organization_name}/sessions/{session_id}/roles/{role} endpoint
     """
+    
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+    
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/sessions/{session_id}/roles/{role}"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"]
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error assuming role")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    roles = result["roles"]
+    session_file_content["roles"] = roles
+    
+    saveContext(session_file, session_file_content)
+    
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
 
-    print("rep_assume_role")
-    pass
+# -------------------------------
 
 def rep_drop_role(session_file, role):
     """
     rep_drop_role <session_file> <role>
     - This command releases the given role for the session.
-    - Calls DELETE /sessions/roles/{role} endpoint
+    - Calls DELETE /organizations/{organization_name}/sessions/{session_id}/roles/{role} endpoint
     """
     
-    print("rep_drop_role")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
 
-def rep_list_roles(session_file, role):
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/sessions/{session_id}/roles/{role}"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"]
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error dropping role")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    roles = result["roles"]
+    session_file_content["roles"] = roles
+    
+    saveContext(session_file, session_file_content)
+
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
+    
+# -------------------------------
+
+def rep_list_roles(session_file):
     """
-    rep_list_roles <session_file> <role>
+    rep_list_roles <session_file>
     - This command lists the current session roles.
-    - Calls GET /sessions/roles endpoint
+    - Calls GET /organizations/{organization_name}/sessions/{session_id}/roles endpoint
     """
     
-    print("rep_list_roles")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
 
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/sessions/{session_id}/roles"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"]
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error listing roles")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    roles = result["data"]
+    
+    saveContext(session_file, session_file_content)
+
+    print("Session Roles:")
+    for role in roles:
+        print(" -> ", role)
+        
+    sys.exit(ReturnCode.SUCCESS)
+    
 # -------------------------------
 
 def rep_list_subjects(session_file, username=None):
@@ -493,16 +585,49 @@ def rep_list_subjects(session_file, username=None):
         
 # -------------------------------
 
-def rep_list_roles_subject(session_file, role):
+def rep_list_role_subjects(session_file, role):
     """
-    rep_list_roles_subject <session_file> <role>
+    rep_list_role_subjects <session_file> <role>
     - This command lists the subjects of a role of the organization 
     with which I have currently a session.
-    - Calls GET /organizations/{organization_name}/subjects/?role={role} endpoint
+    - Calls GET /organizations/{organization_name}/subjects?role={role} endpoint
     """
     
-    print("rep_list_roles_subject")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/subjects?role={role}"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None or result.get("error") is not None:
+        logger.error("Error listing role subjects")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    saveContext(session_file, session_file_content)
+    
+    subjects = result["data"]
+    
+    print("Role Subjects:")
+    for subject in subjects:
+        print(" -> ", subject)
+    
+    sys.exit(ReturnCode.SUCCESS)
+
+# -------------------------------
 
 def rep_list_subject_roles(session_file, username):
     """
@@ -512,8 +637,41 @@ def rep_list_subject_roles(session_file, username):
     - Calls GET /organizations/{organization_name}/subjects/{subject_username}/roles endpoint
     """
     
-    print("rep_list_subject_roles")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/subjects/{username}/roles"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None or result.get("error") is not None:
+        logger.error("Error listing subject roles")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    saveContext(session_file, session_file_content)
+    
+    roles = result["data"]
+    
+    print("Role Subjects:")
+    for role in roles:
+        print(" -> ", role)
+    
+    sys.exit(ReturnCode.SUCCESS)
+    
+# -------------------------------
 
 def rep_list_role_permissions(session_file, role):
     """
@@ -702,6 +860,7 @@ def rep_activate_subject(session_file, username):
     
     session_file = get_session_file(session_file)    
     session_file_content = read_file(session_file)
+    
     if session_file_content is None:
         logger.error(f"Error reading session file: {session_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
@@ -738,8 +897,37 @@ def rep_add_role(session_file, role):
     - Calls POST /organizations/{organization_name}/roles endpoint
     """
     
-    print("rep_add_role")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+    
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/roles"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+        "new_role": role,
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error suspending subject")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    saveContext(session_file, session_file_content)
+    
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
+    
+# -------------------------------
 
 def rep_suspend_role(session_file, role):
     """
@@ -1036,19 +1224,19 @@ elif args["command"] == "rep_drop_role":
     rep_drop_role(args["arg0"], args["arg1"])
     
 elif args["command"] == "rep_list_roles":
-    usage = "<session_file> <role>"
-    validate_args("rep_list_roles", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
-    rep_list_roles(args["arg0"], args["arg1"])
+    usage = "<session_file>"
+    validate_args("rep_list_roles", {"session_file": args["arg0"]}, usage)
+    rep_list_roles(args["arg0"])
     
 elif args["command"] == "rep_list_subjects":
     usage = "<session_file> [username]"
     validate_args("rep_list_subjects", {"session_file": args["arg0"]}, usage)
     rep_list_subjects(args["arg0"], args["arg1"])
     
-elif args["command"] == "rep_list_roles_subject":
+elif args["command"] == "rep_list_role_subjects":
     usage = "<session_file> <role>"
-    validate_args("rep_list_roles_subject", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
-    rep_list_roles_subject(args["arg0"], args["arg1"])
+    validate_args("rep_list_role_subjects", {"session_file": args["arg0"], "role": args["arg1"]}, usage)
+    rep_list_role_subjects(args["arg0"], args["arg1"])
     
 elif args["command"] == "rep_list_subject_roles":
     usage = "<session_file> <username>"

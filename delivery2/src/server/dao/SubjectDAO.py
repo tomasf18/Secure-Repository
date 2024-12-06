@@ -4,6 +4,11 @@ from sqlalchemy.exc import IntegrityError
 
 class SubjectDAO(BaseDAO):
     
+    def __init__(self, session):
+        super().__init__(session)
+    
+# -------------------------------
+
     def create(self, username: str, full_name: str, email: str) -> "Subject":
         """Create a new Subject instance."""
         try:
@@ -15,6 +20,8 @@ class SubjectDAO(BaseDAO):
             self.session.rollback()
             raise ValueError(f"Subject with username '{username}' or email '{email}' already exists.")
     
+# -------------------------------
+
     def get_by_username(self, username: str) -> "Subject":
         """Retrieve a Subject by username."""
         subject = self.session.query(Subject).filter_by(username=username).first()
@@ -26,6 +33,8 @@ class SubjectDAO(BaseDAO):
         """Retrieve all Subjects."""
         return self.session.query(Subject).all()
     
+# -------------------------------
+    
     def update(self, username: str, full_name: str = None, email: str = None) -> "Subject":
         """Update an existing Subject's details."""
         subject = self.get_by_username(username)
@@ -36,12 +45,14 @@ class SubjectDAO(BaseDAO):
         self.session.commit()
         return subject
     
+# -------------------------------
+    
     def delete_subject(self, username: str) -> None:
         """Delete a Subject by username."""
         subject = self.get_by_username(username)
         self.session.delete(subject)
         self.session.commit()
-    
+
 
     
     
