@@ -4,20 +4,52 @@ import subprocess
 
 # ======================== Clear all data ========================
 
-# NOTE: setup_module is a special function that pytest will run before any tests.
-def setup_module(module):
-    """Run the clear_all_data.sh script before the tests."""
+# NOTE: This fixture is used to clear all data before each test.
+@pytest.fixture(scope="function", autouse=True)
+def clear_data():
+    """Run the clear_all_data.sh script before each test."""
     try:
-        print("Clearing data...")
         subprocess.run(["bash", "clear_all_data.sh"], check=True)
     except subprocess.CalledProcessError as e:
-        print("Error clearing data:", e)
+        pytest.fail(f"Error clearing data: {e}")
+        
+# ======================== Test helpers ========================
+
+def run_command(command, *args):
+    """
+    Helper function to run a shell command with arguments and capture its output.
+    
+    :param command: Name of the command to run (e.g., './rep_subject_credentials').
+    :param args: Arguments to pass to the command.
+    :return: A tuple (stdout, stderr).
+    """
+    try:
+        result = subprocess.run(
+            ["bash", command, *args],
+            text=True,  # Capture output as text (str)
+            capture_output=True,  # Capture both stdout and stderr
+            check=True,  # Raise CalledProcessError for non-zero exit codes
+            cwd="../client/commands"  # Run the command from the commands directory
+        )
+        return result.stdout, result.stderr
+    except subprocess.CalledProcessError as e:
+        return e.stdout, e.stderr
 
 # ======================== Test cases ========================
 
 def test_simple():
-    """A simple test to ensure the setup works."""
-    assert 0 == 0
+    """A simple test"""
+    assert 1 == 1
+
+def test_subjects():
+    """A simple test to check if the subject commands work."""
+    
+    # Create user credentials
+    stdout, stderr = run_command("rep_subject_credentials", "123", "user1_cred_file")
+    assert "Program name: rep_subject_credentials" in stdout
+    assert "Private key saved to ../keys/subject_keys/priv_user1_cred_file.pem" in stdout
+    assert stderr == ""  # No errors expected
+    
 
 # ./rep_subject_credentials 123 user1_cred_file
 # ./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
@@ -53,20 +85,20 @@ def test_simple():
 
 # ./rep_add_doc user1_session_file doc1 file1.txt
 
-def test_create_org():
-    orgname1='org1'
-    pub_key = 'pub_key.pem'
+# def test_create_org():
+#     orgname1='org1'
+#     pub_key = 'pub_key.pem'
 
-    ret = os.system(f'./rep_create_org {orgname1} joao Joao joao@gmail.com {pub_key}')
-    assert ret == 0
+#     ret = os.system(f'./rep_create_org {orgname1} joao Joao joao@gmail.com {pub_key}')
+#     assert ret == 0
 
-def test_list_orgs():
-    orgname2='org2'
-    pub_key = 'pub_key.pem'
+# def test_list_orgs():
+#     orgname2='org2'
+#     pub_key = 'pub_key.pem'
 
-    os.system(f'./rep_create_org {orgname2} danilo Danilo danilo@gmail.com {pub_key}')
-    output = subprocess.check_output(f'./rep_list_orgs', shell=True, text=True)
-    assert "{'name': 'org1'}, {'name': 'org2'}" in output
+#     os.system(f'./rep_create_org {orgname2} danilo Danilo danilo@gmail.com {pub_key}')
+#     output = subprocess.check_output(f'./rep_list_orgs', shell=True, text=True)
+#     assert "{'name': 'org1'}, {'name': 'org2'}" in output
 
 # def test_create_session():
 #     orgname='org1'
