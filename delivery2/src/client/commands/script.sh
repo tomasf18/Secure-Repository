@@ -210,3 +210,6 @@
 ./rep_suspend_role user2_org1_session_file ROLE_3
 ./rep_suspend_role user9_org2_session_file ROLE_4
 
+# Reactivate roles
+./rep_reactivate_role user2_org1_session_file ROLE_3
+./rep_reactivate_role user9_org2_session_file ROLE_4
