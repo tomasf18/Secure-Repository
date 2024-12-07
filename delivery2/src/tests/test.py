@@ -34,6 +34,8 @@ def clear_data():
 # Auxiliar function to start the server
 def start_server_process():
     """Start the server and return the process."""
+    print("\n======================== Starting server ========================\n")
+    
     os.chdir(CONFIG["server_dir"])
     server_process = subprocess.Popen(
         ["python3", CONFIG["server_path"]],
@@ -46,16 +48,16 @@ def start_server_process():
 
 # Auxiliar function to stop the server
 def stop_server_process(server_process):
+    print("\n======================== Stopping server ========================\n")
+    
     """Stop the server process."""
     os.kill(server_process.pid, signal.SIGTERM)
     server_process.wait()
-    print("\nServer stopped successfully!")
-    clear_all_data()
+    print("Server stopped successfully!")
 
 @pytest.fixture(scope="session", autouse=True)
 def start_server():
     """Start the server befre each test and stop it afterward."""
-    print("\n======================== Starting server ========================\n")
     
     try:
         server_process = start_server_process()
@@ -70,6 +72,7 @@ def start_server():
         
     finally:
         stop_server_process(server_process)
+        clear_all_data()
         
 # ================== Helper Functions ==================
 
@@ -136,6 +139,62 @@ def test_simple():
     print(f"\nListing subjects...")
     stdout, stderr = run_command("rep_list_subjects", "user1_session_file")
     assert "[{'username': 'user1', 'status': 'ACTIVE'}]" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Create user2 credentials
+    print(f"\nCreating user2 credentials...")
+    stdout, stderr = run_command("rep_subject_credentials", "456", "user2_cred_file")
+    assert "Private key saved to ../keys/subject_keys/priv_user2_cred_file.pem" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Add user2 to the organization
+    print(f"\nAdding user2 to the organization org1...")
+    stdout, stderr = run_command("rep_add_subject", "user1_session_file", "user2", "User2", "user2@gmail.com", "user2_cred_file")
+    assert "Subject user2 added to organization org1 successfully" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Create user3 credentials
+    print(f"\nCreating user3 credentials...")
+    stdout, stderr = run_command("rep_subject_credentials", "789", "user3_cred_file")
+    assert "Private key saved to ../keys/subject_keys/priv_user3_cred_file.pem" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Add user3 to the organization
+    print(f"\nAdding user3 to the organization org1...")
+    stdout, stderr = run_command("rep_add_subject", "user1_session_file", "user3", "User3", "user3@gmail.com", "user3_cred_file")
+    assert "Subject user3 added to organization org1 successfully" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Create user4 credentials
+    print(f"\nCreating user4 credentials...")
+    stdout, stderr = run_command("rep_subject_credentials", "101112", "user4_cred_file")
+    assert "Private key saved to ../keys/subject_keys/priv_user4_cred_file.pem" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Add user4 to the organization
+    print(f"\nAdding user4 to the organization org1...")
+    stdout, stderr = run_command("rep_add_subject", "user1_session_file", "user4", "User4", "user4@gmail.com", "user4_cred_file")
+    assert "Subject user4 added to organization org1 successfully" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # List subjects
+    print(f"\nListing subjects...")
+    stdout, stderr = run_command("rep_list_subjects", "user1_session_file")
+    assert "[{'username': 'user1', 'status': 'ACTIVE'}, {'username': 'user2', 'status': 'ACTIVE'}, {'username': 'user3', 'status': 'ACTIVE'}, {'username': 'user4', 'status': 'ACTIVE'}]" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # List subject user2
+    print(f"\nListing subject user2...")
+    stdout, stderr = run_command("rep_list_subjects", "user1_session_file", "user2")
+    assert "{'username': 'user2', 'status': 'ACTIVE'}" in stdout
     assert stderr == ""  # No errors expected
     print(stdout)
 
