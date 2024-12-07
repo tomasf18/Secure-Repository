@@ -1,17 +1,62 @@
+import signal
+import time
 import pytest
 import os
 import subprocess
 
+# NOTE: The scope "session" runs the fixture only once for the entire test session.
+# Use "function" scope to execute the fixture before each individual test.
+
 # ======================== Clear all data ========================
 
-# NOTE: This fixture is used to clear all data before each test.
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def clear_data():
-    """Run the clear_all_data.sh script before each test."""
+    """Run the clear_all_data.sh script before running the tests."""
+    print("\n======================== Clearing data ========================\n")
     try:
         subprocess.run(["bash", "clear_all_data.sh"], check=True)
     except subprocess.CalledProcessError as e:
         pytest.fail(f"Error clearing data: {e}")
+        
+# ======================== Start Server ========================
+
+@pytest.fixture(scope="session", autouse=True)
+def start_server():
+    """Start the server befre each test and stop it afterward."""
+    print("\n======================== Starting server ========================\n")
+    
+    server_dir = os.path.abspath("server")
+    server_path = os.path.join(server_dir, "server.py")
+    
+    original_dir = os.getcwd()
+    
+    try:
+        # Start the server
+        os.chdir(server_dir)
+        server_process = subprocess.Popen(
+            ["python3", server_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        time.sleep(1)  # Wait for the server to start
+        os.chdir(original_dir)
+        
+        # Check if the server is running
+        if server_process.poll() is not None:
+            stdout, stderr = server_process.communicate()
+            raise Exception(f"Server failed to start. STDOUT: {stdout.decode()}, STDERR: {stderr.decode()}")
+        
+        print("Server started successfully!")
+        
+        # Yield control to the test
+        yield
+        
+    finally:
+        # Stop the server
+        os.kill(server_process.pid, signal.SIGTERM)
+        server_process.wait()
+        
+        print("\nServer stopped successfully!")
         
 # ======================== Test helpers ========================
 
@@ -38,20 +83,53 @@ def run_command(command, *args):
 # ======================== Test cases ========================
 
 def test_simple():
-    """A simple test"""
-    assert 1 == 1
+    """A simple test to add some data to the database."""
+    print("\n======================== Testing simple commands ========================\n")
+    
+    # Create user1 credentials
+    print(f"\nCreating user1 credentials...")
+    stdout, stderr = run_command("rep_subject_credentials", "123", "user1_cred_file")
+    assert "Private key saved to ../keys/subject_keys/priv_user1_cred_file.pem" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Create an organization with the user1
+    print(f"\nCreating an organization with the user1...")
+    stdout, stderr = run_command("rep_create_org", "org1", "user1", "User1", "user1@gmail.com", "user1_cred_file")
+    assert "Organization org1 created successfully" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # List organizations
+    print(f"\nListing organizations...")
+    stdout, stderr = run_command("rep_list_orgs")
+    assert "[{'name': 'org1'}]" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # Create a session with the user1
+    print(f"\nCreating a session with the user1...")
+    stdout, stderr = run_command("rep_create_session", "org1", "user1", "123", "user1_cred_file", "user1_session_file")
+    assert "Session created and saved to ../sessions/user1_session_file.json, sessionId=1" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
+    
+    # List subjects
+    print(f"\nListing subjects...")
+    stdout, stderr = run_command("rep_list_subjects", "user1_session_file")
+    assert "[{'username': 'user1', 'status': 'ACTIVE'}]" in stdout
+    assert stderr == ""  # No errors expected
+    print(stdout)
 
 def test_subjects():
     """A simple test to check if the subject commands work."""
+    print("\n======================== Testing subjects ========================\n")
     
-    # Create user credentials
-    stdout, stderr = run_command("rep_subject_credentials", "123", "user1_cred_file")
-    print(f"\n\nSTDOUT = {stdout}\n\n")
-    print(f"\n\nSTDERR = {stderr}\n\n")
-    assert "Program name: rep_subject_credentials" in stdout
-    assert "Private key saved to ../keys/subject_keys/priv_user1_cred_file.pem" in stdout
-    assert stderr == ""  # No errors expected
-    
+
+def test_docs():
+    """A simple test to check if the document commands work."""
+    print("\n======================== Testing documents ========================\n")
+      
 
 # ./rep_subject_credentials 123 user1_cred_file
 # ./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
