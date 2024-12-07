@@ -16,14 +16,18 @@ CONFIG = {
 
 # ================== Clear All Data ==================
 
-@pytest.fixture(scope="session", autouse=True)
-def clear_data():
-    """Run the clear_all_data.sh script before running the tests."""
+# Auxiliar function to clear all data
+def clear_all_data():
     print("\n======================== Clearing data ========================\n")
     try:
         subprocess.run(["bash", "clear_all_data.sh"], check=True)
     except subprocess.CalledProcessError as e:
         pytest.fail(f"Error clearing data: {e}")
+
+@pytest.fixture(scope="session", autouse=True)
+def clear_data():
+    """Run the clear_all_data.sh script before running the tests."""
+    clear_all_data()
         
 # ================== Start Server ==================
 
@@ -45,8 +49,8 @@ def stop_server_process(server_process):
     """Stop the server process."""
     os.kill(server_process.pid, signal.SIGTERM)
     server_process.wait()
-    
     print("\nServer stopped successfully!")
+    clear_all_data()
 
 @pytest.fixture(scope="session", autouse=True)
 def start_server():
