@@ -25,11 +25,11 @@ def run_command(command, *args):
     """
     try:
         result = subprocess.run(
-            ["bash", command, *args],
+            # Change directory to the client/commands folder and run the command
+            ["bash", "-c", f"cd client/commands && ./{command} {' '.join(args)}"],
             text=True,  # Capture output as text (str)
             capture_output=True,  # Capture both stdout and stderr
             check=True,  # Raise CalledProcessError for non-zero exit codes
-            cwd="../client/commands"  # Run the command from the commands directory
         )
         return result.stdout, result.stderr
     except subprocess.CalledProcessError as e:
@@ -46,6 +46,8 @@ def test_subjects():
     
     # Create user credentials
     stdout, stderr = run_command("rep_subject_credentials", "123", "user1_cred_file")
+    print(f"\n\nSTDOUT = {stdout}\n\n")
+    print(f"\n\nSTDERR = {stderr}\n\n")
     assert "Program name: rep_subject_credentials" in stdout
     assert "Private key saved to ../keys/subject_keys/priv_user1_cred_file.pem" in stdout
     assert stderr == ""  # No errors expected
