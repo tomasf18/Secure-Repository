@@ -4,10 +4,17 @@ import pytest
 import os
 import subprocess
 
+CONFIG = {
+    "current_dir": os.getcwd(),
+    "server_dir": os.path.abspath("server"),
+    "server_path": os.path.abspath("server/server.py"),
+    "commands_dir": os.path.abspath("client/commands"),
+}
+
 # NOTE: The scope "session" runs the fixture only once for the entire test session.
 # Use "function" scope to execute the fixture before each individual test.
 
-# ======================== Clear all data ========================
+# ================== Clear All Data ==================
 
 @pytest.fixture(scope="session", autouse=True)
 def clear_data():
@@ -18,47 +25,49 @@ def clear_data():
     except subprocess.CalledProcessError as e:
         pytest.fail(f"Error clearing data: {e}")
         
-# ======================== Start Server ========================
+# ================== Start Server ==================
+
+# Auxiliar function to start the server
+def start_server_process():
+    """Start the server and return the process."""
+    os.chdir(CONFIG["server_dir"])
+    server_process = subprocess.Popen(
+        ["python3", CONFIG["server_path"]],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    time.sleep(1)  # Wait for the server to start
+    os.chdir(CONFIG["current_dir"])
+    return server_process
+
+# Auxiliar function to stop the server
+def stop_server_process(server_process):
+    """Stop the server process."""
+    os.kill(server_process.pid, signal.SIGTERM)
+    server_process.wait()
+    
+    print("\nServer stopped successfully!")
 
 @pytest.fixture(scope="session", autouse=True)
 def start_server():
     """Start the server befre each test and stop it afterward."""
     print("\n======================== Starting server ========================\n")
     
-    server_dir = os.path.abspath("server")
-    server_path = os.path.join(server_dir, "server.py")
-    
-    original_dir = os.getcwd()
-    
     try:
-        # Start the server
-        os.chdir(server_dir)
-        server_process = subprocess.Popen(
-            ["python3", server_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        time.sleep(1)  # Wait for the server to start
-        os.chdir(original_dir)
+        server_process = start_server_process()
         
         # Check if the server is running
         if server_process.poll() is not None:
             stdout, stderr = server_process.communicate()
             raise Exception(f"Server failed to start. STDOUT: {stdout.decode()}, STDERR: {stderr.decode()}")
-        
         print("Server started successfully!")
         
-        # Yield control to the test
         yield
         
     finally:
-        # Stop the server
-        os.kill(server_process.pid, signal.SIGTERM)
-        server_process.wait()
+        stop_server_process(server_process)
         
-        print("\nServer stopped successfully!")
-        
-# ======================== Test helpers ========================
+# ================== Helper Functions ==================
 
 def run_command(command, *args):
     """
@@ -68,10 +77,15 @@ def run_command(command, *args):
     :param args: Arguments to pass to the command.
     :return: A tuple (stdout, stderr).
     """
+    
+    commands_dir = CONFIG["commands_dir"]
     try:
         result = subprocess.run(
             # Change directory to the client/commands folder and run the command
-            ["bash", "-c", f"cd client/commands && ./{command} {' '.join(args)}"],
+            [
+                "bash", "-c", 
+                f"cd {commands_dir} && ./{command} {' '.join(args)}"
+            ],
             text=True,  # Capture output as text (str)
             capture_output=True,  # Capture both stdout and stderr
             check=True,  # Raise CalledProcessError for non-zero exit codes
@@ -80,7 +94,7 @@ def run_command(command, *args):
     except subprocess.CalledProcessError as e:
         return e.stdout, e.stderr
 
-# ======================== Test cases ========================
+# ================== Tests ==================
 
 def test_simple():
     """A simple test to add some data to the database."""
