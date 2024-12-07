@@ -153,3 +153,17 @@ def organization_role_permissions(organization_name, role):
         data = request.json
         print(f"SERVER: Received data: {data}. Removing permission or subject from role {role} in organization {organization_name}")
         return remove_subject_or_permission_from_role(organization_name, role, data, db_session)
+    
+# -------------------------------
+
+@organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>/acl', methods=['PUT', 'DELETE'])
+def document_acl(organization_name, document_name):
+    db_session = g.db_session
+    if request.method == 'PUT':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Adding permission to a role of document {document_name} in organization {organization_name}")
+        return add_role_permission_to_document(organization_name, document_name, data, db_session)
+    elif request.method == 'DELETE':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Removing permission from a role of document {document_name} in organization {organization_name}")
+        return remove_role_permission_from_document(organization_name, document_name, data, db_session)

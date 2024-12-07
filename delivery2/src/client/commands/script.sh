@@ -294,3 +294,35 @@
 
 # ROLE_3: [ROLE_NEW, ROLE_MOD]
 # ROLE_6: [DOC_READ, DOC_NEW]
+
+
+# Add document permissions to roles
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_DELETE
+
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_4 DOC_ACL
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_4 DOC_READ
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_4 DOC_DELETE
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_5 DOC_ACL
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_5 DOC_READ
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_5 DOC_DELETE
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_6 DOC_ACL
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_6 DOC_READ
+./rep_acl_doc user6_org2_session_file doc6 + ROLE_6 DOC_DELETE
+
+
+# Remove document permissions from roles
+./rep_acl_doc user1_org1_session_file doc1 - ROLE_1 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 - ROLE_2 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 - ROLE_3 DOC_DELETE
+
+./rep_acl_doc user6_org2_session_file doc6 - ROLE_4 DOC_ACL
+./rep_acl_doc user6_org2_session_file doc6 - ROLE_5 DOC_READ
+./rep_acl_doc user6_org2_session_file doc6 - ROLE_6 DOC_DELETE

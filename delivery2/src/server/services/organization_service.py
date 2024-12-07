@@ -7,9 +7,10 @@ from dao.OrganizationDAO import OrganizationDAO
 from dao.RoleDAO import RoleDAO
 from dao.SubjectDAO import SubjectDAO
 from dao.PermissionDAO import PermissionDAO
+from dao.DocumentRolePermissionDAO import DocumentRolePermissionDAO
 
 from models.status import Status
-from models.database_orm import Organization, Subject, Document, Permission
+from models.database_orm import Organization, Subject, Document, Permission, DocumentRolePermission
 
 from utils.server_session_utils import load_session
 from utils.server_session_utils import encrypt_payload
@@ -823,9 +824,198 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
     return encrypted_result, 200
-     
-    
 
+# -------------------------------
+# class DocumentRolePermissionDAO(BaseDAO):
+#     """DAO for managing DocumentRolePermission entities."""
+    
+#     def __init__(self, session):
+#         super().__init__(session)
+        
+#     def create(self, document_acl_id: int, role_id: int, permission_name: str) -> DocumentRolePermission:
+#         """ Create a new DocumentRolePermission entry. """
+#         try:
+#             new_document_role_permission = DocumentRolePermission(
+#                 document_acl_id=document_acl_id,
+#                 role_id=role_id,
+#                 permission_name=permission_name
+#             )
+#             self.session.add(new_document_role_permission)
+#             self.session.commit()
+#             return new_document_role_permission
+#         except IntegrityError:
+#             self.session.rollback()
+#             raise ValueError(f"DocumentRolePermission associated with document_acl_id '{document_acl_id}', role_id '{role_id}', permission_name '{permission_name}' already exists.")
+        
+#     def get_by_document_acl_id(self, document_acl_id):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id).all()
+    
+#     def get_by_role_id(self, role_id):
+#         return self.session.query(self.model).filter(self.model.role_id == role_id).all()
+    
+#     def get_by_permission_name(self, permission_name):
+#         return self.session.query(self.model).filter(self.model.permission_name == permission_name).all()
+    
+#     def get_by_document_acl_id_and_role_id(self, document_acl_id, role_id):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id, self.model.role_id == role_id).all()
+    
+#     def get_by_document_acl_id_and_permission_name(self, document_acl_id, permission_name):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id, self.model.permission_name == permission_name).all()
+    
+#     def get_by_role_id_and_permission_name(self, role_id, permission_name):
+#         return self.session.query(self.model).filter(self.model.role_id == role_id, self.model.permission_name == permission_name).all()
+    
+#     def get_by_document_acl_id_and_role_id_and_permission_name(self, document_acl_id, role_id, permission_name):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id, self.model.role_id == role_id, self.model.permission_name == permission_name).all()
+    
+#     def get_by_document_acl_id_and_role_id_and_permission_name(self, document_acl_id, role_id, permission_name):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id, self.model.role_id == role_id, self.model.permission_name == permission_name).all()
+    
+#     def get_by_document_acl_id_and_role_id_and_permission_name(self, document_acl_id, role_id, permission_name):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id, self.model.role_id == role_id, self.model.permission_name == permission_name).all()
+    
+#     def get_by_document_acl_id_and_role_id_and_permission_name(self, document_acl_id, role_id, permission_name):
+#         return self.session.query(self.model).filter(self.model.document_acl_id == document_acl_id, self.model.role_id == role_id, self.model.permission_name == permission_name).all()
+    
+# class DocumentRolePermission(Base):
+#     __tablename__ = "document_role_permission"
+    
+#     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+#     document_acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
+#     role_id: Mapped[int] = mapped_column(ForeignKey('role.id'), nullable=False)
+#     permission_name: Mapped[str] = mapped_column(ForeignKey('permission.name'), nullable=False)
+    
+#     # Relationships
+#     role: Mapped["Role"] = relationship()
+#     permission: Mapped["Permission"] = relationship()
+#     document_acl: Mapped["DocumentACL"] = relationship(back_populates="permissions")
+    
+#     __table_args__ = (
+#         UniqueConstraint("document_acl_id", "role_id", "permission_name", name="uq_doc_acl_role_permission"),
+#     )
+    
+#     def __repr__(self):
+#         return f"<DocumentRolePermission(document_acl_id={self.document_acl_id}, role_id={self.role_id}, permission_name={self.permission_name})>"
+
+
+def add_role_permission_to_document(organization_name, document_name, data, db_session: Session):
+    '''Handles PUT requests to /organizations/<organization_name>/documents/<document_name>/roles/<role>/permissions'''
+    
+    
+    document_dao = DocumentDAO(db_session)
+    role_dao = RoleDAO(db_session)
+    permission_dao = PermissionDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    org_acl_id = organization.acl.id
+
+    # Get document
+    document = document_dao.get_metadata(session.id, document_name)
+
+    # Get role
+    role_name = decrypted_data.get('role')
+    role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
+
+    # Get permission
+    permission_name = decrypted_data.get('permission')
+    if permission_name not in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
+        return encrypt_payload({
+                "error": f"Permission '{permission_name}' is not a valid document permission."
+            }, session_key[:32], session_key[32:]
+        ), 400
+    
+    permission = permission_dao.get_by_name(permission_name)
+
+    # Add role permission to document
+    document_role_permission_dao.create(document.acl.id, role.id, permission.name)
+    
+    # Construct result
+    result = {
+        "data": f"Permission '{permission.name}' added to role '{role.name}' in document '{document.name}' in organization '{document.org_name}' successfully."
+    }
+    
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
+
+# -------------------------------
+
+def remove_role_permission_from_document(organization_name, document_name, data, db_session):
+    '''Handles DELETE requests to /organizations/<organization_name>/documents/<document_name>/roles/<role>/permissions'''
+    
+    document_dao = DocumentDAO(db_session)
+    role_dao = RoleDAO(db_session)
+    permission_dao = PermissionDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    org_acl_id = organization.acl.id
+
+    # Get document
+    document = document_dao.get_metadata(session.id, document_name)
+
+    # Get role
+    role_name = decrypted_data.get('role')
+    role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
+
+    # Get permission
+    permission_name = decrypted_data.get('permission')
+    if permission_name not in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
+        return encrypt_payload({
+                "error": f"Permission '{permission_name}' is not a valid document permission."
+            }, session_key[:32], session_key[32:]
+        ), 400
+    
+    permission = permission_dao.get_by_name(permission_name)
+
+    # Remove role permission from document
+    document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
+    if not document_role_permission:
+        return encrypt_payload({
+                "error": f"Permission '{permission.name}' is not associated with role '{role.name}' in document '{document.name}' in organization '{document.org_name}'."
+            }, session_key[:32], session_key[32:]
+        ), 400
+    
+    document_role_permission_dao.delete_by_id(document_role_permission.id)
+    
+    # Construct result
+    result = {
+        "data": f"Permission '{permission.name}' removed from role '{role.name}' in document '{document.name}' in organization '{document.org_name}' successfully."
+    }
+    
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    
+    return encrypted_result, 200
 
 # ========================================================================================= #
 

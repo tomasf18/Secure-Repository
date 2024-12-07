@@ -158,4 +158,19 @@
 # ROLE_1: [DOC_DELETE, DOC_NEW]
 # ROLE_2: [DOC_ACL, DOC_DELETE, ROLE_ACL]
 
+# Add document permissions to roles
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_DELETE
+
+# Remove document permissions from roles
+./rep_acl_doc user1_org1_session_file doc1 - ROLE_1 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc1 - ROLE_2 DOC_READ
+./rep_acl_doc user1_org1_session_file doc1 - ROLE_3 DOC_DELETE
 

@@ -715,7 +715,7 @@ def rep_list_role_permissions(session_file, role):
     
     sys.exit(ReturnCode.SUCCESS)
     
-    
+# -------------------------------
 
 def rep_list_permission_roles(session_file, permission):
     """
@@ -1313,8 +1313,41 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
     - Calls PUT/DELETE /organizations/{organization_name}/documents/{document_name}/acl endpoint
     """
 
-    print("rep_acl_doc")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+    
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/documents/{document_name}/acl"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+        "role": role,
+        "permission": permission,
+    }
+    
+    if operator == "+":
+        method = HTTPMethod.PUT
+    elif operator == "-":
+        method = HTTPMethod.DELETE
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=method, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None:
+        logger.error("Error adding permission or subject to role")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    
+    saveContext(session_file, session_file_content)
+    
+    print(result["data"])
+    sys.exit(ReturnCode.SUCCESS)
 
 
 # ****************************************************
