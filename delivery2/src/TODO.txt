@@ -2,6 +2,9 @@ rep_decrypt_file <encrypted file> <encryption metadata>
 rep_get_file <file handle> [file]
 rep_list_docs <session file> [-s username] [-d nt/ot/et date]
 
+WHEN A SUBJECT IS SUSPENDED, I MUST ENSURE THAT, IF HE IS A MANAGER, THERE IS AT LEAST ONE MORE MANAGER IN THET ORG
+CORRECT ERROR MESSAGES FOR EACH COMMAND, SO THAT NO USEFUL MESSAGE FOR ATTACKERS IS SHOWN
+WHEN A DOCUMENT IS ADDED, ADD TO DocumentRolePermission TABLE ALL THE DOCUMENT PERMISSIONS TO MANAGER ROLE!
 
 rep_assume_role <session file> <role>
 rep_drop_role <session file> <role>

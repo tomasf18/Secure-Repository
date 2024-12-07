@@ -1,5 +1,5 @@
 from .BaseDAO import BaseDAO
-from models.database_orm import Role
+from models.database_orm import Role, Subject
 from sqlalchemy.exc import IntegrityError
 
 class RoleDAO(BaseDAO):
@@ -31,12 +31,13 @@ class RoleDAO(BaseDAO):
     
 # -------------------------------
     
-    def get_by_name(self, name: str) -> "Role":
-        """Retrieve a Role by name."""
-        role = self.session.query(Role).filter_by(name=name).first()
-        if not role:
-            raise ValueError(f"Role with name '{name}' not found.")
-        return role
+    # NOT GOOD -> The same name can exist in different ACLs
+    # def get_by_name(self, name: str) -> "Role":
+    #     """Retrieve a Role by name."""
+    #     role = self.session.query(Role).filter_by(name=name).first()
+    #     if not role:
+    #         raise ValueError(f"Role with name '{name}' not found.")
+    #     return role
     
 # -------------------------------
     
@@ -79,3 +80,17 @@ class RoleDAO(BaseDAO):
         """Retrieve all Roles associated with a given username and ACL ID."""
         subject_roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.subjects).filter_by(username=username).all()
         return subject_roles
+    
+# -------------------------------
+
+    def get_role_subjects(self, role_name, acl_id) -> list["Subject"]:
+        """Suspend all Subjects associated with a given Role."""
+        role = self.get_by_name_and_acl_id(role_name, acl_id)
+        return role.subjects
+
+# -------------------------------
+
+    def get_by_acl_id_and_permission(self, acl_id: int, permission_name: str) -> list["Role"]:
+        """Retrieve all Roles associated with a given ACL ID and permission."""
+        roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.permissions).filter_by(name=permission_name).all()
+        return roles

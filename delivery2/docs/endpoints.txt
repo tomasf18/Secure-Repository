@@ -31,10 +31,10 @@
                 (PUT) - Activate a Role [Authorized API]
                 (DELETE) - Reactivate a Role [Authorized API]
 
-                /permissions
-                    (GET) - Get Role Permission [Authenticated API]
-                    (PUT ?permission={permission}) - Add Permission to Role [Authorized API]
-                    (DELETE ?permission={permission}) - Remove Permission from Role [Authorized API]
+                /subject-permissions  
+                    (GET) - Get Role Permissions [Authenticated API]
+                    (PUT) - Add Subject/Permission to Role [Authorized API]
+                    (DELETE) - Remove Subject/Permission from Role [Authorized API]
 
         /documents
             (GET ?minDate={minDate} & maxDate={maxDate} & creator={subject_username} & (...)) - Query Organization Documents [Authenticated API]

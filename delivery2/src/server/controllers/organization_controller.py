@@ -96,17 +96,15 @@ def organization_document(organization_name, document_name):
 
 
 # ==================================== Second Delivery ==================================== #
-
+# GET /organizations/{organization_name}/roles?permission={permission} endpoint
 @organization_blueprint.route('/organizations/<organization_name>/roles', methods=['GET', 'POST'])
 def organization_roles(organization_name):
     db_session = g.db_session
     if request.method == 'GET':
         data = request.json
-        # print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
-        # username = request.args.get('subject')
-        # date_filter = request.args.get('date_filter')
-        # date = request.args.get('date')
-        # return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
+        print(f"SERVER: Received data: {data}. Getting roles from organization {organization_name}")
+        permission = request.args.get('permission')
+        return list_roles_per_permission(organization_name, permission, data, db_session)
     elif request.method == 'POST':
         data = request.json
         print(f"SERVER: Received data: {data}. Creating role in organization {organization_name}")
@@ -122,37 +120,50 @@ def organization_subject_roles(organization_name, username):
         print(f"SERVER: Received data: {data}. Getting roles from subject {username} in organization {organization_name}")
         return list_subject_roles(organization_name, username, data, db_session)
     
-
 # -------------------------------
 
 @organization_blueprint.route('/organizations/<organization_name>/roles/<role>', methods=['PUT', 'DELETE'])
 def organization_role(organization_name, role):
     db_session = g.db_session
-    # if request.method == 'GET':
-    #     data = request.json
-    #     print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
-    #     username = request.args.get('subject')
-    #     date_filter = request.args.get('date_filter')
-    #     date = request.args.get('date')
-    #     return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
-    # elif request.method == 'POST':
-    #     data = request.json
-    #     print(f"SERVER: Received data: {data}. Creating document in organization {organization_name}")
-    #     return create_organization_document(organization_name, data, db_session)
+    if request.method == 'PUT':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Reactivating role {role} in organization {organization_name}")
+        return reactivate_role_subjects(organization_name, role, data, db_session)
+    elif request.method == 'DELETE':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Suspending role {role} in organization {organization_name}")
+        return suspend_role_subjects(organization_name, role, data, db_session)
     
 # -------------------------------
 
-@organization_blueprint.route('/organizations/<organization_name>/roles/<role>/permissions', methods=['GET', 'PUT', 'DELETE'])
+@organization_blueprint.route('/organizations/<organization_name>/roles/<role>/subject-permissions', methods=['GET', 'PUT', 'DELETE'])
 def organization_role_permissions(organization_name, role):
     db_session = g.db_session
-    # if request.method == 'GET':
-    #     data = request.json
-    #     print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
-    #     username = request.args.get('subject')
-    #     date_filter = request.args.get('date_filter')
-    #     date = request.args.get('date')
-    #     return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
-    # elif request.method == 'POST':
-    #     data = request.json
-    #     print(f"SERVER: Received data: {data}. Creating document in organization {organization_name}")
-    #     return create_organization_document(organization_name, data, db_session)
+    if request.method == 'GET':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Getting permissions from role {role} in organization {organization_name}")
+        return get_role_permissions(organization_name, role, data, db_session)
+    elif request.method == 'PUT':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Adding permission or subject to role {role} in organization {organization_name}")
+        return add_subject_or_permission_to_role(organization_name, role, data, db_session)
+    elif request.method == 'DELETE':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Removing permission or subject from role {role} in organization {organization_name}")
+        return remove_subject_or_permission_from_role(organization_name, role, data, db_session)
+    
+# -------------------------------
+
+@organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>/acl', methods=['PUT', 'DELETE'])
+def document_acl(organization_name, document_name):
+    db_session = g.db_session
+    if request.method == 'PUT':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Adding permission to a role of document {document_name} in organization {organization_name}")
+        return add_role_permission_to_document(organization_name, document_name, data, db_session)
+    elif request.method == 'DELETE':
+        data = request.json
+        print(f"SERVER: Received data: {data}. Removing permission from a role of document {document_name} in organization {organization_name}")
+        return remove_role_permission_from_document(organization_name, document_name, data, db_session)
+    
+# -------------------------------

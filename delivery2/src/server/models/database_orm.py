@@ -147,9 +147,6 @@ class ACL(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     type: Mapped[str] = mapped_column(nullable=False)  # Discriminator column
     
-    # Relationships
-    roles: Mapped[list["Role"]] = relationship("Role", back_populates="acl")
-    
     def __repr__(self):
         return f"<ACL(type={self.type})>"
 
@@ -163,6 +160,7 @@ class OrganizationACL(ACL):
     org_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), unique=True, nullable=True)
     
     # Relationships
+    roles: Mapped[list["Role"]] = relationship("Role", back_populates="acl")
     organization: Mapped["Organization"] = relationship(back_populates="acl")
     
     def __repr__(self):
@@ -179,9 +177,32 @@ class DocumentACL(ACL):
     
     # Relationships
     document: Mapped["Document"] = relationship(back_populates="acl")
+    permissions: Mapped[list["DocumentRolePermission"]] = relationship(back_populates="document_acl")
     
     def __repr__(self):
         return f"<DocumentACL(document_id={self.document_id})>"
+    
+# ----------------------------------------------------------------------------------------------- #
+
+class DocumentRolePermission(Base):
+    __tablename__ = "document_role_permission"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    document_acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
+    role_id: Mapped[int] = mapped_column(ForeignKey('role.id'), nullable=False)
+    permission_name: Mapped[str] = mapped_column(ForeignKey('permission.name'), nullable=False)
+    
+    # Relationships
+    role: Mapped["Role"] = relationship()
+    permission: Mapped["Permission"] = relationship()
+    document_acl: Mapped["DocumentACL"] = relationship(back_populates="permissions")
+    
+    __table_args__ = (
+        UniqueConstraint("document_acl_id", "role_id", "permission_name", name="uq_doc_acl_role_permission"),
+    )
+    
+    def __repr__(self):
+        return f"<DocumentRolePermission(document_acl_id={self.document_acl_id}, role_id={self.role_id}, permission_name={self.permission_name})>"
 
 # ----------------------------------------------------------------------------------------------- #
 
@@ -205,7 +226,7 @@ class Role(Base):
     acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
     
     # Relationships
-    acl: Mapped["ACL"] = relationship(back_populates="roles")
+    acl: Mapped["OrganizationACL"] = relationship(back_populates="roles")
     permissions: Mapped[list["Permission"]] = relationship(secondary=RolePermissions)
     subjects: Mapped[list["Subject"]] = relationship(secondary=RoleSubjects)
     
