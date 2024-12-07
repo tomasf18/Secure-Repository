@@ -729,8 +729,47 @@ def rep_list_permission_roles(session_file, permission):
     - Calls GET /organizations/{organization_name}/roles?permission={permission} endpoint
     """
     
-    print("rep_list_permission_roles")
-    pass
+    session_file = get_session_file(session_file)
+    session_file_content = read_file(session_file)
+
+    if session_file_content is None:
+        logger.error(f"Error reading session file: {session_file}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+        
+    session_id = session_file_content['session_id']
+    session_key = convert_str_to_bytes(session_file_content["session_key"])
+    
+    endpoint = f"/organizations/{session_file_content['organization']}/roles?permission={permission}"
+    
+    data = {
+        "session_id": session_id,
+        "counter": session_file_content["counter"] + 1,
+        "nonce": session_file_content["nonce"],
+    }
+    
+    result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    
+    if result is None or result.get("error") is not None:
+        logger.error("Error listing permission roles")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    saveContext(session_file, session_file_content)
+    
+    is_doc_perm = result.get("document_permission")
+    data = result.get("data")
+    
+    if is_doc_perm:
+        print("Roles per document that have the permission:")
+        for doc_data in data:
+            print(f"Document: {doc_data.get("document_name")}")
+            for role in doc_data.get("roles"):
+                print(" -> ", role)
+    else:
+        print("Roles that have the permission:")
+        for role in data:
+            print(" -> ", role)
+    
+    sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
 

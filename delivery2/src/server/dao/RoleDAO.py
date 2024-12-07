@@ -88,3 +88,9 @@ class RoleDAO(BaseDAO):
         role = self.get_by_name_and_acl_id(role_name, acl_id)
         return role.subjects
 
+# -------------------------------
+
+    def get_by_acl_id_and_permission(self, acl_id: int, permission_name: str) -> list["Role"]:
+        """Retrieve all Roles associated with a given ACL ID and permission."""
+        roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.permissions).filter_by(name=permission_name).all()
+        return roles

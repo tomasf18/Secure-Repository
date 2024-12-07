@@ -96,17 +96,15 @@ def organization_document(organization_name, document_name):
 
 
 # ==================================== Second Delivery ==================================== #
-
+# GET /organizations/{organization_name}/roles?permission={permission} endpoint
 @organization_blueprint.route('/organizations/<organization_name>/roles', methods=['GET', 'POST'])
 def organization_roles(organization_name):
     db_session = g.db_session
     if request.method == 'GET':
         data = request.json
-        # print(f"SERVER: Received data: {data}. Getting documents from organization {organization_name}")
-        # username = request.args.get('subject')
-        # date_filter = request.args.get('date_filter')
-        # date = request.args.get('date')
-        # return list_organization_documents(organization_name, data, username, date_filter, date, db_session)
+        print(f"SERVER: Received data: {data}. Getting roles from organization {organization_name}")
+        permission = request.args.get('permission')
+        return list_roles_per_permission(organization_name, permission, data, db_session)
     elif request.method == 'POST':
         data = request.json
         print(f"SERVER: Received data: {data}. Creating role in organization {organization_name}")
@@ -167,3 +165,5 @@ def document_acl(organization_name, document_name):
         data = request.json
         print(f"SERVER: Received data: {data}. Removing permission from a role of document {document_name} in organization {organization_name}")
         return remove_role_permission_from_document(organization_name, document_name, data, db_session)
+    
+# -------------------------------

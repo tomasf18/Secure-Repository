@@ -223,25 +223,25 @@
 
 
 # Add permissions to roles
-./rep_add_permission user2_org1_session_file ROLE_2 DOC_ACL
-./rep_add_permission user2_org1_session_file ROLE_2 DOC_READ
-./rep_add_permission user2_org1_session_file ROLE_2 DOC_DELETE
+./rep_add_permission user2_org1_session_file ROLE_1 DOC_NEW
+./rep_add_permission user2_org1_session_file ROLE_1 SUBJECT_NEW
+./rep_add_permission user2_org1_session_file ROLE_1 SUBJECT_DOWN
+./rep_add_permission user2_org1_session_file ROLE_2 SUBJECT_UP
+./rep_add_permission user2_org1_session_file ROLE_2 SUBJECT_DOWN
+./rep_add_permission user2_org1_session_file ROLE_2 SUBJECT_NEW
 ./rep_add_permission user2_org1_session_file ROLE_2 ROLE_ACL
 ./rep_add_permission user2_org1_session_file ROLE_3 DOC_NEW
 ./rep_add_permission user2_org1_session_file ROLE_3 ROLE_NEW
 ./rep_add_permission user2_org1_session_file ROLE_3 ROLE_MOD
-./rep_add_permission user2_org1_session_file ROLE_1 DOC_READ
-./rep_add_permission user2_org1_session_file ROLE_1 DOC_DELETE
-./rep_add_permission user2_org1_session_file ROLE_1 DOC_NEW
 
-./rep_add_permission user9_org2_session_file ROLE_5 DOC_ACL
-./rep_add_permission user9_org2_session_file ROLE_5 DOC_READ
-./rep_add_permission user9_org2_session_file ROLE_5 DOC_DELETE
+./rep_add_permission user9_org2_session_file ROLE_5 SUBJECT_UP
+./rep_add_permission user9_org2_session_file ROLE_5 SUBJECT_DOWN
+./rep_add_permission user9_org2_session_file ROLE_5 SUBJECT_NEW
 ./rep_add_permission user9_org2_session_file ROLE_4 DOC_NEW
 ./rep_add_permission user9_org2_session_file ROLE_4 ROLE_NEW
 ./rep_add_permission user9_org2_session_file ROLE_4 ROLE_MOD
-./rep_add_permission user9_org2_session_file ROLE_6 DOC_READ
-./rep_add_permission user9_org2_session_file ROLE_6 DOC_DELETE
+./rep_add_permission user9_org2_session_file ROLE_6 SUBJECT_DOWN
+./rep_add_permission user9_org2_session_file ROLE_6 SUBJECT_NEW
 ./rep_add_permission user9_org2_session_file ROLE_6 DOC_NEW
 
 
@@ -254,13 +254,13 @@
 ./rep_list_role_permissions user9_org2_session_file ROLE_5
 ./rep_list_role_permissions user9_org2_session_file ROLE_6
 
-# ROLE_1: [DOC_READ, DOC_DELETE, DOC_NEW]
-# ROLE_2: [DOC_ACL, DOC_READ, DOC_DELETE, ROLE_ACL]
+# ROLE_1: [SUBJECT_DOWN, SUBJECT_NEW, DOC_NEW]
+# ROLE_2: [SUBJECT_UP, SUBJECT_DOWN, SUBJECT_NEW, ROLE_ACL]
 # ROLE_3: [DOC_NEW, ROLE_NEW, ROLE_MOD]
 
 # ROLE_4: [DOC_NEW, ROLE_NEW, ROLE_MOD]
-# ROLE_5: [DOC_ACL, DOC_READ, DOC_DELETE]
-# ROLE_6: [DOC_READ, DOC_DELETE, DOC_NEW]
+# ROLE_5: [SUBJECT_UP, SUBJECT_DOWN, SUBJECT_NEW]
+# ROLE_6: [SUBJECT_DOWN, SUBJECT_NEW, DOC_NEW]
 
 
 # Add subjects to roles
@@ -289,7 +289,7 @@
 ./rep_remove_permission user2_org1_session_file ROLE_3 DOC_NEW
 ./rep_list_role_permissions user2_org1_session_file ROLE_3
 
-./rep_remove_permission user9_org2_session_file ROLE_6 DOC_DELETE
+./rep_remove_permission user9_org2_session_file ROLE_6 SUBJECT_DOWN
 ./rep_list_role_permissions user9_org2_session_file ROLE_6
 
 # ROLE_3: [ROLE_NEW, ROLE_MOD]
@@ -298,31 +298,56 @@
 
 # Add document permissions to roles
 ./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_ACL
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_READ
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_1 DOC_DELETE
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_ACL
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_READ
+./rep_acl_doc user1_org1_session_file doc2 + ROLE_1 DOC_READ
+./rep_acl_doc user1_org1_session_file doc3 + ROLE_1 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc4 + ROLE_2 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc5 + ROLE_2 DOC_READ
 ./rep_acl_doc user1_org1_session_file doc1 + ROLE_2 DOC_DELETE
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_ACL
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_READ
-./rep_acl_doc user1_org1_session_file doc1 + ROLE_3 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc2 + ROLE_3 DOC_ACL
+./rep_acl_doc user1_org1_session_file doc3 + ROLE_3 DOC_READ
+./rep_acl_doc user1_org1_session_file doc4 + ROLE_3 DOC_DELETE
 
 ./rep_acl_doc user6_org2_session_file doc6 + ROLE_4 DOC_ACL
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_4 DOC_READ
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_4 DOC_DELETE
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_5 DOC_ACL
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_5 DOC_READ
+./rep_acl_doc user6_org2_session_file doc7 + ROLE_4 DOC_READ
+./rep_acl_doc user6_org2_session_file doc8 + ROLE_4 DOC_DELETE
+./rep_acl_doc user6_org2_session_file doc9 + ROLE_5 DOC_ACL
+./rep_acl_doc user6_org2_session_file doc10 + ROLE_5 DOC_READ
 ./rep_acl_doc user6_org2_session_file doc6 + ROLE_5 DOC_DELETE
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_6 DOC_ACL
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_6 DOC_READ
-./rep_acl_doc user6_org2_session_file doc6 + ROLE_6 DOC_DELETE
+./rep_acl_doc user6_org2_session_file doc7 + ROLE_6 DOC_ACL
+./rep_acl_doc user6_org2_session_file doc8 + ROLE_6 DOC_READ
+./rep_acl_doc user6_org2_session_file doc9 + ROLE_6 DOC_DELETE
 
 
 # Remove document permissions from roles
 ./rep_acl_doc user1_org1_session_file doc1 - ROLE_1 DOC_ACL
-./rep_acl_doc user1_org1_session_file doc1 - ROLE_2 DOC_READ
-./rep_acl_doc user1_org1_session_file doc1 - ROLE_3 DOC_DELETE
+./rep_acl_doc user1_org1_session_file doc5 - ROLE_2 DOC_READ
+./rep_acl_doc user1_org1_session_file doc4 - ROLE_3 DOC_DELETE
 
 ./rep_acl_doc user6_org2_session_file doc6 - ROLE_4 DOC_ACL
-./rep_acl_doc user6_org2_session_file doc6 - ROLE_5 DOC_READ
-./rep_acl_doc user6_org2_session_file doc6 - ROLE_6 DOC_DELETE
+./rep_acl_doc user6_org2_session_file doc10 - ROLE_5 DOC_READ
+./rep_acl_doc user6_org2_session_file doc9 - ROLE_6 DOC_DELETE
+
+
+# # List permissions per role
+
+# ## Organization permissions
+./rep_list_permission_roles user1_org1_session_file ROLE_ACL
+./rep_list_permission_roles user1_org1_session_file ROLE_MOD
+./rep_list_permission_roles user1_org1_session_file SUBJECT_NEW
+./rep_list_permission_roles user1_org1_session_file DOC_NEW
+
+./rep_list_permission_roles user6_org2_session_file DOC_NEW
+./rep_list_permission_roles user6_org2_session_file ROLE_NEW
+./rep_list_permission_roles user6_org2_session_file ROLE_MOD
+./rep_list_permission_roles user6_org2_session_file SUBJECT_DOWN
+
+## Document permissions
+./rep_list_permission_roles user1_org1_session_file DOC_ACL
+./rep_list_permission_roles user1_org1_session_file DOC_READ
+./rep_list_permission_roles user1_org1_session_file DOC_DELETE
+
+./rep_list_permission_roles user6_org2_session_file DOC_ACL
+./rep_list_permission_roles user6_org2_session_file DOC_READ
+./rep_list_permission_roles user6_org2_session_file DOC_DELETE
+
+# --- End of script --- #

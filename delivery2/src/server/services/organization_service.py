@@ -1017,5 +1017,72 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     
     return encrypted_result, 200
 
+# -------------------------------
+
+
+# This function lists the roles of the organization with which I have currently a session that have a given permission. 
+# Use the names previously referred for the permission rights.
+# As roles can be used in documents’ ACLs to associate subjects to permissions, this command should also list the roles 
+# per document that have the given permission. Note: permissions for documents are different from the other organization permissions.
+# Doc permissions: DOC_ACL, DOC_READ, DOC_DELETE
+# All permissions: "DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"
+# doc permissions: "DOC_ACL", "DOC_READ", "DOC_DELETE"
+# other organization permissions: "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"
+
+def list_roles_per_permission(organization_name, permission, data, db_session):
+    '''Handles GET requests to /organizations/<organization_name>/permissions/<permission>/roles'''
+    
+    role_dao = RoleDAO(db_session)
+    permission_dao = PermissionDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
+    session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+
+    # Get session
+    try:
+        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+    except ValueError as e:
+        message, code = e.args
+        return message, code
+
+    document_permission = permission in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]
+
+    # Get organization
+    organization = organization_dao.get_by_name(organization_name)
+    org_name = organization.name
+    org_acl_id = organization.acl.id
+
+    # Get permission
+    permission = permission_dao.get_by_name(permission)
+    document_roles_permission = []
+    serializable_document_roles = []
+    
+    if document_permission: # Get, for each document, the roles that have the given permission
+        document_roles_permission = document_role_permission_dao.get_document_roles_by_permission_and_org(permission.name, org_name)
+        for doc_name, roles in document_roles_permission.items():
+            if roles != []:
+                serializable_document_roles.append({
+                    "document_name": doc_name,
+                    "roles": roles
+                })
+    else:
+        document_roles_permission = role_dao.get_by_acl_id_and_permission(org_acl_id, permission.name)
+        serializable_document_roles = [role.__repr__() for role in document_roles_permission]
+    
+    # Construct result
+    result = {
+        "document_permission": document_permission,
+        "data": serializable_document_roles,
+    }
+    
+
+    # Update session
+    session_dao.update_counter(session.id, decrypted_data["counter"])
+    
+    # Encrypt result
+    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
+    
+    return encrypted_result, 200
+
 # ========================================================================================= #
 
