@@ -6,6 +6,7 @@ import secrets
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as SQLAlchemySession
 
+from dao.RoleDAO import RoleDAO
 from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
 from dao.RepositoryDAO import RepositoryDAO
@@ -21,7 +22,6 @@ from utils.server_session_utils import load_session
 from utils.server_session_utils import encrypt_payload
 
 from utils.constants.http_code import HTTP_Code
-from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 
 # -------------------------------
 
@@ -135,12 +135,23 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     '''
     
     session_dao = SessionDAO(db_session)
+    role_dao = RoleDAO(db_session)
 
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    # Verify if the subject is bound to the role in the organization
+    session_subject = session.subject
+    organization = session.organization
+    subjects_with_role = role_dao.get_role_subjects(role, organization.acl.id)
+    if session_subject not in subjects_with_role:
+        return encrypt_payload({
+                "error": f"Subject '{session_subject.username}' is not bound to role '{role}' in organization '{organization_name}'"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     try:
         role_added = session_dao.add_session_role(session.id, role)
@@ -153,7 +164,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     # Construct result
     result = {
         "roles": [role.name for role in session.session_roles],
-        "data": f"Role '{role_added.__repr__()}' added the session with user '{session.subject_username}' in organization '{session.organization_name}'"
+        "data": f"Role '{role_added.__repr__()}' added to the session with user '{session.subject_username}' in organization '{session.organization_name}'"
     }  
 
     # Update session
@@ -196,7 +207,7 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
         role_removed = session_dao.drop_session_role(session.id, role)
     except Exception as e:
         return encrypt_payload({
-                "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
+                "error": f"Error removing role '{role}' from session '{session_id}' in organization '{organization_name}'"
             }, session_key[:32], session_key[32:]
         ), HTTP_Code.FORBIDDEN
     

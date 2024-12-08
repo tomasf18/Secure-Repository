@@ -191,7 +191,7 @@
 
 # List permissions per role
 
-## List permissions per role
+## Organization permissions
 ./rep_list_permission_roles user1_org1_session_file ROLE_ACL
 # ROLE_ACL: [ROLE_2]
 ./rep_list_permission_roles user1_org1_session_file ROLE_MOD
@@ -201,7 +201,7 @@
 ./rep_list_permission_roles user1_org1_session_file DOC_NEW
 # DOC_NEW: [ROLE_1, ROLE_2, ROLE_3]
 
-## List permissions per role
+## Document permissions
 ./rep_list_permission_roles user1_org1_session_file DOC_ACL
 ./rep_list_permission_roles user1_org1_session_file DOC_READ
 ./rep_list_permission_roles user1_org1_session_file DOC_DELETE

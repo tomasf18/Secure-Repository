@@ -4,13 +4,16 @@ rep_list_docs <session file> [-s username] [-d nt/ot/et date]
 
 WHEN A SUBJECT IS SUSPENDED/REMOVED FROM A MANAGER ROLE, I MUST ENSURE THAT, IF HE IS A MANAGER, THERE IS AT LEAST ONE MORE MANAGER AT THET ORG -> DONE
 WHEN A DOCUMENT IS ADDED, ADD TO DocumentRolePermission TABLE ALL THE DOCUMENT PERMISSIONS TO MANAGER ROLE! -> DONE
-WHEN ADDING A SUBJECT TO A MANAGER ROLE, MAKE SURE TO GIV HIM ALL THE PERMISSIONS
+WHEN ADDING A SUBJECT TO A MANAGER ROLE, MAKE SURE TO GIV HIM ALL THE PERMISSIONS (it's the manager who has the permissions, not the subject) -> DONE 
+
+VERIFY IF THE SUBJECT, WHEN ASSMING A ROLE, HAS THAT ROLE IN THE ORG
+
 CORRECT ERROR MESSAGES FOR EACH COMMAND, SO THAT NO USEFUL MESSAGE FOR ATTACKERS IS SHOWN
 TRY WIRESHARK TO SEE ENCRYPTED/PLAINTEXT CONTENT
 
-rep_assume_role <session file> <role>
-rep_drop_role <session file> <role>
-rep_list_roles <session file> <role>
+rep_assume_role <session file> <role>   
+rep_drop_role <session file> <role>     
+rep_list_roles <session file> <role>    
 rep_list_role_subjects <session file> <role>
 rep_list_subject_roles <session file> <username>
 rep_list_role_permissions <session file> <role>

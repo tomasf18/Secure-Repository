@@ -4,8 +4,7 @@ from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
 from .OrganizationDAO import OrganizationDAO
 
-from models.database_orm import Role
-from models.database_orm import Session
+from models.database_orm import Role, Session
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
@@ -156,11 +155,6 @@ class SessionDAO(BaseDAO):
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
             
             session.session_roles.append(role_object)
-            role_object.subjects.append(session.subject)    # Eu não posso dar append do subject ao role!!! Supostamente roles na sessao sao diferented de roles na organizaçao
-                                                            # Esta parte de dar append do subect ao role é suposto ser feita no rep_add_permission
-                                                            # E depois, na sessao, o subject assume roles QUE ELE POSSUI na organizaçáo, e nao qualquer um!! (retirar role_object.subjects.remove(session.subject)
-                                                            # da função drop_session_role tambem, e fazer a verificação de se o subject está a tentar asuumir um role que lhe é valido na organizacao
-            
             self.session.commit()
             
             self.session.refresh(role_object)
@@ -184,7 +178,6 @@ class SessionDAO(BaseDAO):
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
             
             session.session_roles.remove(role_object)
-            role_object.subjects.remove(session.subject)
             
             self.session.commit()
             
@@ -264,3 +257,16 @@ class SessionDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise
+        
+# -------------------------------
+
+    def has_permission(self, session_id: int, permissions: list[str]) -> bool:
+        """
+        Check if a ssubject within a session has the given permission(s).
+        """
+        session = self.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        
+        # TODO  
+        pass
