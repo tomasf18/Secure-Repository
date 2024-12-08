@@ -1073,7 +1073,7 @@ def rep_reactivate_role(session_file, role):
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
+    if result is None or result.get("error") is not None:
         logger.error("Error reactivating role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
@@ -1121,7 +1121,7 @@ def rep_add_permission(session_file, role, object):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
+    if result is None or result.get("error") is not None:
         logger.error("Error adding permission or subject to role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
@@ -1379,7 +1379,7 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=method, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
+    if result is None or result.get("error") is not None:
         logger.error("Error adding permission or subject to role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     

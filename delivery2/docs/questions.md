@@ -72,3 +72,6 @@ Bom dia, @jpbarraca. Tenho as seguintes dúvidas:
 Quando crio uma organização, o Manager so vai ter as permissoes ao nivel da organizacao, e nao ao nivel dos documentos, certo? (DOC_ACL, DOC_READ, DOC_DELETE)
 Estas sao adicionadas ao manager quando um documento é criado, e essas permissoes sao relativas àquele documento
 
+# -------------------------------
+
+Quando reiniciar o server, posso ter a base de dados a ser reseted?
