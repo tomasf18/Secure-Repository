@@ -328,9 +328,9 @@
 ./rep_acl_doc user6_org2_session_file doc9 - ROLE_6 DOC_DELETE
 
 
-# # List permissions per role
+# List permissions per role
 
-# ## Organization permissions
+## Organization permissions
 ./rep_list_permission_roles user1_org1_session_file ROLE_ACL
 ./rep_list_permission_roles user1_org1_session_file ROLE_MOD
 ./rep_list_permission_roles user1_org1_session_file SUBJECT_NEW

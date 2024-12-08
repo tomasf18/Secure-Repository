@@ -264,6 +264,9 @@ def create_organization_document(organization_name, data, db_session: Session):
     
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
+    organization_dao = OrganizationDAO(db_session)
+    role_dao = RoleDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
 
     # Get session
     try:
@@ -278,12 +281,20 @@ def create_organization_document(organization_name, data, db_session: Session):
     key = convert_str_to_bytes(decrypted_data.get('key'))
     iv = convert_str_to_bytes(decrypted_data.get('iv'))
     
-    document_dao.create_document(document_name, session.id, encrypted_file_content, alg, key, iv)
+    new_document = document_dao.create_document(document_name, session.id, encrypted_file_content, alg, key, iv)
 
     # Construct result
     result = {
         "data": f"Document '{document_name}' uploaded in the organization '{organization_name}' successfully."
     }
+    
+    # Get Manager role
+    organization = organization_dao.get_by_name(organization_name)
+    role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+
+    # Give all the document permissions to the Manager role
+    for doc_permission_name in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
+        document_role_permission_dao.create(new_document.acl.id, role.id, doc_permission_name)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
