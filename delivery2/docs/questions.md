@@ -1,112 +1,66 @@
-Organizations can be universally listed, as well as the public metadata of their documents.
-Qualquer pessoa pode ter acesso à metadata dos documentos de uma organização? 
+    def add_session_role(self, session_id: int, role: str) -> Role:
+        """
+        Add a role to a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+            
+            role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
+            
+            session.session_roles.append(role_object)
+            role_object.subjects.append(session.subject)    # Eu não posso dar append do subject ao role!!! Supostamente roles na sessao sao diferented de roles na organizaçao
+                                                            # Esta parte de dar append do subect ao role é suposto ser feita no rep_add_permission
+                                                            # E depois, na sessao, o subject assume roles QUE ELE POSSUI na organizaçáo, e nao qualquer um!! (retirar role_object.subjects.remove(session.subject)
+                                                            # da função drop_session_role tambem, e fazer a verificação de se o subject está a tentar asuumir um role que lhe é valido na organizacao
+            
+            self.session.commit()
+            
+            self.session.refresh(role_object)
+            self.session.refresh(session)
+            
+            return role_object
+        except IntegrityError:
+            self.session.rollback()
+            
+# -------------------------------
 
-Sim (para ja, mas depois com autenticacao ja nao)
+    def drop_session_role(self, session_id: int, role: str) -> Role:
+        """
+        Drop a role from a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+            
+            role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
+            
+            session.session_roles.remove(role_object)
+            role_object.subjects.remove(session.subject)
+            
+            self.session.commit()
+            
+            self.session.refresh(role_object)
+            self.session.refresh(session)
+            
+            return role_object
+        except IntegrityError:
+            self.session.rollback()
 
----
+# -------------------------------
 
-All subjects hold one or more key pairs, and their public keys are available in the Repository.
-(Ver imagem abaixo, para ver se as public keys armazenadas na tabela "OrgSubj" bastam)
-
-Os key pairs são armazenados localmente?
-
-R.: Sim, e as public keys no repositório
-
----
-
-Each subject must have a set of well-defined identity attributes in their association profile. We will consider 4:
-
-    username;
-    full_name;
-    email;
-    public_key.
-
-
-O que é essa "public_key"?
-
-R.: Já a removi
-
----
-
-All subjects hold one or more key pairs
-Privada -> localmente
-Publica -> no repositorio
-
-
-Criámos uma tabela à parte para isso.
-Mas com isto, precisamos da public_key no subject?
-
-R.: Não (ver diagrama)
+Como é que se destinguem os roles de uma organization ACL dos roles de um document ACL? É suposto os roles serem sempre os mesmos, só que quando usamos o comando
+`rep_acl_doc <session file> <document name> [+/-] <role> <permission>` podemos adicionar a permissao de documento ao role, e, se o role nao estiver na ACL do documento, ele é adicionado?
+Ou é suposto os roles serem diferentes? E quando uso este mesmo comando, se o role nao
+existir, crio um.
 
 
-  ---
+Bom dia, @jpbarraca. Tenho as seguintes dúvidas:
 
-  Each session must have an identifier and one or more keys
-  The session keys must be used to enforce the confidentiality (when necessary) and the integrity (correctness and freshness) of messages exchanged during a session. Different keys can be used for the different protections, if deemed necessary.
+1. No comando `rep_assume_role <session file> <role>`, o subject, não sendo um Manager, apenas pode assumir Roles na sessão que lhe tenham sido atribuídos naquela organização, por exemplo, com o comando `rep_add_permission <session file> <role> <username>`, que ` change the properties of a role in the organization with which I have currently a session, by adding a subject`, certo? Ou pode assumir qualquer um que exista na organização? SIM `By default, subjects have no default role upon logging in into a session. They need to explicitly ask for a role they are bound to, and can do so for more than one role per session. They can also release a role during the session. The set of roles associated to each session is stored by the Repository, in the context of each active session.`
 
- 
-
-  -> Confidencialidade: PubK Danilo
-  -> Integridade: PrivK Tomás
-
-  R.: VER NOVA FORMA
-
-
-
-
-
-
-
-
-  ---
-
-  como é que associamos um document a um file sendo que os files estão noutro storage?
-  É só guardar o file handle, que irá identificar o ficherio no outro storage, certo?
-
-  R.: Sim
-
-  ---
-
-  A session always implicitly refers to one specific Repository organization.
-
-  Como assim "implicitly"? É suposto termos na tabela session uma foreign key para a tabela org e outra para a tabela subject, certo?
-
-  R.: Sim
-
-  --- 
-
-  When subjects are associated to one organization, they choose an existing or new public key for that context.
-
-  Esta parte é toda feita localmente (do lado do cliente)
-
-  R.: Sim
-
-  ---
-
- session is created upon a login operation in that organization, performed with the credentials that the organization maintains about the subject. 
-
- O que é que são estas "**credentials**"?
-
- R.: 
-
-  ---
-
-  Replay: an attacker cannot be able to replay and interaction that took place within a session. Therefore, the software must be able to detect out of order or past messages.
-
-  R.: nº de sequencia resolve isto (nº é melhor do que timestamp)
-  
----
-
-```bash
-rep_create_org <organization> <username> <name> <email> <public key file>
-```
-
-Para que é que temos a pub_key do subject no repo se temos de passar como ficheiro?
-
-R.: NESTE CASO NÃO EXISTE NENHUMA PUBLIC KEY ASSOCIADA À ORGANIZAÇÃO, ENTÃO TEMOS DE PASSAR
-
-rep_add_subject <session file> <username> <name> <email> <credentials file>
-
-credentials file é só a public key.
-
-<session file> -> Para verificar se o subject que está a adicionar tem permissoes para isso
+2. Qual é a diferença entre a ACL de uma organização da ACL de um documento? Existem as seguintes permissões: `"DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"`. Mas apenas `DOC_ACL`, `DOC_READ` e `DOC_DELETE` se referem a documentos. Posto isto, como é que se destinguem os roles de uma ACL de org dos de uma ACL de doc? 
+É suposto os roles de uma ACL de documento serem um subconjunto dos roles que já existem na organização a que esse documento pertence? E, deste modo, usando o comando `rep_acl_doc <session file> <document name> [+/-] <role> <permission>`, se adiciona uma permissão de documento a uma role já existente na organização? Neste caso, se o role não existir, na ACL do documento, 
+    é adicionado, bem como, usando o mesmo comando para remover permissões de documentos, se o role ficar sem permissões para documentos, é retirado da ACL do mesmo?
