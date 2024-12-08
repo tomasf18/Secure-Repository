@@ -337,11 +337,10 @@ def create_organization_document(organization_name, data, db_session: Session):
     
     # Get Manager role
     organization = organization_dao.get_by_name(organization_name)
-    role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+    manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
 
     # Give all the document permissions to the Manager role
-    for doc_permission_name in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
-        document_role_permission_dao.create(new_document.acl.id, role.id, doc_permission_name)
+    document_role_permission_dao.add_all_doc_permissions_to_role(new_document.acl.id, manager_role.id)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
@@ -434,7 +433,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
-        missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_READ"])
+        missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_READ"])
         if missing_permissions != []:
             return encrypt_payload({
                     "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
@@ -480,7 +479,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
         
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
-        missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_DELETE"])
+        missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_DELETE"])
         if missing_permissions != []:
             return encrypt_payload({
                     "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
@@ -627,16 +626,19 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
     # Suspend role subjects
     subjects_to_be_suspended = role_dao.get_role_subjects(role_name, acl_id)
     
+    # Suspend all but the Managers
     for subject in subjects_to_be_suspended:
-        organization_dao.update_org_subj_association_status(organization_name, subject.username, Status.SUSPENDED.value)
+        if not organization_dao.subject_has_role(organization_name, subject.username, "Manager"):
+            organization_dao.update_org_subj_association_status(organization_name, subject.username, Status.SUSPENDED.value)
 
     serializable_suspended_subjects = []
     for subject in subjects_to_be_suspended:
-        status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
-        serializable_suspended_subjects.append({
-            "username": subject.username,
-            "status": status
-        })
+        if not organization_dao.subject_has_role(organization_name, subject.username, "Manager"):
+            status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
+            serializable_suspended_subjects.append({
+                "username": subject.username,
+                "status": status
+            })
     
     # Construct result
     result = {
@@ -957,7 +959,7 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
     # Get document
     document = document_dao.get_metadata(session.id, document_name)
     
-    missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_ACL"])
+    missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_ACL"])
     if missing_permissions != []:
         return encrypt_payload({
                 "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
@@ -1026,7 +1028,7 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     # Get document
     document = document_dao.get_metadata(session.id, document_name)
 
-    missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_ACL"])
+    missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_ACL"])
     if missing_permissions != []:
         return encrypt_payload({
                 "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
