@@ -6,6 +6,8 @@ from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
 from utils.cryptography.integrity import calculate_digest, verify_digest
 
+from utils.constants.http_code import HTTP_Code
+
 from dao.SessionDAO import SessionDAO
 
 from models.database_orm import Session
@@ -162,7 +164,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
     if session is None:
         print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
-                json.dumps(f"Session with id {session_id} not found"), 404
+                json.dumps(f"Session with id {session_id} not found"), HTTP_Code.NOT_FOUND
             )
 
     session_key = session_dao.get_decrypted_key(session_id)
@@ -174,7 +176,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"Invalid session key"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
 
     if (decrypted_data.get("counter") is None) or (decrypted_data.get("nonce") is None):
@@ -183,7 +185,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"No counter or nonce provided!"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
         
     if not verify_message_order(decrypted_data, counter=session.counter, nonce=session.nonce):
@@ -192,7 +194,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"Invalid message order"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
 
     if organization_name != session.organization_name:
@@ -201,7 +203,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"Cannot access organization {organization_name}"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
 
     return decrypted_data, session, session_key

@@ -2,10 +2,10 @@ from .BaseDAO import BaseDAO
 from .RoleDAO import RoleDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
+from .PermissionDAO import PermissionDAO
 from .OrganizationDAO import OrganizationDAO
 
-from models.database_orm import Role
-from models.database_orm import Session
+from models.database_orm import Role, Session, Permission
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
@@ -19,6 +19,7 @@ class SessionDAO(BaseDAO):
         self.key_store_dao = KeyStoreDAO(session)
         self.organization_dao = OrganizationDAO(session)
         self.role_dao = RoleDAO(session)
+        self.permission_dao = PermissionDAO(session)
 
 # -------------------------------
 
@@ -156,11 +157,6 @@ class SessionDAO(BaseDAO):
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
             
             session.session_roles.append(role_object)
-            role_object.subjects.append(session.subject)    # Eu não posso dar append do subject ao role!!! Supostamente roles na sessao sao diferented de roles na organizaçao
-                                                            # Esta parte de dar append do subect ao role é suposto ser feita no rep_add_permission
-                                                            # E depois, na sessao, o subject assume roles QUE ELE POSSUI na organizaçáo, e nao qualquer um!! (retirar role_object.subjects.remove(session.subject)
-                                                            # da função drop_session_role tambem, e fazer a verificação de se o subject está a tentar asuumir um role que lhe é valido na organizacao
-            
             self.session.commit()
             
             self.session.refresh(role_object)
@@ -184,7 +180,6 @@ class SessionDAO(BaseDAO):
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
             
             session.session_roles.remove(role_object)
-            role_object.subjects.remove(session.subject)
             
             self.session.commit()
             
@@ -264,3 +259,21 @@ class SessionDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise
+        
+# -------------------------------
+
+    def missing_org_permitions(self, session_id: int, permissions: list[str]) -> list["Permission"]:
+        """
+        Check if a subject within a session has the given permission(s).
+        """
+        missing_permissions = []
+        session = self.get_by_id(session_id)
+        session_roles = session.session_roles
+        for permission in permissions:
+            permission_object = self.permission_dao.get_by_name(permission)
+            if any(permission_object in role.permissions for role in session_roles):
+                continue
+            missing_permissions.append(permission_object)
+        
+        return missing_permissions
+                    

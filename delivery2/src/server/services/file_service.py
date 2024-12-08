@@ -1,8 +1,8 @@
 import os
 import json
-import base64
 
 from utils.utils import convert_bytes_to_str
+from utils.constants.http_code import HTTP_Code
 
 def download_file(file_handle):
     '''Handles GET requests to /files/<file_handle>'''
@@ -16,10 +16,10 @@ def download_file(file_handle):
     # Search in organization's directory for the file using the file_handle
     file_path = os.path.join(data_org_dir, file_handle) + ".enc"
     if not os.path.exists(file_path):
-        return json.dumps({"error": "File not found."}), 404
+        return json.dumps({"error": "File not found."}), HTTP_Code.NOT_FOUND
     
     # Return the encrypted file contents
     with open(file_path, "rb") as f:
         encrypted_data = f.read()
         
-    return json.dumps({"data": convert_bytes_to_str(encrypted_data)}), 200
+    return json.dumps({"data": convert_bytes_to_str(encrypted_data)}), HTTP_Code.OK
