@@ -162,7 +162,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
     if session is None:
         print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
-                json.dumps(f"Session with id {session_id} not found"), 404
+                json.dumps(f"Session with id {session_id} not found"), HTTP_Code.NOT_FOUND
             )
 
     session_key = session_dao.get_decrypted_key(session_id)

@@ -20,6 +20,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from utils.server_session_utils import load_session
 from utils.server_session_utils import encrypt_payload
 
+from utils.constants.http_code import HTTP_Code
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 
 # -------------------------------
@@ -61,17 +62,17 @@ def create_session(data, db_session: SQLAlchemySession):
         )
     except ValueError as e:
         message = e.args[0]
-        return json.dumps({"error:": message}), 404
+        return json.dumps({"error:": message}), HTTP_Code.NOT_FOUND
 
     if (client is None):
-        return json.dumps(f"User not found!"), 404
+        return json.dumps(f"User not found!"), HTTP_Code.NOT_FOUND
     
     # Get client public key
     client_pub_key = keystore_dao.get_by_id(client.pub_key_id).key
 
     # Verify Signature
     if (not verify_signature(data=data, pub_key=client_pub_key)):
-        return json.dumps(f"Invalid signature!"), 400
+        return json.dumps(f"Invalid signature!"), HTTP_Code.BAD_REQUEST
 
     # Derive session key
     session_key: bytes
@@ -91,7 +92,7 @@ def create_session(data, db_session: SQLAlchemySession):
             nonce = nonce,  # for unique session identification
         )
     except IntegrityError:
-        return json.dumps(f"Session for user '{username}' already exists."), 400
+        return json.dumps(f"Session for user '{username}' already exists."), HTTP_Code.BAD_REQUEST
 
     # Create response
     result = {
@@ -117,7 +118,7 @@ def create_session(data, db_session: SQLAlchemySession):
     
     # Return response to the client
     print(f"\n\nResult: {result}\n\n")
-    return result, 201
+    return result, HTTP_Code.CREATED
 
 # -------------------------------
 

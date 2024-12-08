@@ -15,7 +15,9 @@ from models.database_orm import Organization, Subject, Document, Permission, Doc
 from utils.server_session_utils import load_session
 from utils.server_session_utils import encrypt_payload
 
+from utils.constants.http_code import HTTP_Code
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes
+
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -42,9 +44,9 @@ def create_organization(data, db_session: Session):
     try:
         organization_dao.create(org_name, username, name, email, public_key)
     except IntegrityError:
-        return json.dumps(f"Organization with name '{org_name}' already exists."), 400
+        return json.dumps(f"Organization with name '{org_name}' already exists."), HTTP_Code.BAD_REQUEST
     
-    return json.dumps(f'Organization {org_name} created successfully'), 201
+    return json.dumps(f'Organization {org_name} created successfully'), HTTP_Code.CREATED
 
 # -------------------------------
 
@@ -97,7 +99,7 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
         return encrypt_payload({
                 "error": f"Organization '{organization_name}' doesn't exist."
             }, session_key[:32], session_key[32:]
-        ), 404
+        ), HTTP_Code.NOT_FOUND
     
     # Construct result
     result = {
@@ -172,7 +174,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
         return encrypt_payload({
                 "error": f"Subject with username '{username}' already exists."
             }, session_key[:32], session_key[32:]
-        ), 400
+        ), HTTP_Code.BAD_REQUEST
 
     # Construct result
     result = {
@@ -191,9 +193,15 @@ def add_organization_subject(organization_name, data, db_session: Session):
 
 def suspend_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/subjects/<subject_name>'''
-    
+
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
+    
+    if organization_dao.subject_has_role(organization_name, username, "Manager"):
+        return encrypt_payload({
+                "error": f"Subject '{username}' is a Manager and cannot be suspended."
+            }, session_key[:32], session_key[32:]
+        ), 403 # Forbidden
 
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
@@ -302,7 +310,7 @@ def create_organization_document(organization_name, data, db_session: Session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 201
+    return encrypted_result, HTTP_Code.CREATED
 
 # -------------------------------
 
@@ -323,7 +331,7 @@ def list_organization_documents(organization_name, data, username, date_filter, 
         return encrypt_payload({
                 "error": "No documents found."
             }, session_key[:32], session_key[32:]
-        ), 404
+        ), HTTP_Code.NOT_FOUND
 
     i = 0
     serializable_documents = []
@@ -344,7 +352,7 @@ def list_organization_documents(organization_name, data, username, date_filter, 
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 201
+    return encrypted_result, HTTP_Code.CREATED
 
 # =================================== Auxiliar Function =================================== #
 
@@ -390,7 +398,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
         return encrypt_payload({
                 "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
             }, session_key[:32], session_key[32:]
-        ), 404
+        ), HTTP_Code.NOT_FOUND
     
     serializable_document = get_serializable_document(document, document_dao)
 
@@ -406,7 +414,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 201
+    return encrypted_result, HTTP_Code.CREATED
 
 
 # def get_organization_document_file(organization_name, document_name, data, db_session: Session):
@@ -425,9 +433,9 @@ def get_organization_document_metadata(organization_name, document_name, data, d
 #     document: "Document" = document_dao.get_metadata(session.id, document_name)
 #     if not document.file_handle:
 #         return encrypt_payload({
-#                 "error": f"ERROR 404 - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
+#                 "error": f"ERROR HTTP_Code.NOT_FOUND - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
 #             }, session_key[:32], session_key[32:]
-#         ), 404
+#         ), HTTP_Code.NOT_FOUND
     
 #     serializable_document = get_serializable_document(document)
 
@@ -442,7 +450,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
 #     # Encrypt result
 #     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-#     return encrypted_result, 201
+#     return encrypted_result, HTTP_Code.CREATED
 
 # -------------------------------
 
@@ -465,7 +473,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
         return encrypt_payload({
                 "error": e.args[0]
             }, session_key[:32], session_key[32:]
-        ), 400
+        ), HTTP_Code.BAD_REQUEST
     
     # Construct result
     result = {
@@ -516,7 +524,7 @@ def create_organization_role(organization_name, data, db_session: Session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 201
+    return encrypted_result, HTTP_Code.CREATED
 
 # -------------------------------
 
@@ -736,7 +744,7 @@ def add_subject_or_permission_to_role(organization_name, role_name, data, db_ses
             return encrypt_payload({
                     "error": f"Subject '{object}' or Permission '{object}' doesn't exist."
                 }, session_key[:32], session_key[32:]
-            ), 400
+            ), HTTP_Code.BAD_REQUEST
     
     result = None
     
@@ -800,7 +808,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
             return encrypt_payload({
                     "error": f"Subject '{object}' or Permission '{object}' doesn't exist."
                 }, session_key[:32], session_key[32:]
-            ), 400
+            ), HTTP_Code.BAD_REQUEST
     
     result = None
     
@@ -814,7 +822,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
             return encrypt_payload({
                     "error": f"Subject '{subject.username}' is not associated with role '{role_name}' in organization '{organization_name}'."
                 }, session_key[:32], session_key[32:]
-            ), 400
+            ), HTTP_Code.BAD_REQUEST
         
     if permission:
         try:
@@ -826,7 +834,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
             return encrypt_payload({
                     "error": f"Permission '{permission.name}' is not associated with role '{role_name}' in organization '{organization_name}'."
                 }, session_key[:32], session_key[32:]
-            ), 400
+            ), HTTP_Code.BAD_REQUEST
         
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
@@ -944,7 +952,7 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
         return encrypt_payload({
                 "error": f"Permission '{permission_name}' is not a valid document permission."
             }, session_key[:32], session_key[32:]
-        ), 400
+        ), HTTP_Code.BAD_REQUEST
     
     permission = permission_dao.get_by_name(permission_name)
 
@@ -1000,7 +1008,7 @@ def remove_role_permission_from_document(organization_name, document_name, data,
         return encrypt_payload({
                 "error": f"Permission '{permission_name}' is not a valid document permission."
             }, session_key[:32], session_key[32:]
-        ), 400
+        ), HTTP_Code.BAD_REQUEST
     
     permission = permission_dao.get_by_name(permission_name)
 
@@ -1010,7 +1018,7 @@ def remove_role_permission_from_document(organization_name, document_name, data,
         return encrypt_payload({
                 "error": f"Permission '{permission.name}' is not associated with role '{role.name}' in document '{document.name}' in organization '{document.org_name}'."
             }, session_key[:32], session_key[32:]
-        ), 400
+        ), HTTP_Code.BAD_REQUEST
     
     document_role_permission_dao.delete_by_id(document_role_permission.id)
     
