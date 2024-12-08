@@ -87,7 +87,7 @@ def organization_document(organization_name, document_name):
 
 
 # ==================================== Second Delivery ==================================== #
-# GET /organizations/{organization_name}/roles?permission={permission} endpoint
+
 @organization_blueprint.route('/organizations/<organization_name>/roles', methods=['GET', 'POST'])
 def organization_roles(organization_name):
     db_session = g.db_session

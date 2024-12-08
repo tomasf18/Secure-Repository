@@ -814,12 +814,20 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
             return encrypt_payload({
                     "error": f"Subject '{object}' or Permission '{object}' doesn't exist."
                 }, session_key[:32], session_key[32:]
-            ), HTTP_Code.BAD_REQUEST
+            ), HTTP_Code.NOT_FOUND
     
     result = None
     
     if subject:
         try:
+            if role.name == "Manager":
+                managers = role_dao.get_role_subjects("Manager", acl_id)
+                if subject in managers and len(managers) == 1:
+                    return encrypt_payload({
+                            "error": f"Role '{role_name}' must have at least one active subject."
+                        }, session_key[:32], session_key[32:]
+                    ), HTTP_Code.FORBIDDEN
+
             role.subjects.remove(subject)
             result = {
                 "data": f"Subject '{subject.username}' removed from role '{role_name}' in organization '{organization_name}' successfully."
@@ -832,6 +840,12 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
         
     if permission:
         try:
+            if role.name == "Manager":
+                return encrypt_payload({
+                        "error": f"Role '{role_name}' cannot have its permissions modified."
+                    }, session_key[:32], session_key[32:]
+                ), HTTP_Code.FORBIDDEN
+                
             role.permissions.remove(permission)
             result = {
                 "data": f"Permission '{permission.name}' removed from role '{role_name}' in organization '{organization_name}' successfully."
