@@ -51,10 +51,9 @@ class OrganizationDAO(BaseDAO):
             # Step 7: Add the creator Subject to the "Manager" Role
             manager_role.subjects.append(subject)  # add the subject to the role
 
-            # Step 8: Add all Permissions for Manager
+            # Step 8: Add all Organization Permissions for Manager (except DOC_ACL, DOC_READ, DOC_DELETE, which are for Document)
             permissions = self.session.query(Permission).filter(Permission.name.in_([
-                "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", 
-                "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD", "DOC_ACL", "DOC_READ", "DOC_DELETE"
+                "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"
             ])).all()
 
             for permission in permissions:

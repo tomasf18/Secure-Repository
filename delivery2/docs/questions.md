@@ -56,6 +56,8 @@ Como é que se destinguem os roles de uma organization ACL dos roles de um docum
 Ou é suposto os roles serem diferentes? E quando uso este mesmo comando, se o role nao
 existir, crio um.
 
+# -------------------------------
+
 
 Bom dia, @jpbarraca. Tenho as seguintes dúvidas:
 
@@ -64,3 +66,9 @@ Bom dia, @jpbarraca. Tenho as seguintes dúvidas:
 2. Qual é a diferença entre a ACL de uma organização da ACL de um documento? Existem as seguintes permissões: `"DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"`. Mas apenas `DOC_ACL`, `DOC_READ` e `DOC_DELETE` se referem a documentos. Posto isto, como é que se destinguem os roles de uma ACL de org dos de uma ACL de doc? 
 É suposto os roles de uma ACL de documento serem um subconjunto dos roles que já existem na organização a que esse documento pertence? E, deste modo, usando o comando `rep_acl_doc <session file> <document name> [+/-] <role> <permission>`, se adiciona uma permissão de documento a uma role já existente na organização? Neste caso, se o role não existir, na ACL do documento, 
     é adicionado, bem como, usando o mesmo comando para remover permissões de documentos, se o role ficar sem permissões para documentos, é retirado da ACL do mesmo?
+
+# -------------------------------
+
+Quando crio uma organização, o Manager so vai ter as permissoes ao nivel da organizacao, e nao ao nivel dos documentos, certo? (DOC_ACL, DOC_READ, DOC_DELETE)
+Estas sao adicionadas ao manager quando um documento é criado, e essas permissoes sao relativas àquele documento
+
