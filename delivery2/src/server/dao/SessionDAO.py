@@ -2,9 +2,10 @@ from .BaseDAO import BaseDAO
 from .RoleDAO import RoleDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
+from .PermissionDAO import PermissionDAO
 from .OrganizationDAO import OrganizationDAO
 
-from models.database_orm import Role, Session
+from models.database_orm import Role, Session, Permission
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +19,7 @@ class SessionDAO(BaseDAO):
         self.key_store_dao = KeyStoreDAO(session)
         self.organization_dao = OrganizationDAO(session)
         self.role_dao = RoleDAO(session)
+        self.permission_dao = PermissionDAO(session)
 
 # -------------------------------
 
@@ -260,13 +262,18 @@ class SessionDAO(BaseDAO):
         
 # -------------------------------
 
-    def has_permission(self, session_id: int, permissions: list[str]) -> bool:
+    def missing_permitions(self, session_id: int, permissions: list[str]) -> list["Permission"]:
         """
-        Check if a ssubject within a session has the given permission(s).
+        Check if a subject within a session has the given permission(s).
         """
+        missing_permissions = []
         session = self.get_by_id(session_id)
-        if not session:
-            raise ValueError(f"Session with ID '{session_id}' does not exist.")
+        session_roles = session.session_roles
+        for permission in permissions:
+            permission_object = self.permission_dao.get_by_name(permission)
+            if any(permission_object in role.permissions for role in session_roles):
+                continue
+            missing_permissions.append(permission_object)
         
-        # TODO  
-        pass
+        return missing_permissions
+                    
