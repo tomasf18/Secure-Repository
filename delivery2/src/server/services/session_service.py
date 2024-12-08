@@ -148,7 +148,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
         return encrypt_payload({
                 "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
             }, session_key[:32], session_key[32:]
-        ), 403
+        ), HTTP_Code.FORBIDDEN
     
     # Construct result
     result = {
@@ -168,7 +168,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
         print(role.__repr__())
     print("\n\n\n\n")
     
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
 
 # -------------------------------
 
@@ -198,7 +198,7 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
         return encrypt_payload({
                 "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
             }, session_key[:32], session_key[32:]
-        ), 403
+        ), HTTP_Code.FORBIDDEN
     
     # Construct result
     result = {
@@ -218,7 +218,7 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
         print(role.__repr__())
     print("\n\n\n\n")
         
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
 
 # -------------------------------
 
@@ -252,4 +252,4 @@ def list_session_roles(organization_name, session_id, data, db_session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK

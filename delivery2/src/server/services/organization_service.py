@@ -23,8 +23,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 
-
-
 # -------------------------------
 
 def create_organization(data, db_session: Session):
@@ -60,7 +58,7 @@ def list_organizations(db_session: Session):
         serializable_organizations.append({
             "name": org.name
         })
-    return json.dumps(serializable_organizations), 200
+    return json.dumps(serializable_organizations), HTTP_Code.OK
 
 # -------------------------------
 
@@ -112,7 +110,7 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
 
 # -------------------------------
 
@@ -146,7 +144,7 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
 
 # -------------------------------
 
@@ -187,7 +185,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
 
 # -------------------------------
 
@@ -197,11 +195,6 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
     
-    if organization_dao.subject_has_role(organization_name, username, "Manager"):
-        return encrypt_payload({
-                "error": f"Subject '{username}' is a Manager and cannot be suspended."
-            }, session_key[:32], session_key[32:]
-        ), 403 # Forbidden
 
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
@@ -209,13 +202,19 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
         message, code = e.args
         return message, code
     
+    if organization_dao.subject_has_role(organization_name, username, "Manager"):
+        return encrypt_payload({
+                "error": f"Subject '{username}' is a Manager and cannot be suspended."
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
+        
     try:
         organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
     except Exception as e:
         return encrypt_payload({
                 "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
             }, session_key[:32], session_key[32:]
-        ), 403
+        ), HTTP_Code.FORBIDDEN
     
     # Construct result
     result = {
@@ -228,7 +227,7 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
     
 # -------------------------------
     
@@ -250,7 +249,7 @@ def activate_organization_subject(organization_name, username, data, db_session:
         return encrypt_payload({
                 "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
             }, session_key[:32], session_key[32:]
-        ), 403
+        ), HTTP_Code.FORBIDDEN
     
     # Construct result
     result = {
@@ -263,7 +262,7 @@ def activate_organization_subject(organization_name, username, data, db_session:
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return json.dumps(encrypted_result), 200
+    return json.dumps(encrypted_result), HTTP_Code.OK
     
 # -------------------------------
     
@@ -486,7 +485,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 
 # ==================================== Second Delivery ==================================== #
@@ -563,12 +562,13 @@ def list_subject_roles(organization_name, username, data, db_session: Session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 
 def suspend_role_subjects(organization_name, role_name, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/roles/<role>'''
+    
     
     role_dao = RoleDAO(db_session)
     session_dao = SessionDAO(db_session)
@@ -581,6 +581,12 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
         message, code = e.args
         return message, code
 
+    if role_name == "Manager":
+        return encrypt_payload({
+                "error": f"Role '{role_name}' cannot be suspended."
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
+        
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
@@ -610,7 +616,7 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 
@@ -657,7 +663,7 @@ def reactivate_role_subjects(organization_name, role_name, data, db_session: Ses
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 
@@ -696,7 +702,7 @@ def get_role_permissions(organization_name, role_name, data, db_session: Session
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
     # data = {
@@ -766,7 +772,7 @@ def add_subject_or_permission_to_role(organization_name, role_name, data, db_ses
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 
@@ -842,7 +848,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 # class DocumentRolePermissionDAO(BaseDAO):
@@ -970,7 +976,7 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 
@@ -1034,7 +1040,7 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
 
@@ -1101,7 +1107,7 @@ def list_roles_per_permission(organization_name, permission, data, db_session):
     # Encrypt result
     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
     
-    return encrypted_result, 200
+    return encrypted_result, HTTP_Code.OK
 
 # ========================================================================================= #
 

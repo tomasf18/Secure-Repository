@@ -174,7 +174,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"Invalid session key"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
 
     if (decrypted_data.get("counter") is None) or (decrypted_data.get("nonce") is None):
@@ -183,7 +183,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"No counter or nonce provided!"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
         
     if not verify_message_order(decrypted_data, counter=session.counter, nonce=session.nonce):
@@ -192,7 +192,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"Invalid message order"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
 
     if organization_name != session.organization_name:
@@ -201,7 +201,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
             encrypt_payload({
                     "error": f"Cannot access organization {organization_name}"
                 }, session_key[:32], session_key[32:]
-            ), 403
+            ), HTTP_Code.FORBIDDEN
         )
 
     return decrypted_data, session, session_key

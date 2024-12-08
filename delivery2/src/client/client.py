@@ -911,7 +911,7 @@ def rep_suspend_subject(session_file, username):
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
+    if result is None or result.get("error") is not None:
         logger.error("Error suspending subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
@@ -1029,8 +1029,8 @@ def rep_suspend_role(session_file, role):
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
-        logger.error("Error suspending subject")
+    if result is None or result.get("error") is not None:
+        logger.error("Error suspending role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     
     saveContext(session_file, session_file_content)
