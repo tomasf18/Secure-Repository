@@ -262,7 +262,7 @@ class SessionDAO(BaseDAO):
         
 # -------------------------------
 
-    def missing_permitions(self, session_id: int, permissions: list[str]) -> list["Permission"]:
+    def missing_org_permitions(self, session_id: int, permissions: list[str]) -> list["Permission"]:
         """
         Check if a subject within a session has the given permission(s).
         """

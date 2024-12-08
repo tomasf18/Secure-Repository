@@ -1,12 +1,12 @@
 import json
 import base64
 
-from dao.SessionDAO import SessionDAO
-from dao.DocumentDAO import DocumentDAO
-from dao.OrganizationDAO import OrganizationDAO
 from dao.RoleDAO import RoleDAO
 from dao.SubjectDAO import SubjectDAO
+from dao.SessionDAO import SessionDAO
+from dao.DocumentDAO import DocumentDAO
 from dao.PermissionDAO import PermissionDAO
+from dao.OrganizationDAO import OrganizationDAO
 from dao.DocumentRolePermissionDAO import DocumentRolePermissionDAO
 
 from models.status import Status
@@ -127,7 +127,14 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
         message, code = e.args
         return message, code
 
-    subject: "Subject" = organization_dao.get_subject_by_username(organization_name, username)
+    try:
+        subject: "Subject" = organization_dao.get_subject_by_username(organization_name, username)
+    except Exception as e:
+        return encrypt_payload({
+                "error": f"Subject '{username}' doesn't exist in the organization '{organization_name}'."
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.NOT_FOUND
+        
     status = organization_dao.get_org_subj_association(org_name=organization_name, username=username).status
 
     # Create result
@@ -153,7 +160,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
     
     organization_dao = OrganizationDAO(db_session)
     session_dao = SessionDAO(db_session)
-
+    
     # Get session
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
@@ -161,6 +168,13 @@ def add_organization_subject(organization_name, data, db_session: Session):
         message, code = e.args
         return message, code
 
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["SUBJECT_NEW"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
+        
     username = decrypted_data.get('username')
     name = decrypted_data.get('name')
     email = decrypted_data.get('email')
@@ -200,6 +214,13 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["SUBJECT_DOWN"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     if organization_dao.subject_has_role(organization_name, username, "Manager"):
         return encrypt_payload({
@@ -241,6 +262,13 @@ def activate_organization_subject(organization_name, username, data, db_session:
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["SUBJECT_UP"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     if organization_dao.subject_has_role(organization_name, username, "Manager"):
         return encrypt_payload({
@@ -286,6 +314,13 @@ def create_organization_document(organization_name, data, db_session: Session):
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["DOC_NEW"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     document_name = decrypted_data.get('document_name')
     encrypted_file_content = convert_str_to_bytes(decrypted_data.get('file'))
@@ -388,6 +423,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
 
     # Get session
     try:
@@ -398,6 +434,12 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
+        missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_READ"])
+        if missing_permissions != []:
+            return encrypt_payload({
+                    "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
+                }, session_key[:32], session_key[32:]
+            ), HTTP_Code.FORBIDDEN
     except Exception as e:
         return encrypt_payload({
                 "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
@@ -420,42 +462,6 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     
     return encrypted_result, HTTP_Code.CREATED
 
-
-# def get_organization_document_file(organization_name, document_name, data, db_session: Session):
-#     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
-    
-#     document_dao = DocumentDAO(db_session)
-#     session_dao = SessionDAO(db_session)
-
-#     # Get session
-#     try:
-#         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
-#     except ValueError as e:
-#         message, code = e.args
-#         return message, code
-    
-#     document: "Document" = document_dao.get_metadata(session.id, document_name)
-#     if not document.file_handle:
-#         return encrypt_payload({
-#                 "error": f"ERROR HTTP_Code.NOT_FOUND - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
-#             }, session_key[:32], session_key[32:]
-#         ), HTTP_Code.NOT_FOUND
-    
-#     serializable_document = get_serializable_document(document)
-
-#     # Construct result
-#     result = {
-#         "data": serializable_document
-#     }
-
-#     # Update session
-#     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-#     # Encrypt result
-#     encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-#     return encrypted_result, HTTP_Code.CREATED
-
 # -------------------------------
 
 def delete_organization_document(organization_name, document_name, data, db_session: Session):
@@ -463,6 +469,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     
     document_dao = DocumentDAO(db_session)
     session_dao = SessionDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
 
     # Get session
     try:
@@ -470,8 +477,15 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     except ValueError as e:
         message, code = e.args
         return message, code
-
+        
     try:
+        document: "Document" = document_dao.get_metadata(session.id, document_name)
+        missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_DELETE"])
+        if missing_permissions != []:
+            return encrypt_payload({
+                    "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
+                }, session_key[:32], session_key[32:]
+            ), HTTP_Code.FORBIDDEN
         ceasing_file_handle = document_dao.delete(session.id, document_name)
     except ValueError as e:
         return encrypt_payload({
@@ -496,7 +510,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
 # ==================================== Second Delivery ==================================== #
 
 def create_organization_role(organization_name, data, db_session: Session):
-    '''Handles POST requests to /organizations/<organization_name>/documents'''
+    '''Handles POST requests to /organizations/<organization_name>/roles'''
     
     role_dao = RoleDAO(db_session)
     session_dao = SessionDAO(db_session)
@@ -508,6 +522,13 @@ def create_organization_role(organization_name, data, db_session: Session):
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["ROLE_NEW"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     # Get organization, acl_id and new_role
     organization = organization_dao.get_by_name(organization_name)
@@ -550,8 +571,8 @@ def list_subject_roles(organization_name, username, data, db_session: Session):
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
 
-    # Get subject
-    subject = organization_dao.get_subject_by_username(organization_name, username)
+    # # Get subject
+    # subject = organization_dao.get_subject_by_username(organization_name, username)
 
     # Get roles
     roles = role_dao.get_by_username_and_acl_id(username, acl_id)
@@ -585,6 +606,13 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["ROLE_DOWN"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
 
     if role_name == "Manager":
         return encrypt_payload({
@@ -638,6 +666,13 @@ def reactivate_role_subjects(organization_name, role_name, data, db_session: Ses
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["ROLE_UP"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     if role_name == "Manager":
         return encrypt_payload({
@@ -716,12 +751,6 @@ def get_role_permissions(organization_name, role_name, data, db_session: Session
     return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
-    # data = {
-    #     "session_id": session_id,
-    #     "counter": session_file_content["counter"] + 1,
-    #     "nonce": session_file_content["nonce"],
-    #     "object": object, -> Object: username or permission ID/name (e.g. DOC_READ, DOC_WRITE, ...)
-    # }
 
 def add_subject_or_permission_to_role(organization_name, role_name, data, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/roles/<role>/subject-permissions'''
@@ -738,6 +767,13 @@ def add_subject_or_permission_to_role(organization_name, role_name, data, db_ses
     except ValueError as e:
         message, code = e.args
         return message, code
+    
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["ROLE_MOD"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
 
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
@@ -815,6 +851,13 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
     except ValueError as e:
         message, code = e.args
         return message, code
+
+    missing_permissions = session_dao.missing_org_permitions(session.id, ["ROLE_MOD"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
 
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
@@ -913,6 +956,13 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
 
     # Get document
     document = document_dao.get_metadata(session.id, document_name)
+    
+    missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_ACL"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
 
     # Get role
     role_name = decrypted_data.get('role')
@@ -976,6 +1026,13 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     # Get document
     document = document_dao.get_metadata(session.id, document_name)
 
+    missing_permissions = document_role_permission_dao.missing_doc_permissions(session.roles, document.acl.id, ["DOC_ACL"])
+    if missing_permissions != []:
+        return encrypt_payload({
+                "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
+
     # Get role
     role_name = decrypted_data.get('role')
     role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
@@ -1021,16 +1078,6 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     return encrypted_result, HTTP_Code.OK
 
 # -------------------------------
-
-
-# This function lists the roles of the organization with which I have currently a session that have a given permission. 
-# Use the names previously referred for the permission rights.
-# As roles can be used in documents’ ACLs to associate subjects to permissions, this command should also list the roles 
-# per document that have the given permission. Note: permissions for documents are different from the other organization permissions.
-# Doc permissions: DOC_ACL, DOC_READ, DOC_DELETE
-# All permissions: "DOC_ACL", "DOC_READ", "DOC_DELETE", "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"
-# doc permissions: "DOC_ACL", "DOC_READ", "DOC_DELETE"
-# other organization permissions: "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD"
 
 def list_roles_per_permission(organization_name, permission, data, db_session):
     '''Handles GET requests to /organizations/<organization_name>/permissions/<permission>/roles'''

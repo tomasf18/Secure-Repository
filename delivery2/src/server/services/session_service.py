@@ -146,7 +146,15 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     # Verify if the subject is bound to the role in the organization
     session_subject = session.subject
     organization = session.organization
-    subjects_with_role = role_dao.get_role_subjects(role, organization.acl.id)
+    
+    try:
+        subjects_with_role = role_dao.get_role_subjects(role, organization.acl.id)
+    except Exception as e:
+        return encrypt_payload({
+                "error": e.args[0]
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.NOT_FOUND
+        
     if session_subject not in subjects_with_role:
         return encrypt_payload({
                 "error": f"Subject '{session_subject.username}' is not bound to role '{role}' in organization '{organization_name}'"

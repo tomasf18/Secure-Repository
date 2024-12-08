@@ -231,3 +231,5 @@ class DocumentDAO(BaseDAO):
         self.session.commit()
 
         return ceasing_file_handle
+    
+# -------------------------------

@@ -16,6 +16,7 @@
 # Create session
 ./rep_create_session org1 user1 123 user1_cred_file user1_org1_session_file
 
+./rep_assume_role user1_org1_session_file Manager
 
 # Add subjects to organization
 ./rep_add_subject user1_org1_session_file user2 User2 user2@gmail.com user2_cred_file

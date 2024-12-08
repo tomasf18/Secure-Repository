@@ -6,6 +6,8 @@ from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
 from utils.cryptography.integrity import calculate_digest, verify_digest
 
+from utils.constants.http_code import HTTP_Code
+
 from dao.SessionDAO import SessionDAO
 
 from models.database_orm import Session
