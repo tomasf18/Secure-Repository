@@ -121,7 +121,7 @@ class AES:
         return secrets.token_bytes(32)
 # -------------------------------
 
-    def derive_aes_key(self, password: str) -> bytes:
+    def derive_aes_key(self, password: str, salt: bytes) -> bytes:
         """ Derive a secure AES key from the repository password using PBKDF2.
 
         Args:
@@ -130,9 +130,6 @@ class AES:
         Returns:
             bytes: Derived AES key
         """
-        
-        # Generate a salt (e.g., from a secure source)
-        salt = 'salt'.encode()
 
         # Use PBKDF2 to derive the AES key
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)

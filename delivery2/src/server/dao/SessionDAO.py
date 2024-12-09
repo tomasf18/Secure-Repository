@@ -48,18 +48,19 @@ class SessionDAO(BaseDAO):
             if not organization:
                 raise ValueError(f"Organization with name '{organization_name}' does not exist.")
 
-            encrypted_session_key, iv = self.key_store_dao.create(key, "symmetric")
+            encrypted_session_key, iv, salt = self.key_store_dao.create(key, "symmetric")
             
             print(f"\n\nSession key iv: {iv} with length {len(iv)}")
             print(f"Decrypted session key: {key}")
             print(f"Encrypted session key: {encrypted_session_key.key}")
-            print(f'Again, decrypted session key: {self.key_store_dao.decrypt_key(encrypted_session_key.key, iv)}\n\n')
+            print(f'Again, decrypted session key: {self.key_store_dao.decrypt_key(encrypted_session_key.key, iv, salt)}\n\n')
             
             # Create the session
             new_session = Session(
                 subject_username=subject_username,
                 organization_name=organization_name,
                 key_id=encrypted_session_key.id,
+                key_salt=salt,
                 key_iv=iv,
                 nonce=nonce,
                 counter=counter
@@ -121,7 +122,8 @@ class SessionDAO(BaseDAO):
             raise ValueError(f"Session with ID '{session_id}' does not exist.")
         encrypted_key = self.get_encrypted_key(session_id)
         iv = session.key_iv
-        return self.key_store_dao.decrypt_key(encrypted_key, iv)
+        salt = session.key_salt
+        return self.key_store_dao.decrypt_key(encrypted_key, iv, salt)
     
 # -------------------------------    
     

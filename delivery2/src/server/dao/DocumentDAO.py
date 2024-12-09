@@ -94,7 +94,7 @@ class DocumentDAO(BaseDAO):
             algorithm, mode = alg.split("-")
             
             print("DECRYPTED METADATA KEY: ", key)
-            encrypted_metadata_key, iv_encrypted_key = self.key_store_dao.create(key, "symmetric")
+            encrypted_metadata_key, iv_encrypted_key, salt = self.key_store_dao.create(key, "symmetric")
             print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key)
 
             metadata = self.restricted_metadata_dao.create(
@@ -103,6 +103,7 @@ class DocumentDAO(BaseDAO):
                 mode=mode, 
                 encrypted_metadata_key_id=encrypted_metadata_key.id,    # Store the key encrypted (used to encrypt the document file)
                 iv=iv,                                                  # Store the IV used to encrypt the document file
+                salt=salt,                                              # Store the salt used to derive the key used to encrypt the metadata key
                 iv_encrypted_key=iv_encrypted_key                       # Store the IV used to encrypt the metadata key
             )
 
@@ -138,7 +139,8 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Session with ID '{document_id}' does not exist.")
         encrypted_key = self.get_encrypted_metadata_key(document_id)
         iv = restricted_metadata.iv_encrypted_key
-        return self.key_store_dao.decrypt_key(encrypted_key, iv)
+        salt = restricted_metadata.salt
+        return self.key_store_dao.decrypt_key(encrypted_key, iv, salt)
         
 # -------------------------------
     

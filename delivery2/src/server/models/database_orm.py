@@ -110,6 +110,8 @@ class RestrictedMetadata(Base):
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
     iv: Mapped[bytes] = mapped_column(nullable=True)
     
+    # Salt used to derive the key used to encrypt the metadata key
+    salt: Mapped[bytes] = mapped_column(nullable=False)
     # IV used to encrypt the encryption file key
     iv_encrypted_key: Mapped[bytes] = mapped_column(nullable=False)
     
@@ -264,6 +266,7 @@ class Session(Base):
     subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
     organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
+    key_salt: Mapped[bytes] = mapped_column(nullable=False)
     key_iv: Mapped[bytes] = mapped_column(nullable=False)
 
     nonce: Mapped[str] = mapped_column(nullable=True)
