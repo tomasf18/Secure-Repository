@@ -268,7 +268,7 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
 #
 # ****************************************************
 
-
+# TODO: Encrypt public key server
 def rep_create_org(org, username, name, email, pub_key_file):
     """
     rep_create_org <org> <username> <name> <email> <pub_key_file> 
@@ -308,7 +308,7 @@ def rep_create_org(org, username, name, email, pub_key_file):
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
-
+# TODO: server sign
 def rep_list_org():
     """
     rep_list_orgs 
@@ -329,6 +329,7 @@ def rep_list_org():
 
 # -------------------------------
 
+# TODO: Encrypt public key server
 def rep_create_session(org, username, password, credentials_file, session_file):
     """
     rep_create_session <org> <username> <password> <credentials_file> <session_file> 

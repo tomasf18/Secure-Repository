@@ -94,6 +94,7 @@ def create_session(data, db_session: SQLAlchemySession):
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), HTTP_Code.BAD_REQUEST
 
+    # TODO: Encrypt
     # Create response
     result = {
         "session_id": session.id,
