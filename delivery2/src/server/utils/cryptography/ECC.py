@@ -84,8 +84,6 @@ class ECC:
             ec.EllipticCurvePrivateKey: private key object
         """
         
-        # Private key is a string, so we need to convert it to bytes
-        serialized_private_key = serialized_private_key
         password = password.encode() if password else None
         private_key = serialization.load_pem_private_key(
             serialized_private_key,

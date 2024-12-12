@@ -1,12 +1,15 @@
 import logging
 from flask import Blueprint, request, g
 from services.organization_service import *
+from utils.utils import convert_str_to_bytes
 
 organization_blueprint = Blueprint("organizations", __name__)
 
 
 
 # -------------------------------
+
+ephemeral_keys = {}
 
 @organization_blueprint.route("/organizations", methods=["GET", "POST"])
 def organizations():
@@ -17,7 +20,30 @@ def organizations():
     if request.method == 'POST':
         data = request.json
         print(f"SERVER: Received data: {data}. Creating organization")
-        return create_organization(data, db_session)
+        if "public_key" in data:
+            client_ephemeral_pub_key = convert_str_to_bytes(data["public_key"])
+            result, encryption_key, code = generate_anonymous_signed_shared_secret(client_ephemeral_pub_key, db_session)
+            ephemeral_keys[data["public_key"]] = encryption_key
+            return result, code
+
+        encryption_key = ephemeral_keys[data["client_ephemeral_public_key"]] # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it
+        ephemeral_keys.pop(data["client_ephemeral_public_key"])
+        encrypted_message = convert_str_to_bytes(data["message"])
+        iv = convert_str_to_bytes(data["iv"])
+        decrypted_data = decrypt_anonymous_content(encrypted_message, encryption_key, iv).decode()
+        print("\n\n\n\n\n DECRYPTED DATA: \n\n", decrypted_data, "\n\n\n\n")
+        
+        decrypted_data_dict = json.loads(decrypted_data)
+        
+        return_data, code = create_organization(decrypted_data_dict, db_session)
+        encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
+        
+        print("\n\n\nENCRYPTED_DATA: ", encrypted_return_data)
+        print("\n ENCRYPTION KEY: ", encryption_key)
+        print("\nIV:\n", iv_encrypted_return_data, "\n\n\n")
+        return json.dumps({"data": convert_bytes_to_str(encrypted_return_data), 
+                           "iv": convert_bytes_to_str(iv_encrypted_return_data)
+                           }), code
 
 # -------------------------------
 

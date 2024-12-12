@@ -1,6 +1,3 @@
-import sys
-import json
-import base64
 import logging
 import requests
 
@@ -10,6 +7,10 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from utils.client_session_utils import exchange_keys as exchange_keys_utils
 from utils.client_session_utils import encrypt_payload as encrypt_payload_utils
 from utils.client_session_utils import decrypt_payload as decrypt_payload_utils
+from utils.client_session_utils import exchange_anonymous_keys as exchange_anonymous_keys_utils
+from utils.client_session_utils import encrypt_anonymous as encrypt_anonymous_utils
+from utils.client_session_utils import decrypt_anonymous as decrypt_anonymous_utils
+from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 
 logging.basicConfig(
     filename='project.log',
@@ -80,14 +81,26 @@ class ApiConsumer:
 
             else:
                 print("Sending request")
-                body = {
-                    "data": data
-                }
-                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
-                final_endpoint = self.rep_address + endpoint
-                response = requests.request(method, final_endpoint, json=body)
+                
+                encryption_key, client_ephemeral_public_key = self.exchange_anonymous_keys(endpoint)
+                
+                encrypted_data = self.encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
+                print("\nDATA: ", data)
+                print("\nENCRYPTED_DATA: ", encrypted_data, "\n\n\n")
 
-
+                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{encrypted_data}\"")
+                response = requests.request(method, self.rep_address + endpoint, json=encrypted_data)
+                response_json = response.json()
+                encrypted_data = convert_str_to_bytes(response_json["data"])
+                
+                iv = convert_str_to_bytes(response_json["iv"])
+                
+                print("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
+                print("\nENCRYPTION_KEY: ", encryption_key)
+                print("\nIV:\n", iv, "\n\n\n")
+                
+                received_message = self.decrypt_anonymous(encrypted_data, encryption_key, iv).decode()
+                
             ## TODO: adicionar maneira de dar print error 404 (getOrganizationDocumentFile orgservices)
             if response.status_code in [200, 201, 403, 404]:
                 return received_message if received_message else response.json()
@@ -111,3 +124,19 @@ class ApiConsumer:
     
     def decrypt_payload(self, response, encryption_key, integrity_key):
         return decrypt_payload_utils(response, encryption_key, integrity_key)
+    
+# -------------------------------
+    
+    def exchange_anonymous_keys(self, endpoint):
+        return exchange_anonymous_keys_utils(self.rep_address, endpoint, self.rep_pub_key)
+    
+# -------------------------------
+
+    def encrypt_anonymous(self, data, encryption_key, client_ephemeral_public_key):
+        return encrypt_anonymous_utils(data, encryption_key, client_ephemeral_public_key)
+    
+# -------------------------------
+    
+    def decrypt_anonymous(self, data, encryption_key, iv):
+        return decrypt_anonymous_utils(data, encryption_key, iv)
+    
