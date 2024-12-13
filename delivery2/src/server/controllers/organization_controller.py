@@ -15,7 +15,6 @@ def organizations():
     db_session = g.db_session
     if request.method == 'GET':
         print("SERVER: Getting organizations")
-        print("REQUEST: ", request)
         data = request.json
         if data and "public_key" in data:
             return get_ephemeral_server_public_key(data, db_session)

@@ -268,7 +268,6 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
 #
 # ****************************************************
 
-# TODO: Encrypt public key server
 def rep_create_org(org, username, name, email, pub_key_file):
     """
     rep_create_org <org> <username> <name> <email> <pub_key_file> 
@@ -308,7 +307,7 @@ def rep_create_org(org, username, name, email, pub_key_file):
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
-# TODO: server sign
+
 def rep_list_org():
     """
     rep_list_orgs 
@@ -329,7 +328,6 @@ def rep_list_org():
 
 # -------------------------------
 
-# TODO: Encrypt public key server
 def rep_create_session(org, username, password, credentials_file, session_file):
     """
     rep_create_session <org> <username> <password> <credentials_file> <session_file> 
@@ -379,7 +377,7 @@ def rep_create_session(org, username, password, credentials_file, session_file):
         
 def rep_get_file(file_handle, output_file=None, get_doc_file=False):
     """
-    rep_get_file <file_handle> [file] 
+    rep_get_file <file_handle> [file]
     - This command downloads a file given its handle. 
     The file contents are written to stdout or to the 
     file referred in the optional last argument.
