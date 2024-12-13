@@ -1,4 +1,3 @@
-import os
 import json
 import base64
 from dotenv import load_dotenv
@@ -7,7 +6,6 @@ from dao.RoleDAO import RoleDAO
 from dao.SubjectDAO import SubjectDAO
 from dao.SessionDAO import SessionDAO
 from dao.DocumentDAO import DocumentDAO
-from dao.RepositoryDAO import RepositoryDAO
 from dao.PermissionDAO import PermissionDAO
 from dao.OrganizationDAO import OrganizationDAO
 from dao.DocumentRolePermissionDAO import DocumentRolePermissionDAO
@@ -15,63 +13,17 @@ from dao.DocumentRolePermissionDAO import DocumentRolePermissionDAO
 from models.status import Status
 from models.database_orm import Organization, Subject, Document, Permission, DocumentRolePermission
 
-from utils.cryptography.ECC import ECC
-from utils.cryptography.AES import AES
-from utils.cryptography.auth import sign
 from utils.server_session_utils import load_session
-from utils.server_session_utils import exchange_keys
 from utils.server_session_utils import encrypt_payload
-
-from cryptography.hazmat.primitives import serialization
 
 from utils.constants.http_code import HTTP_Code
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes
-
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 
 load_dotenv()
-
-# -------------------------------
-
-def generate_anonymous_signed_shared_secret(client_ephemeral_pub_key: bytes, db_session: Session):
-    repository_dao = RepositoryDAO(db_session)
-    encryption_key, ephemeral_server_public_key = exchange_keys(client_ephemeral_pub_key)
-    data = {
-        "public_key": convert_bytes_to_str(ephemeral_server_public_key)
-    } 
-    
-    # Get repository private key using the respective password to decrypt it
-    rep_priv_key_password: str = os.getenv('REP_PRIV_KEY_PASSWORD')
-    rep_priv_key = ECC.load_private_key(repository_dao.get_private_key(), rep_priv_key_password)
-    
-    # Sign response
-    signature = sign(
-        data = data,
-        private_key = rep_priv_key,
-    )
-
-    # Finish response packet
-    result = json.dumps({
-        "data": data,
-        "signature": convert_bytes_to_str(signature)
-    })
-    
-    # Return response to the client
-    print(f"\n\nResult: {result}\n\n")
-    return result, encryption_key[:32], HTTP_Code.OK
-
-# -------------------------------
-
-def decrypt_anonymous_content(data: bytes, key: bytes, iv: bytes):
-    decryptor = AES()
-    return decryptor.decrypt_data(data, key, iv)
-
-def encrypt_anonymous_content(data: bytes, key: bytes):
-    encryptor = AES()
-    return encryptor.encrypt_data(data, key)
 
 # -------------------------------
 

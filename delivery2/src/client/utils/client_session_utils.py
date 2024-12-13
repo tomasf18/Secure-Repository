@@ -15,6 +15,31 @@ from utils.cryptography.integrity import calculate_digest, verify_digest
 logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
 
+
+def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> str:
+    encryption_key, client_ephemeral_public_key = exchange_anonymous_keys(rep_address, endpoint, method, rep_pub_key)
+    
+    if not data:
+        data = {}
+        
+    data = encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
+    
+    print("\nDATA: ", data)
+    print("\nENCRYPTED_DATA: ", data, "\n\n\n")
+    print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+    
+    response = requests.request(method, rep_address + endpoint, json=data)
+    response_json = response.json()
+    encrypted_data = convert_str_to_bytes(response_json["data"])
+    
+    iv = convert_str_to_bytes(response_json["iv"])
+    
+    print("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
+    print("\nENCRYPTION_KEY: ", encryption_key)
+    print("\nIV:\n", iv, "\n\n\n")
+    
+    return response, decrypt_anonymous(encrypted_data, encryption_key, iv).decode()
+
 # -------------------------------
 
 def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pub_key: bytes):

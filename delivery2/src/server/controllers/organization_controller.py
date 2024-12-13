@@ -1,7 +1,7 @@
 import logging
 from flask import Blueprint, request, g
 from services.organization_service import *
-from utils.utils import convert_str_to_bytes
+from utils.utils import get_ephemeral_server_public_key, get_decrypted_request, get_shared_secret, encrypt_anonymous_content
 
 organization_blueprint = Blueprint("organizations", __name__)
 
@@ -9,7 +9,6 @@ organization_blueprint = Blueprint("organizations", __name__)
 
 # -------------------------------
 
-ephemeral_keys = {}
 
 @organization_blueprint.route("/organizations", methods=["GET", "POST"])
 def organizations():
@@ -21,7 +20,7 @@ def organizations():
         if data and "public_key" in data:
             return get_ephemeral_server_public_key(data, db_session)
     
-        encryption_key = ephemeral_keys[data["client_ephemeral_public_key"]] # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it    
+        encryption_key = get_shared_secret(data["client_ephemeral_public_key"]) # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it    
         return_data, code = list_organizations(db_session)
         encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
         
@@ -38,7 +37,7 @@ def organizations():
         if "public_key" in data:
             return get_ephemeral_server_public_key(data, db_session)
 
-        encryption_key = ephemeral_keys[data["client_ephemeral_public_key"]] # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it
+        encryption_key = get_shared_secret(data["client_ephemeral_public_key"]) # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it
         decrypted_data, encryption_key = get_decrypted_request(data, encryption_key)
         return_data, code = create_organization(decrypted_data, db_session)
         encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
@@ -49,21 +48,6 @@ def organizations():
                            "iv": convert_bytes_to_str(iv_encrypted_return_data)
                            }), code
 
-def get_ephemeral_server_public_key(data, db_session):
-    client_ephemeral_pub_key = convert_str_to_bytes(data["public_key"])
-    result, encryption_key, code = generate_anonymous_signed_shared_secret(client_ephemeral_pub_key, db_session)
-    ephemeral_keys[data["public_key"]] = encryption_key
-    return result, code
-
-def get_decrypted_request(data, encryption_key):
-    ephemeral_keys.pop(data["client_ephemeral_public_key"])
-    encrypted_message = convert_str_to_bytes(data["message"])
-    iv = convert_str_to_bytes(data["iv"])
-    decrypted_data = decrypt_anonymous_content(encrypted_message, encryption_key, iv).decode()
-    print("\n\n\n\n\n DECRYPTED DATA: \n\n", decrypted_data, "\n\n\n\n")
-    print("\n ENCRYPTION KEY: ", encryption_key)
-    
-    return json.loads(decrypted_data), encryption_key
 # -------------------------------
 
 @organization_blueprint.route('/organizations/<organization_name>/subjects', methods=['GET', 'POST'])

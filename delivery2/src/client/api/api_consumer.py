@@ -10,7 +10,8 @@ from utils.client_session_utils import decrypt_payload as decrypt_payload_utils
 from utils.client_session_utils import exchange_anonymous_keys as exchange_anonymous_keys_utils
 from utils.client_session_utils import encrypt_anonymous as encrypt_anonymous_utils
 from utils.client_session_utils import decrypt_anonymous as decrypt_anonymous_utils
-from utils.utils import convert_bytes_to_str, convert_str_to_bytes
+from utils.client_session_utils import anonymous_request
+from utils.utils import convert_str_to_bytes
 
 logging.basicConfig(
     filename='project.log',
@@ -80,29 +81,9 @@ class ApiConsumer:
                     print(f"Error decrypting server response: {e}")
 
             else:
-                print("Sending request")
+                                
+                response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
                 
-                encryption_key, client_ephemeral_public_key = self.exchange_anonymous_keys(endpoint, method)
-                
-                if not data:
-                    data = {}
-                    
-                data = self.encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
-                print("\nDATA: ", data)
-                print("\nENCRYPTED_DATA: ", data, "\n\n\n")
-
-                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
-                response = requests.request(method, self.rep_address + endpoint, json=data)
-                response_json = response.json()
-                encrypted_data = convert_str_to_bytes(response_json["data"])
-                
-                iv = convert_str_to_bytes(response_json["iv"])
-                
-                print("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
-                print("\nENCRYPTION_KEY: ", encryption_key)
-                print("\nIV:\n", iv, "\n\n\n")
-                
-                received_message = self.decrypt_anonymous(encrypted_data, encryption_key, iv).decode()
                 
             ## TODO: adicionar maneira de dar print error 404 (getOrganizationDocumentFile orgservices)
             if response.status_code in [200, 201, 403, 404]:
