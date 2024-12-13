@@ -17,7 +17,7 @@ logger = logging.getLogger()
 
 # -------------------------------
 
-def exchange_anonymous_keys(rep_address: str, endpoint: str, rep_pub_key: bytes):
+def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pub_key: bytes):
     """Exchange keys with the repository
     Sends the ephemeral public key of the subject to the server (endpoint rep_addr/sessions) and receives the ephemeral public key from the server.
     
@@ -40,7 +40,7 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, rep_pub_key: bytes)
     }
 
     # Send to the server 
-    response = requests.request("post", rep_address + endpoint, json=data)
+    response = requests.request(method, rep_address + endpoint, json=data)
     
     print("\n\n\nRESPONSE: ", response.json(), "\n\n\n")
     

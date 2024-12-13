@@ -82,14 +82,17 @@ class ApiConsumer:
             else:
                 print("Sending request")
                 
-                encryption_key, client_ephemeral_public_key = self.exchange_anonymous_keys(endpoint)
+                encryption_key, client_ephemeral_public_key = self.exchange_anonymous_keys(endpoint, method)
                 
-                encrypted_data = self.encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
+                if not data:
+                    data = {}
+                    
+                data = self.encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
                 print("\nDATA: ", data)
-                print("\nENCRYPTED_DATA: ", encrypted_data, "\n\n\n")
+                print("\nENCRYPTED_DATA: ", data, "\n\n\n")
 
-                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{encrypted_data}\"")
-                response = requests.request(method, self.rep_address + endpoint, json=encrypted_data)
+                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+                response = requests.request(method, self.rep_address + endpoint, json=data)
                 response_json = response.json()
                 encrypted_data = convert_str_to_bytes(response_json["data"])
                 
@@ -127,8 +130,8 @@ class ApiConsumer:
     
 # -------------------------------
     
-    def exchange_anonymous_keys(self, endpoint):
-        return exchange_anonymous_keys_utils(self.rep_address, endpoint, self.rep_pub_key)
+    def exchange_anonymous_keys(self, endpoint, method):
+        return exchange_anonymous_keys_utils(self.rep_address, endpoint, method, self.rep_pub_key)
     
 # -------------------------------
 
