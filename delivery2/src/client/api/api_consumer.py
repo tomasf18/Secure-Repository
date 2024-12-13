@@ -84,7 +84,6 @@ class ApiConsumer:
                                 
                 response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
                 
-                
             ## TODO: adicionar maneira de dar print error 404 (getOrganizationDocumentFile orgservices)
             if response.status_code in [200, 201, 403, 404]:
                 return received_message if received_message else response.json()

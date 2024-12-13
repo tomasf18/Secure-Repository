@@ -16,7 +16,7 @@ logging.basicConfig(format='%(levelname)s\t- %(message)s')
 logger = logging.getLogger()
 
 
-def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> str:
+def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> tuple[requests.Response, dict]:
     encryption_key, client_ephemeral_public_key = exchange_anonymous_keys(rep_address, endpoint, method, rep_pub_key)
     
     if not data:
@@ -24,7 +24,6 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
         
     data = encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
     
-    print("\nDATA: ", data)
     print("\nENCRYPTED_DATA: ", data, "\n\n\n")
     print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
     
@@ -38,7 +37,7 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     print("\nENCRYPTION_KEY: ", encryption_key)
     print("\nIV:\n", iv, "\n\n\n")
     
-    return response, decrypt_anonymous(encrypted_data, encryption_key, iv).decode()
+    return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())
 
 # -------------------------------
 
@@ -72,8 +71,6 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     if response.status_code not in [200]:
         logging.error(f"Error: Invalid repository response: {response}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
-
-    logging.debug(f"Response from repository: {response}")
 
     # Verify if signature is valid from repository
     response = response.json()
@@ -156,22 +153,20 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
         "signature": signature_str
     }
 
+    endpoint = "/sessions"
     # Send to the server 
-    response = requests.request("post", rep_address + "/sessions", json=body)
-        
+    response, received_message = anonymous_request(rep_pub_key, "post", rep_address, endpoint, body)
+    
     if response.status_code not in [201]:
         logging.error(f"Error: Invalid repository response: {response}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
-    logging.debug(f"Response from repository: {response}")
-
     # Verify if signature is valid from repository
-    response = response.json()
-    if (not verify_signature(response, rep_pub_key)):
+    if (not verify_signature(received_message, rep_pub_key)):
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # If it is valid, finish calculations
-    response_data = response["data"]
+    response_data = received_message["data"]
     server_session_public_key = convert_str_to_bytes(response_data["public_key"])
     session_key: bytes = ecdh.generate_shared_secret(server_session_public_key)
 
