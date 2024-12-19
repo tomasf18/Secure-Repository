@@ -1,30 +1,36 @@
-rep_decrypt_file <encrypted file> <encryption metadata>
-rep_get_file <file handle> [file]
-rep_list_docs <session file> [-s username] [-d nt/ot/et date]
 
 WHEN A SUBJECT IS SUSPENDED/REMOVED FROM A MANAGER ROLE, I MUST ENSURE THAT, IF HE IS A MANAGER, THERE IS AT LEAST ONE MORE MANAGER AT THET ORG -> DONE
 WHEN A DOCUMENT IS ADDED, ADD TO DocumentRolePermission TABLE ALL THE DOCUMENT PERMISSIONS TO MANAGER ROLE! -> DONE
 WHEN ADDING A SUBJECT TO A MANAGER ROLE, MAKE SURE TO GIV HIM ALL THE PERMISSIONS (it's the manager who has the permissions, not the subject) -> DONE 
 VERIFY IF THE SUBJECT, WHEN ASSMING A ROLE, HAS THAT ROLE IN THE ORG -> DONE
-No comando rep_list_role_permissions nós retornamos as permissões de um dado role incluindo as permissões do role nos documentos.
-    # TODO: Encrypt
-    # Create response
-    result = {
-        "session_id": session.id,
-        "username": session.subject_username,
-        "organization": session.organization_name,
-        "roles": [role.name for role in session.session_roles],
-        "public_key": base64.b64encode(session_server_public_key).decode('utf-8'), # So that the client can generate the shared secret (key for the session symmetric encryption)
-        "nonce": nonce,
-    }
-
-
 ALSO STORE THE SALT USED TO ENCRYPT THE CONTENT STORED BY THE REPO 
-TIME TO LIVE OF THE SESSIONS
+# TODO: Encrypt
+# Create response
+result = {
+    "session_id": session.id,
+    "username": session.subject_username,
+    "organization": session.organization_name,
+    "roles": [role.name for role in session.session_roles],
+    "public_key": base64.b64encode(session_server_public_key).decode('utf-8'), # So that the client can generate the shared secret (key for the session symmetric encryption)
+    "nonce": nonce,
+}
 
+---
+No comando rep_list_role_permissions nós retornamos as permissões de um dado role incluindo as permissões do role nos documentos.
+A DOC_ACL access right allows a role holder to add or remove access rights for other roles. At least one role must keep this right for each document, in order to allow an ACL to be updated.
+TIME TO LIVE OF THE SESSIONS
 CORRECT ERROR MESSAGES FOR EACH COMMAND, SO THAT NO USEFUL MESSAGE FOR ATTACKERS IS SHOWN
 TRY WIRESHARK TO SEE ENCRYPTED/PLAINTEXT CONTENT
+rep_suspend_subject         // Vou a todas as sessoes dele e elimio as e depois, no create, session vejo se ele esta suspenso (e no suspend role tmb)
 
+
+
+
+
+---
+rep_decrypt_file <encrypted file> <encryption metadata>
+rep_get_file <file handle> [file]
+rep_list_docs <session file> [-s username] [-d nt/ot/et date]
 rep_assume_role <session file> <role>   
 rep_drop_role <session file> <role>     
 rep_list_roles <session file> <role>    
@@ -40,6 +46,86 @@ rep_remove_permission <session file> <role> <username>
 rep_add_permission <session file> <role> <permission>
 rep_remove_permission <session file> <role> <permission>
 rep_acl_doc <session file> <document name> [+/-] <role> <permission>
+
+
+
+
+
+
+rep_subject_credentials u1
+rep_subject_credentials u2
+rep_create_org
+u1 - rep_create_session u1
+u1 - rep_add_subject     # Without permission
+u1 - rep_assume_role Manager
+u1 - rep_add_subject     # With permission
+u1 - rep_add_role ROLE 1 -> some perm 
+u1 - rep_add_permission <session file> <role> <permission>
+u1 - (...)
+u1 - rep_add_role ROLE 2 -> some perm
+u1 - rep_add_permission <session file> <role> <permission>
+u1 - (...)
+u1 - rep_list_orgs
+u1 - rep_add_permission <session file> ROLE1 u1
+u1 - rep_assume_role user1 ROLE1
+u1 - rep_drop_role u1 ROLE1
+u1 - rep_list_roles
+u2 - rep_create_session u2
+u2 - rep_assume_role user2 ROLE2 // is not bound to
+u1 - rep_add_permission <session file> ROLE2 u2
+u2 - rep_assume_role user2 ROLE2 
+u2 - rep_list_subject_roles
+u2 - rep_list_subjects
+u2 - rep_list_role_subjects
+u2 - rep_list_role_permissions
+u2 - rep_list_permission_roles
+u1 - rep_suspend_subject u2         // Vou a todas as sessoes dele e elimio as e depois, no create, session vejo se ele esta suspenso
+u2 - rep_add_doc                    // Doesn't have a session because he was SUSPENDED
+u2 - rep_create_session u2          // SUSPENDED
+u1 - rep_activate_subject u2
+u2 - rep_create_session u2
+u2 - rep_add_doc  file1.txt
+u1 - rep_get_doc_metadata           // MANAGER DONT HAVE ACCESS, ONLY THE OWNER
+u2 - rep_get_doc_metadata           
+u2 - rep_get_file (with file handle of prev metadata)
+u2 - rep_decrypt_file
+u1 - rep_list_docs
+u2 - rep_acl_doc add doc read to u1 file1.txt
+u1 - rep_get_doc_metadata           
+u1 - rep_get_doc_file
+u1 - rep_delete_doc  // WITHOUT PERMISSION
+
+u1 - rep_suspend_role ROLE2
+u2 - rep_add_doc                    // Doesn't have a session because he was SUSPENDED
+u2 - rep_create_session u2          // SUSPENDED
+u1 - rep_reactivate_role
+u2 - rep_create_session u2   
+
+u1 - rep_drop_role Manager
+u1 - rep_assume_role user1 ROLE1
+u1 - rep_suspend_subject u2 // without perm
+u1 - rep_assume_role Manager
+
+u1 - rep_add_permission <session file> ROLE1 SUBJDOWN
+u1 - rep_add_permission <session file> ROLE1 SUBJUP
+u1 - rep_drop_role Manager
+u1 - rep_assume_role ROLE1
+u1 - rep_suspend_subject u2 
+u1 - rep_activate_subject u2
+
+u1 - rep_assume_role Manager
+u1 - rep_remove_permission <session file> ROLE1 SUBJDOWN
+u1 - rep_drop_role Manager
+u1 - rep_suspend_subject u2 // without permission
+u1 - rep_assume_role Manager
+u2 - rep_create_session u2 
+
+u2 - rep_assume_role user2 ROLE2    
+u2 - rep_add_doc file1.txt                   // works
+u1 - rep_remove_permission <session file> ROLE2 user2
+u2 - rep_add_doc file2.txt                   // does not work
+
+
 
 
 
