@@ -1,6 +1,3 @@
-import sys
-import json
-import base64
 import logging
 import requests
 
@@ -10,6 +7,11 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from utils.client_session_utils import exchange_keys as exchange_keys_utils
 from utils.client_session_utils import encrypt_payload as encrypt_payload_utils
 from utils.client_session_utils import decrypt_payload as decrypt_payload_utils
+from utils.client_session_utils import exchange_anonymous_keys as exchange_anonymous_keys_utils
+from utils.client_session_utils import encrypt_anonymous as encrypt_anonymous_utils
+from utils.client_session_utils import decrypt_anonymous as decrypt_anonymous_utils
+from utils.client_session_utils import anonymous_request
+from utils.utils import convert_str_to_bytes
 
 logging.basicConfig(
     filename='project.log',
@@ -79,16 +81,9 @@ class ApiConsumer:
                     print(f"Error decrypting server response: {e}")
 
             else:
-                print("Sending request")
-                body = {
-                    "data": data
-                }
-                print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
-                final_endpoint = self.rep_address + endpoint
-                response = requests.request(method, final_endpoint, json=body)
-
-
-            ## TODO: adicionar maneira de dar print error 404 (getOrganizationDocumentFile orgservices)
+                                
+                response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
+                
             if response.status_code in [200, 201, 403, 404]:
                 return received_message if received_message else response.json()
             else:
@@ -111,3 +106,19 @@ class ApiConsumer:
     
     def decrypt_payload(self, response, encryption_key, integrity_key):
         return decrypt_payload_utils(response, encryption_key, integrity_key)
+    
+# -------------------------------
+    
+    def exchange_anonymous_keys(self, endpoint, method):
+        return exchange_anonymous_keys_utils(self.rep_address, endpoint, method, self.rep_pub_key)
+    
+# -------------------------------
+
+    def encrypt_anonymous(self, data, encryption_key, client_ephemeral_public_key):
+        return encrypt_anonymous_utils(data, encryption_key, client_ephemeral_public_key)
+    
+# -------------------------------
+    
+    def decrypt_anonymous(self, data, encryption_key, iv):
+        return decrypt_anonymous_utils(data, encryption_key, iv)
+    

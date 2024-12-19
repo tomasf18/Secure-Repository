@@ -1,5 +1,6 @@
 import json
 import base64
+from dotenv import load_dotenv
 
 from dao.RoleDAO import RoleDAO
 from dao.SubjectDAO import SubjectDAO
@@ -18,18 +19,18 @@ from utils.server_session_utils import encrypt_payload
 from utils.constants.http_code import HTTP_Code
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 
-
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 
+load_dotenv()
+
 # -------------------------------
 
-def create_organization(data, db_session: Session):
+def create_organization(data: dict, db_session: Session):
     '''Handles POST requests to /organizations'''
     
     organization_dao = OrganizationDAO(db_session)
-    data = data.get("data")
     org_name: str = data.get('organization')
     username: str = data.get('username')
     name: str = data.get('name')

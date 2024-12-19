@@ -1,6 +1,7 @@
 import logging
 from flask import Blueprint, request, g
 from services.organization_service import *
+from utils.utils import get_ephemeral_server_public_key, get_decrypted_request, get_shared_secret, encrypt_anonymous_content
 
 organization_blueprint = Blueprint("organizations", __name__)
 
@@ -8,16 +9,43 @@ organization_blueprint = Blueprint("organizations", __name__)
 
 # -------------------------------
 
+
 @organization_blueprint.route("/organizations", methods=["GET", "POST"])
 def organizations():
     db_session = g.db_session
     if request.method == 'GET':
         print("SERVER: Getting organizations")
-        return list_organizations(db_session)
+        data = request.json
+        if data and "public_key" in data:
+            return get_ephemeral_server_public_key(data, db_session)
+    
+        encryption_key = get_shared_secret(data["client_ephemeral_public_key"]) # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it    
+        return_data, code = list_organizations(db_session)
+        encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
+        
+        print("\n\n\nENCRYPTED_DATA: ", encrypted_return_data)
+        print("\nIV:\n", iv_encrypted_return_data, "\n\n\n")
+        return json.dumps({"data": convert_bytes_to_str(encrypted_return_data), 
+                           "iv": convert_bytes_to_str(iv_encrypted_return_data)
+                           }), code
+        
     if request.method == 'POST':
         data = request.json
         print(f"SERVER: Received data: {data}. Creating organization")
-        return create_organization(data, db_session)
+        
+        if "public_key" in data:
+            return get_ephemeral_server_public_key(data, db_session)
+
+        encryption_key = get_shared_secret(data["client_ephemeral_public_key"]) # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it
+        decrypted_data, encryption_key = get_decrypted_request(data, encryption_key)
+        return_data, code = create_organization(decrypted_data, db_session)
+        encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
+        
+        print("\n\n\nENCRYPTED_DATA: ", encrypted_return_data)
+        print("\nIV:\n", iv_encrypted_return_data, "\n\n\n")
+        return json.dumps({"data": convert_bytes_to_str(encrypted_return_data), 
+                           "iv": convert_bytes_to_str(iv_encrypted_return_data)
+                           }), code
 
 # -------------------------------
 

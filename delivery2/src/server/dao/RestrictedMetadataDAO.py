@@ -6,7 +6,7 @@ from models.database_orm import RestrictedMetadata, Document
 class RestrictedMetadataDAO(BaseDAO):
     """DAO for managing RestrictedMetadata entities."""
 
-    def create(self, document: Document, algorithm: str, mode: str, encrypted_metadata_key_id: int, iv: bytes, iv_encrypted_key: bytes) -> RestrictedMetadata:
+    def create(self, document: Document, algorithm: str, mode: str, encrypted_metadata_key_id: int, iv: bytes, salt: bytes, iv_encrypted_key: bytes) -> RestrictedMetadata:
         """ Create a new RestrictedMetadata entry. """
         try:
             metadata = RestrictedMetadata(
@@ -15,6 +15,7 @@ class RestrictedMetadataDAO(BaseDAO):
                 mode=mode,
                 key_id=encrypted_metadata_key_id,
                 iv=iv,
+                salt=salt,
                 iv_encrypted_key=iv_encrypted_key
             )
             self.session.add(metadata)
