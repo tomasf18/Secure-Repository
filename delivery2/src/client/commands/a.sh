@@ -75,7 +75,6 @@
 ./rep_activate_subject user1_org1_session_file user2
 
 # User 2 attempts actions while already activated
-./rep_create_session org1 user2 456 user2_cred_file user2_org1_session_file
 ./rep_add_doc user2_org1_session_file doc1 file1.txt
 
 # Document metadata and access
@@ -92,7 +91,7 @@
 ./rep_get_doc_metadata user1_org1_session_file doc1 # Can read
 
 ./rep_acl_doc user1_org1_session_file doc1 - Manager DOC_READ  # Does not have acl permission
-./rep_get_doc_metadata user1_org1_session_file doc1 # Should fail
+./rep_get_doc_metadata user1_org1_session_file doc1 # Should still be able to read
 
 
 # Delete document (without permission)

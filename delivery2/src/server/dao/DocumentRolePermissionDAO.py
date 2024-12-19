@@ -66,25 +66,6 @@ class DocumentRolePermissionDAO(BaseDAO):
         return roles
     
 # -------------------------------
-#class DocumentRolePermission(Base):
-    # __tablename__ = "document_role_permission"
-    
-    # id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    # document_acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
-    # role_id: Mapped[int] = mapped_column(ForeignKey('role.id'), nullable=False)
-    # permission_name: Mapped[str] = mapped_column(ForeignKey('permission.name'), nullable=False)
-    
-    # # Relationships
-    # role: Mapped["Role"] = relationship()
-    # permission: Mapped["Permission"] = relationship()
-    # document_acl: Mapped["DocumentACL"] = relationship(back_populates="permissions")
-    
-    # __table_args__ = (
-    #     UniqueConstraint("document_acl_id", "role_id", "permission_name", name="uq_doc_acl_role_permission"),
-    # )
-    
-    # def __repr__(self):
-    #     return f"<DocumentRolePermission(document_acl_id={self.document_acl_id}, role_id={self.role_id}, permission_name={self.permission_name})>"
 
     def get_document_roles_by_permission_and_org(self, permission_name, org_name) -> dict[str, list[str]]:
         # For each organization document, get the roles that have the specified permission

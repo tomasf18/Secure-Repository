@@ -338,10 +338,10 @@ def create_organization_document(organization_name, data, db_session: Session):
     
     # Get Manager role
     organization = organization_dao.get_by_name(organization_name)
-    manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+    role_to_add_doc_permissions = session.session_roles[0]
 
     # Give all the document permissions to the Manager role
-    document_role_permission_dao.add_all_doc_permissions_to_role(new_document.acl.id, manager_role.id)
+    document_role_permission_dao.add_all_doc_permissions_to_role(new_document.acl.id, role_to_add_doc_permissions.id)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
@@ -971,11 +971,11 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
     role_name = decrypted_data.get('role')
     role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
     
-    if role.name == "Manager":
-        return encrypt_payload({
-                "error": f"Role '{role_name}' cannot have its permissions modified."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+    # if role.name == "Manager":
+    #     return encrypt_payload({
+    #             "error": f"Role '{role_name}' cannot have its permissions modified."
+    #         }, session_key[:32], session_key[32:]
+    #     ), HTTP_Code.FORBIDDEN
 
     # Get permission
     permission_name = decrypted_data.get('permission')
@@ -1040,11 +1040,11 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     role_name = decrypted_data.get('role')
     role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
     
-    if role.name == "Manager":
-        return encrypt_payload({
-                "error": f"Role '{role_name}' cannot have its permissions modified."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+    # if role.name == "Manager":
+    #     return encrypt_payload({
+    #             "error": f"Role '{role_name}' cannot have its permissions modified."
+    #         }, session_key[:32], session_key[32:]
+    #     ), HTTP_Code.FORBIDDEN
 
     # Get permission
     permission_name = decrypted_data.get('permission')
