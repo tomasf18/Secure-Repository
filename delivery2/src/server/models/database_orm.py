@@ -272,6 +272,8 @@ class Session(Base):
     nonce: Mapped[str] = mapped_column(nullable=True)
     counter: Mapped[int] = mapped_column(nullable=True)
     
+    creation_timestamp: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now())
+    
     # Relationships
     subject: Mapped["Subject"] = relationship()
     organization: Mapped["Organization"] = relationship()

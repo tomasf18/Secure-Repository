@@ -1,62 +1,70 @@
 #!/bin/bash
 
 # Add subjects credentials
-./rep_subject_credentials u1
-./rep_subject_credentials u2
+./rep_subject_credentials 123 user1_cred_file
+./rep_subject_credentials 456 user2_cred_file
 
 # Create organization
-./rep_create_org
+./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
 
 # Create sessions
-./rep_create_session u1
+./rep_create_session org1 user1 123 user1_cred_file user1_org1_session_file
 
 # Add subjects (without permission)
-./rep_add_subject u1_session_file
+./rep_add_subject user1_org1_session_file user2 User2 user2@gmail.com user2_cred_file
 
 # Assume role (Manager)
-./rep_assume_role u1_session_file Manager
+./rep_assume_role user1_org1_session_file Manager
 
 # Add subjects (with permission)
-./rep_add_subject u1_session_file
+./rep_add_subject user1_org1_session_file user2 User2 user2@gmail.com user2_cred_file
 
 # Add roles and permissions
-./rep_add_role u1_session_file ROLE_1
+./rep_add_role user1_org1_session_file ROLE_1
 ./rep_add_permission u1_session_file ROLE_1 SOME_PERMISSION
-./rep_add_role u1_session_file ROLE_2
+./rep_add_role user1_org1_session_file ROLE_2
 ./rep_add_permission u1_session_file ROLE_2 SOME_PERMISSION
 
 # List organizations
 ./rep_list_orgs
 
 # Add permissions to roles
-./rep_add_permission u1_session_file ROLE_1 u1
+./rep_add_permission user2_org1_session_file ROLE_1 user1
 
 # Assume and drop roles
-./rep_assume_role u1_session_file ROLE_1
-./rep_drop_role u1_session_file ROLE_1
+./rep_assume_role user1_org1_session_file ROLE_1
+./rep_drop_role user1_org1_session_file ROLE_1
 
-# List roles
-./rep_list_roles u1_session_file
+# List session roles
+./rep_list_roles user1_org1_session_file
 
 # User 2 creates session
-./rep_create_session u2
+./rep_create_session org1 user2 456 user2_cred_file user2_org1_session_file
 
 # Assume role (not bound to)
-./rep_assume_role u2_session_file ROLE_2
+./rep_assume_role user2_org1_session_file ROLE_2
 
-# Add permissions to roles for another user
-./rep_add_permission u1_session_file ROLE_2 u2
-./rep_assume_role u2_session_file ROLE_2
+# Add user 2 to ROLE_2
+./rep_add_permission user1_org1_session_file ROLE_2 user2
+./rep_assume_role user2_org1_session_file ROLE_2
 
-# List subject roles and subjects
-./rep_list_subject_roles u2_session_file
-./rep_list_subjects u2_session_file
-./rep_list_role_subjects u2_session_file
-./rep_list_role_permissions u2_session_file
-./rep_list_permission_roles u2_session_file
+# List user2 roles on org1
+./rep_list_subject_roles user1_org1_session_file user2
+
+# List subjects on org1
+./rep_list_subjects user1_org1_session_file
+
+# List subjects who have a role
+./rep_list_role_subjects user1_org1_session_file ROLE_1
+
+# List permissions of a role
+./rep_list_role_permissions user2_org1_session_file Manager
+
+# List the roles which have a permission
+./rep_list_permission_roles user1_org1_session_file ROLE_ACL
 
 # Suspend subject
-./rep_suspend_subject u1_session_file u2
+./rep_suspend_subject user1_org1_session_file user2
 
 # User 2 attempts actions while suspended
 ./rep_add_doc u2_session_file file1.txt

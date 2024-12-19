@@ -1,6 +1,7 @@
 import json
 import base64
 import logging
+import datetime
 
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
@@ -13,6 +14,7 @@ from dao.SessionDAO import SessionDAO
 
 from models.database_orm import Session
 
+SESSION_TIME_LIMIT = 60 * 10 # 10 minutes
 
 # -------------------------------
 
@@ -156,6 +158,13 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
     # Get session
     session_id = data.get("session_id")
     session = session_dao.get_by_id(session_id)
+       
+    if session_expired(session):
+        print(f"SERVER: Session with id {session_id} expired")
+        raise ValueError(
+                json.dumps(f"Session with id {session_id} expired"), HTTP_Code.FORBIDDEN
+            ) 
+    
     if session is None:
         print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
@@ -202,3 +211,10 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
         )
 
     return decrypted_data, session, session_key
+
+# -------------------------------
+
+def session_expired(session: Session) -> bool:
+    session_creation_time = session.creation_timestamp
+    current_time = datetime.datetime.now()
+    return (current_time - session_creation_time).total_seconds() > SESSION_TIME_LIMIT
