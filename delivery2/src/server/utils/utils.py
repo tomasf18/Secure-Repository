@@ -6,6 +6,7 @@ from .cryptography.ECC import ECC
 from .cryptography.auth import sign
 from models.database_orm import Session
 from .constants.http_code import HTTP_Code
+from .server_session_utils import encrypt_payload
 from dao.RepositoryDAO import RepositoryDAO
 
 
@@ -18,6 +19,10 @@ def convert_str_to_bytes(data: str) -> bytes:
 def check_permissions(user_id: int) -> bool:
     pass
 
+def return_data(key: str, data: str, code: HTTP_Code, session_key: bytes = None):
+    if session_key:
+        return encrypt_payload({key: data}, session_key[:32], session_key[32:]), code
+    return json.dumps({key: data}), code
 
 ephemeral_keys = {}
 

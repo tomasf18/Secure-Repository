@@ -4,7 +4,6 @@ import logging
 
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
-from utils.utils import convert_bytes_to_str, convert_str_to_bytes
 from utils.cryptography.integrity import calculate_digest, verify_digest
 
 from utils.constants.http_code import HTTP_Code
@@ -69,7 +68,7 @@ def encrypt_payload(data: dict | str, encryption_key: bytes, integrity_key: byte
 
     body = {
         "data": data,
-        "signature": convert_bytes_to_str(digest)
+        "signature": base64.b64encode(digest).decode('utf-8') # convert_bytes_to_str(digest)
     }
     
     print(f"Encrypted payload: {body} with encryption key: {encryption_key} and integrity key: {integrity_key}")
@@ -91,7 +90,7 @@ def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
     
     encryptor = AES()
     received_data = response["data"]
-    received_mac = convert_str_to_bytes(response["signature"])
+    received_mac = base64.b64decode(response["signature"].encode('utf-8')) # convert_str_to_bytes(response["signature"])
     
     message_str = received_data["message"]
     data_to_digest = (message_str + received_data["iv"]).encode()
@@ -101,12 +100,12 @@ def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
         print("Digest verification failed")
         return None
     
-    encrypted_message = convert_str_to_bytes(message_str)
+    encrypted_message = base64.b64decode(message_str.encode('utf-8')) # convert_str_to_bytes(received_data["message"])
     # Decrypt data
     received_message = encryptor.decrypt_data(
         encrypted_data=encrypted_message,
         key=encryption_key,
-        iv=convert_str_to_bytes(received_data["iv"])
+        iv=base64.b64decode(received_data["iv"].encode('utf-8')) # convert_str_to_bytes(received_data["iv"])
     )
     return json.loads(received_message.decode('utf-8'))
 

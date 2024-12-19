@@ -17,7 +17,7 @@ from utils.server_session_utils import load_session
 from utils.server_session_utils import encrypt_payload
 
 from utils.constants.http_code import HTTP_Code
-from utils.utils import convert_bytes_to_str, convert_str_to_bytes
+from utils.utils import convert_bytes_to_str, convert_str_to_bytes, return_data
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -59,7 +59,7 @@ def list_organizations(db_session: Session):
         serializable_organizations.append({
             "name": org.name
         })
-    return json.dumps(serializable_organizations), HTTP_Code.OK
+    return return_data("data", serializable_organizations, HTTP_Code.OK)
 
 # -------------------------------
 

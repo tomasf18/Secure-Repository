@@ -322,8 +322,12 @@ def rep_list_org():
     if result is None:
         logger.error("Error listing organizations")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("error") is not None:
+        print("\nError: " + result["error"] + "\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("data") is not None:
+        print(f"\n{result['data']}\n")
 
-    print(result)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
