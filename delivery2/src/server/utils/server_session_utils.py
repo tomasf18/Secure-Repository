@@ -10,9 +10,14 @@ from utils.cryptography.integrity import calculate_digest, verify_digest
 
 from utils.constants.http_code import HTTP_Code
 
-from dao.SessionDAO import SessionDAO
+from sqlalchemy.orm import Session as SQLAlchemySession
 
+from dao.SessionDAO import SessionDAO
+from dao.OrganizationDAO import OrganizationDAO
+
+from models.status import Status
 from models.database_orm import Session
+
 
 SESSION_TIME_LIMIT = 60 * 10 # 10 minutes
 
@@ -139,7 +144,7 @@ def verify_message_order(data: dict, counter: int, nonce: bytes) -> bool:
     
 # -------------------------------
 
-def load_session(data: dict, session_dao: SessionDAO, organization_name: str) -> tuple[dict, Session, bytes]:
+def load_session(data: dict, db_session: SQLAlchemySession, organization_name: str) -> tuple[dict, Session, bytes]:
     """Load the session from the received data and make the necessary verifications: 
         - organization
         - message order 
@@ -155,21 +160,29 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
         tuple[dict, Session, bytes]: Decrypted data, Session, Session key
     """
     
+    session_dao = SessionDAO(db_session)
+    
     # Get session
     session_id = data.get("session_id")
     session = session_dao.get_by_id(session_id)
-       
-    if session_expired(session):
-        print(f"SERVER: Session with id {session_id} expired")
-        raise ValueError(
-                json.dumps(f"Session with id {session_id} expired"), HTTP_Code.FORBIDDEN
-            ) 
     
     if session is None:
         print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
                 json.dumps(f"Session with id {session_id} not found"), HTTP_Code.NOT_FOUND
             )
+        
+    if subject_invalid(session, db_session):
+        print(f"SERVER: Subject {session.subject_username} is suspended")
+        raise ValueError(
+                json.dumps(f"Subject {session.subject_username} is suspended"), HTTP_Code.FORBIDDEN
+            )
+       
+    if session_expired(session):
+        print(f"SERVER: Session with id {session_id} expired")
+        raise ValueError(
+                json.dumps(f"Session with id {session_id} expired"), HTTP_Code.FORBIDDEN
+            ) 
 
     session_key = session_dao.get_decrypted_key(session_id)
     
@@ -218,3 +231,9 @@ def session_expired(session: Session) -> bool:
     session_creation_time = session.creation_timestamp
     current_time = datetime.datetime.now()
     return (current_time - session_creation_time).total_seconds() > SESSION_TIME_LIMIT
+
+def subject_invalid(session: Session, db_session: SQLAlchemySession) -> bool:
+    organization_dao = OrganizationDAO(db_session)
+    org_subj_assoc = organization_dao.get_org_subj_association(session.organization_name, session.subject_username)
+    print(f"SUBJECT STATUS: {org_subj_assoc}")
+    return org_subj_assoc.status == Status.SUSPENDED.value

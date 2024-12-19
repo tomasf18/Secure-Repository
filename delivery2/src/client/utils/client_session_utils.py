@@ -37,6 +37,8 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     print("\nENCRYPTION_KEY: ", encryption_key)
     print("\nIV:\n", iv, "\n\n\n")
     
+    print("\n\n\nRESPONSE: ", response_json, "\n\n\n")
+    
     return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())
 
 # -------------------------------
@@ -157,8 +159,12 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     # Send to the server 
     response, received_message = anonymous_request(rep_pub_key, "post", rep_address, endpoint, body)
     
-    if response.status_code not in [201]:
+    if response.status_code not in [201, 403]:
         logging.error(f"Error: Invalid repository response: {response}")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    if response.status_code == 403:
+        print(f"Error: {received_message["error"]}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # Verify if signature is valid from repository

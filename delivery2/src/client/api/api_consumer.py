@@ -81,7 +81,7 @@ class ApiConsumer:
                     print(f"Error decrypting server response: {e}")
 
             else:
-                                
+                
                 response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
                 
             if response.status_code in [200, 201, 403, 404]:

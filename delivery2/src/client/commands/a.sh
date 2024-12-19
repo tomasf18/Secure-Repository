@@ -23,13 +23,14 @@
 ./rep_add_role user1_org1_session_file ROLE_1
 ./rep_add_permission u1_session_file ROLE_1 SOME_PERMISSION
 ./rep_add_role user1_org1_session_file ROLE_2
-./rep_add_permission u1_session_file ROLE_2 SOME_PERMISSION
+./rep_add_permission user1_org1_session_file ROLE_2 DOC_NEW
+
 
 # List organizations
 ./rep_list_orgs
 
-# Add permissions to roles
-./rep_add_permission user2_org1_session_file ROLE_1 user1
+# Add user1 to ROLE_1
+./rep_add_permission user1_org1_session_file ROLE_1 user1
 
 # Assume and drop roles
 ./rep_assume_role user1_org1_session_file ROLE_1
@@ -42,7 +43,7 @@
 ./rep_create_session org1 user2 456 user2_cred_file user2_org1_session_file
 
 # Assume role (not bound to)
-./rep_assume_role user2_org1_session_file ROLE_2
+./rep_assume_role user2_org1_session_file ROLE_2    # Should fail
 
 # Add user 2 to ROLE_2
 ./rep_add_permission user1_org1_session_file ROLE_2 user2
@@ -67,55 +68,67 @@
 ./rep_suspend_subject user1_org1_session_file user2
 
 # User 2 attempts actions while suspended
-./rep_add_doc u2_session_file file1.txt
-./rep_create_session u2
+./rep_add_doc user2_org1_session_file doc1 file1.txt
+./rep_create_session org1 user2 456 user2_cred_file user2_org1_session_file
 
 # Activate subject
-./rep_activate_subject u1_session_file u2
-./rep_create_session u2
-./rep_add_doc u2_session_file file1.txt
+./rep_activate_subject user1_org1_session_file user2
+
+# User 2 attempts actions while already activated
+./rep_create_session org1 user2 456 user2_cred_file user2_org1_session_file
+./rep_add_doc user2_org1_session_file doc1 file1.txt
 
 # Document metadata and access
-./rep_get_doc_metadata u1_session_file
-./rep_get_doc_metadata u2_session_file
-./rep_get_doc_file u2_session_file
-./rep_decrypt_file u2_session_file
-./rep_list_docs u1_session_file
+./rep_get_doc_metadata user1_org1_session_file doc1 # Should fail, only the owner can access
+./rep_get_doc_metadata user2_org1_session_file doc1 
+# ./rep_get_file <file handle> doc1_encrypted
+# ./rep_decrypt_file doc1_encrypted doc1_metadata.json
+./rep_get_doc_file user2_org1_session_file doc1
+./rep_list_docs user2_org1_session_file
 
 # Add document ACL
-./rep_acl_doc u2_session_file doc1 + u1 DOC_READ
-./rep_get_doc_metadata u1_session_file
-./rep_get_doc_file u1_session_file
+./rep_acl_doc user1_org1_session_file doc1 + Manager DOC_READ  # Does not have acl permission
+./rep_acl_doc user2_org1_session_file doc1 + Manager DOC_READ 
+./rep_get_doc_metadata user1_org1_session_file doc1 # Can read
+
+./rep_acl_doc user1_org1_session_file doc1 - Manager DOC_READ  # Does not have acl permission
+./rep_get_doc_metadata user1_org1_session_file doc1 # Should fail
+
 
 # Delete document (without permission)
-./rep_delete_doc u1_session_file doc1
+./rep_delete_doc user1_org1_session_file doc1 # Should fail, only the owner can delete
+./rep_acl_doc user2_org1_session_file doc1 + Manager DOC_DELETE  
+./rep_delete_doc user1_org1_session_file doc1 
+./rep_get_doc_metadata user2_org1_session_file doc1 
 
-# Suspend and reactivate roles
-./rep_suspend_role u1_session_file ROLE_2
-./rep_create_session u2
-./rep_reactivate_role u1_session_file ROLE_2
-./rep_create_session u2
 
-# Drop and assume roles
-./rep_drop_role u1_session_file Manager
-./rep_assume_role u1_session_file ROLE_1
-./rep_suspend_subject u1_session_file u2
-./rep_activate_subject u1_session_file u2
+# # Suspend and reactivate roles
+./rep_suspend_role user1_org1_session_file ROLE_2
 
-# Manage permissions
-./rep_add_permission u1_session_file ROLE_1 SUBJDOWN
-./rep_add_permission u1_session_file ROLE_1 SUBJUP
-./rep_remove_permission u1_session_file ROLE_1 SUBJDOWN
+# ./rep_create_session u2
+# ./rep_reactivate_role u1_session_file ROLE_2
+# ./rep_create_session u2
 
-# Suspend subject without permission
-./rep_suspend_subject u1_session_file u2
+# # Drop and assume roles
+# ./rep_drop_role u1_session_file Manager
+# ./rep_assume_role u1_session_file ROLE_1
+# ./rep_suspend_subject u1_session_file u2
+# ./rep_activate_subject u1_session_file u2
 
-# Final assume role and session creation
-./rep_assume_role u1_session_file Manager
-./rep_create_session u2
+# # Manage permissions
+# ./rep_add_permission u1_session_file ROLE_1 SUBJDOWN
+# ./rep_add_permission u1_session_file ROLE_1 SUBJUP
+# ./rep_remove_permission u1_session_file ROLE_1 SUBJDOWN
 
-# Role management and document addition
-./rep_assume_role u2_session_file ROLE_2
-./rep_add_doc u2_session_file file1.txt
-./rep_remove_permission u1_session_file ROLE_2 u2
-./rep_add_doc u2_session_file file2.txt
+# # Suspend subject without permission
+# ./rep_suspend_subject u1_session_file u2
+
+# # Final assume role and session creation
+# ./rep_assume_role u1_session_file Manager
+# ./rep_create_session u2
+
+# # Role management and document addition
+# ./rep_assume_role u2_session_file ROLE_2
+# ./rep_add_doc u2_session_file file1.txt
+# ./rep_remove_permission u1_session_file ROLE_2 u2
+# ./rep_add_doc u2_session_file file2.txt

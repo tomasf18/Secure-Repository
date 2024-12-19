@@ -23,6 +23,8 @@ from utils.server_session_utils import encrypt_payload
 
 from utils.constants.http_code import HTTP_Code
 
+from models.status import Status
+
 # -------------------------------
 
 def create_session(data, db_session: SQLAlchemySession):
@@ -60,12 +62,14 @@ def create_session(data, db_session: SQLAlchemySession):
             org_name=org_name,
             username=username
         )
+        if client.status == Status.SUSPENDED.value:
+            return json.dumps({"error": f"User '{username}' is suspended."}), HTTP_Code.FORBIDDEN
     except ValueError as e:
         message = e.args[0]
-        return json.dumps({"error:": message}), HTTP_Code.NOT_FOUND
+        return json.dumps({"error": message}), HTTP_Code.NOT_FOUND
 
     if (client is None):
-        return json.dumps(f"User not found!"), HTTP_Code.NOT_FOUND
+        return json.dumps({"error": f"User not found!"}), HTTP_Code.NOT_FOUND
     
     # Get client public key
     client_pub_key = keystore_dao.get_by_id(client.pub_key_id).key
@@ -94,7 +98,6 @@ def create_session(data, db_session: SQLAlchemySession):
     except IntegrityError:
         return json.dumps(f"Session for user '{username}' already exists."), HTTP_Code.BAD_REQUEST
 
-    # TODO: Encrypt
     # Create response
     result = {
         "session_id": session.id,
@@ -139,7 +142,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     role_dao = RoleDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -207,7 +210,7 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
     session_dao = SessionDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -256,7 +259,7 @@ def list_session_roles(organization_name, session_id, data, db_session):
     session_dao = SessionDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code

@@ -72,7 +72,7 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -123,7 +123,7 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -164,7 +164,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
     
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -211,7 +211,7 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     session_dao = SessionDAO(db_session)
     
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -259,7 +259,7 @@ def activate_organization_subject(organization_name, username, data, db_session:
     session_dao = SessionDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -311,7 +311,7 @@ def create_organization_document(organization_name, data, db_session: Session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -360,7 +360,7 @@ def list_organization_documents(organization_name, data, username, date_filter, 
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -427,7 +427,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -473,7 +473,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -518,7 +518,7 @@ def create_organization_role(organization_name, data, db_session: Session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -562,7 +562,7 @@ def list_subject_roles(organization_name, username, data, db_session: Session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -602,7 +602,7 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -665,7 +665,7 @@ def reactivate_role_subjects(organization_name, role_name, data, db_session: Ses
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -725,7 +725,7 @@ def get_role_permissions(organization_name, role_name, data, db_session: Session
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -766,7 +766,7 @@ def add_subject_or_permission_to_role(organization_name, role_name, data, db_ses
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -850,7 +850,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -948,7 +948,7 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -1017,7 +1017,7 @@ def remove_role_permission_from_document(organization_name, document_name, data,
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
@@ -1093,7 +1093,7 @@ def list_roles_per_permission(organization_name, permission, data, db_session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code = e.args
         return message, code
