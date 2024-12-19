@@ -302,8 +302,12 @@ def rep_create_org(org, username, name, email, pub_key_file):
     if result is None:
         logger.error("Error creating organization")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("error") is not None:
+        print("\nError: " + result["error"] + "\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("data") is not None:
+        print(f"\n{result['data']}\n")
     
-    print(result)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------

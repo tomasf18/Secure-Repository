@@ -43,9 +43,9 @@ def create_organization(data: dict, db_session: Session):
     try:
         organization_dao.create(org_name, username, name, email, public_key)
     except IntegrityError:
-        return json.dumps(f"Organization with name '{org_name}' already exists."), HTTP_Code.BAD_REQUEST
+        return return_data("error", f"Organization '{org_name}' already exists.", HTTP_Code.BAD_REQUEST)
     
-    return json.dumps(f'Organization {org_name} created successfully'), HTTP_Code.CREATED
+    return return_data("data", f"Organization '{org_name}' created successfully.", HTTP_Code.CREATED)
 
 # -------------------------------
 
