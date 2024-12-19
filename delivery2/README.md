@@ -46,34 +46,34 @@
 
 ### </> API Endpoints
 
-| **Endpoint**                                | **Method** | **Description**                                    | **Access**              | **Parameters**                                                                 |
-|---------------------------------------------|------------|----------------------------------------------------|-------------------------|--------------------------------------------------------------------------------|
-| `/sessions`                                 | POST       | Create a new session                              | Anonymous API           | -                                                                              |
-| `/organizations`                            | POST       | Create a new organization                         | Anonymous API           | -                                                                              |
-| `/organizations`                            | GET        | List organizations                                | Anonymous API           | -                                                                              |
-| `/organizations/{organization_name}/subjects` | GET        | List subjects (with a role)                      | Authenticated API       | `role={role}`                                                                 |
-| `/organizations/{organization_name}/subjects` | POST       | Add a subject to the organization                | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/subjects/{subject_username}` | GET        | Get subject details                              | Authenticated API       | -                                                                              |
-| `/organizations/{organization_name}/subjects/{subject_username}` | PUT        | Activate a subject                               | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/subjects/{subject_username}` | DELETE     | Suspend a subject                                | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/subjects/{subject_username}/roles` | GET        | Get roles of a subject                           | Authenticated API       | -                                                                              |
-| `/organizations/{organization_name}/subjects/{subject_username}/roles/{role}` | PUT        | Add role to subject                              | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/subjects/{subject_username}/roles/{role}` | DELETE     | Remove role from subject                         | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/roles`  | GET        | List roles (with permission)                     | Authenticated API       | `permission={permission}`                                                     |
-| `/organizations/{organization_name}/roles`  | POST       | Add a new role                                   | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/roles/{role}` | PUT      | Activate a role                                  | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/roles/{role}` | DELETE   | Deactivate a role                                | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/roles/{role}/subject-permissions` | GET | Get role permissions                              | Authenticated API       | -                                                                              |
-| `/organizations/{organization_name}/roles/{role}/subject-permissions` | PUT | Add subject/permission to role                   | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/roles/{role}/subject-permissions` | DELETE | Remove subject/permission from role              | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/documents` | GET       | Query documents                                  | Authenticated API       | `username`, `date_filter`, `date`                                       |
-| `/organizations/{organization_name}/documents` | POST      | Add a document                                   | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/documents/{document_name}` | GET | Get document metadata                            | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/documents/{document_name}` | DELETE | Delete a document                                | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/documents/{document_name}/file` | GET       | Download file of a document                      | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/documents/{document_name}/ACL` | PUT       | Update document ACL                              | Authorized API          | -                                                                              |
-| `/organizations/{organization_name}/documents/{document_name}/ACL` | DELETE    | Remove document ACL                              | Authorized API          | -                                                                              |
-| `/files/{file_handle}`                       | GET        | Download a file                                  | Anonymous API           | -                                                                              |
+| **Endpoint**                                                                  | **Method** | **Description**                                  | **Access**              | **Parameters**                      |
+|-------------------------------------------------------------------------------|------------|--------------------------------------------------|-------------------------|-------------------------------------|
+| `/sessions`                                                                   | POST       | Create a new session                             | Anonymous API           | -                                   |
+| `/organizations`                                                              | POST       | Create a new organization                        | Anonymous API           | -                                   |
+| `/organizations`                                                              | GET        | List organizations                               | Anonymous API           | -                                   |
+| `/organizations/{organization_name}/subjects`                                 | GET        | List subjects (with a role)                      | Authenticated API       | `role={role}`                       |
+| `/organizations/{organization_name}/subjects`                                 | POST       | Add a subject to the organization                | Authorized API          | -                                   |
+| `/organizations/{organization_name}/subjects/{subject_username}`              | GET        | Get subject details                              | Authenticated API       | -                                   |
+| `/organizations/{organization_name}/subjects/{subject_username}`              | PUT        | Activate a subject                               | Authorized API          | -                                   |
+| `/organizations/{organization_name}/subjects/{subject_username}`              | DELETE     | Suspend a subject                                | Authorized API          | -                                   |
+| `/organizations/{organization_name}/subjects/{subject_username}/roles`        | GET        | Get roles of a subject                           | Authenticated API       | -                                   |
+| `/organizations/{organization_name}/subjects/{subject_username}/roles/{role}` | PUT        | Add role to subject                              | Authorized API          | -                                   |
+| `/organizations/{organization_name}/subjects/{subject_username}/roles/{role}` | DELETE     | Remove role from subject                         | Authorized API          | -                                   |
+| `/organizations/{organization_name}/roles`                                    | GET        | List roles (with permission)                     | Authenticated API       | `permission={permission}`           |
+| `/organizations/{organization_name}/roles`                                    | POST       | Add a new role                                   | Authorized API          | -                                   |
+| `/organizations/{organization_name}/roles/{role}`                             | PUT        | Activate a role                                  | Authorized API          | -                                   |
+| `/organizations/{organization_name}/roles/{role}`                             | DELETE     | Deactivate a role                                | Authorized API          | -                                   |
+| `/organizations/{organization_name}/roles/{role}/subject-permissions`         | GET        | Get role permissions                             | Authenticated API       | -                                   |
+| `/organizations/{organization_name}/roles/{role}/subject-permissions`         | PUT        | Add subject/permission to role                   | Authorized API          | -                                   |
+| `/organizations/{organization_name}/roles/{role}/subject-permissions`         | DELETE     | Remove subject/permission from role              | Authorized API          | -                                   |
+| `/organizations/{organization_name}/documents`                                | GET        | Query documents                                  | Authenticated API       | `username`, `date_filter`, `date`   |
+| `/organizations/{organization_name}/documents`                                | POST       | Add a document                                   | Authorized API          | -                                   |
+| `/organizations/{organization_name}/documents/{document_name}`                | GET        | Get document metadata                            | Authorized API          | -                                   |
+| `/organizations/{organization_name}/documents/{document_name}`                | DELETE     | Delete a document                                | Authorized API          | -                                   |
+| `/organizations/{organization_name}/documents/{document_name}/file`           | GET        | Download file of a document                      | Authorized API          | -                                   |
+| `/organizations/{organization_name}/documents/{document_name}/ACL`            | PUT        | Update document ACL                              | Authorized API          | -                                   |
+| `/organizations/{organization_name}/documents/{document_name}/ACL`            | DELETE     | Remove document ACL                              | Authorized API          | -                                   |
+| `/files/{file_handle}`                                                        | GET        | Download a file                                  | Anonymous API           | -                                   |
 
 ---
 
