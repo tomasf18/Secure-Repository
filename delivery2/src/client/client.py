@@ -438,7 +438,6 @@ def rep_assume_role(session_file, role):
 
     data = result.get("data", {})
     roles = data.get("roles")
-
     if roles is not None:
         session_file_content["roles"] = roles
     
@@ -600,8 +599,8 @@ def rep_list_role_subjects(session_file, role):
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
     saveContext(session_file, session_file_content)
         
-    subjects = result["data"]
     show_result(result, "Error listing role subjects", print_data=False)
+    subjects = result["data"]
     print("Role Subjects:")
     for subject in subjects:
         print(" -> ", subject)
