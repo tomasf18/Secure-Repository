@@ -172,19 +172,19 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
     if session is None:
         print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
-                f"Session with id {session_id} not found", HTTP_Code.NOT_FOUND, None
+                 f"Session with id {session_id} not found", HTTP_Code.NOT_FOUND, None
             )
         
     if subject_invalid(session, db_session):
         print(f"SERVER: Subject {session.subject_username} is suspended")
         raise ValueError(
-                json.dumps(f"Subject {session.subject_username} is suspended"), HTTP_Code.FORBIDDEN
+                f"Subject {session.subject_username} is suspended", HTTP_Code.FORBIDDEN, None
             )
        
     if session_expired(session):
         print(f"SERVER: Session with id {session_id} expired")
         raise ValueError(
-                json.dumps(f"Session with id {session_id} expired"), HTTP_Code.FORBIDDEN
+                f"Session with id {session_id} expired", HTTP_Code.FORBIDDEN, None
             ) 
 
     session_dao.update_last_interaction(session.id)

@@ -129,3 +129,8 @@
 
 ./rep_remove_permission user1_org1_session_file Manager ROLE_ACL # Should fail
 ./rep_remove_permission user1_org1_session_file Manager user1    # Should fail
+
+./rep_add_permission user1_org1_session_file Manager user2
+
+./rep_assume_role user2_org1_session_file Manager
+./rep_remove_permission user2_org1_session_file Manager user1
