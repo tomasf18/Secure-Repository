@@ -778,12 +778,8 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
         
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None or result.get("error") is not None:
-        logger.error("Error listing documents")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
+    show_result(result, "Error listing documents")
     saveContext(session_file, session_file_content)
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 # ****************************************************
@@ -1148,14 +1144,9 @@ def rep_add_doc(session_file, document_name, file):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error adding document")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
 
+    show_result(result, "Error adding document")
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1188,12 +1179,8 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
 
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None:
-        logger.error("Error getting document metadata")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    show_result(result, "Error getting document metadata", print_data=False)
 
-    saveContext(session_file, session_file_content)
-    
     data = result["data"]
     
     document_name = data["document_name"]
@@ -1205,6 +1192,7 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     if doc_get_file:
         return data
     
+    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1231,7 +1219,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     with open(output_decrypted_file, "w") as file:
         file.write(decrypted_file_content)
         
-    print("\n", decrypted_file_content)
+    print(f"\n{decrypted_file_content}\n")
 
 # -------------------------------
 
@@ -1263,12 +1251,8 @@ def rep_delete_doc(session_file, document_name):
         
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
 
-    if result is None:
-        logger.error("Error deleting document")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
+    show_result(result, "Error deleting document")
     saveContext(session_file, session_file_content)
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1309,13 +1293,8 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=method, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None or result.get("error") is not None:
-        logger.error("Error adding permission or subject to role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
+    show_result(result, "Error adding permission or subject to role")
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
     
     

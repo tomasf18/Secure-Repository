@@ -247,15 +247,12 @@ def create_organization_document(organization_name, data, db_session: Session):
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
     
     missing_permissions = session_dao.missing_org_permitions(session.id, ["DOC_NEW"])
     if missing_permissions != []:
-        return encrypt_payload({
-                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
     
     document_name = decrypted_data.get('document_name')
     encrypted_file_content = convert_str_to_bytes(decrypted_data.get('file'))
@@ -264,11 +261,6 @@ def create_organization_document(organization_name, data, db_session: Session):
     iv = convert_str_to_bytes(decrypted_data.get('iv'))
     
     new_document = document_dao.create_document(document_name, session.id, encrypted_file_content, alg, key, iv)
-
-    # Construct result
-    result = {
-        "data": f"Document '{document_name}' uploaded in the organization '{organization_name}' successfully."
-    }
     
     # Get Manager role
     organization = organization_dao.get_by_name(organization_name)
@@ -279,11 +271,7 @@ def create_organization_document(organization_name, data, db_session: Session):
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    return encrypted_result, HTTP_Code.CREATED
+    return return_data("data", f"Document '{document_name}' uploaded in the organization '{organization_name}' successfully.", HTTP_Code.CREATED, session_key)
 
 # -------------------------------
 
@@ -296,15 +284,12 @@ def list_organization_documents(organization_name, data, username, date_filter, 
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
     
     documents: list["Document"] = document_dao.get(session.id, username, date_filter, date)
     if not documents:
-        return encrypt_payload({
-                "error": "No documents found."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.NOT_FOUND
+        return return_data("error", "No documents found.", HTTP_Code.NOT_FOUND, session_key)
 
     i = 0
     serializable_documents = []
@@ -314,18 +299,9 @@ def list_organization_documents(organization_name, data, username, date_filter, 
             "document" + str(i): doc.__repr__(),
         })
 
-    # Construct result
-    result = {
-        "data": serializable_documents
-    }
-
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    return encrypted_result, HTTP_Code.CREATED
+    return return_data("data", serializable_documents, HTTP_Code.OK, session_key)
 
 # =================================== Auxiliar Function =================================== #
 
@@ -363,38 +339,22 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
     
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
         missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_READ"])
         if missing_permissions != []:
-            return encrypt_payload({
-                    "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.FORBIDDEN
+            return return_data("error", f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.NOT_FOUND
+        return return_data("error", f"Document '{document_name}' doesn't exists in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
     
     serializable_document = get_serializable_document(document, document_dao)
 
-    # Construct result
-    result = {
-        "data": serializable_document
-    }
-
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    print("\n\n\n RESULT: ", result, "\n\n\n")
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    return encrypted_result, HTTP_Code.CREATED
+    return return_data("data", serializable_document, HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -409,36 +369,21 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
         
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
         missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_DELETE"])
         if missing_permissions != []:
-            return encrypt_payload({
-                    "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.FORBIDDEN
+            return return_data("error", f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
         ceasing_file_handle = document_dao.delete(session.id, document_name)
     except ValueError as e:
-        return encrypt_payload({
-                "error": e.args[0]
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.BAD_REQUEST
-    
-    # Construct result
-    result = {
-        "data": f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully."
-    }
+        return return_data("error", e.args[0], HTTP_Code.NOT_FOUND, session_key)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    return encrypted_result, HTTP_Code.OK
+    return return_data("data", f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully.", HTTP_Code.OK, session_key)
 
 
 # ==================================== Second Delivery ==================================== #
@@ -796,58 +741,52 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
 
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
     org_acl_id = organization.acl.id
 
-    # Get document
-    document = document_dao.get_metadata(session.id, document_name)
+    try:
+        # Get document
+        document = document_dao.get_metadata(session.id, document_name)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     
     missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_ACL"])
     if missing_permissions != []:
-        return encrypt_payload({
-                "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
 
     # Get role
     role_name = decrypted_data.get('role')
-    role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
+    try:
+        role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     
     if role.name == "Manager":
-        return encrypt_payload({
-                "error": f"Role '{role_name}' cannot have its permissions modified."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Role '{role_name}' cannot have its permissions modified.", HTTP_Code.FORBIDDEN, session_key)
 
     # Get permission
     permission_name = decrypted_data.get('permission')
     if permission_name not in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
-        return encrypt_payload({
-                "error": f"Permission '{permission_name}' is not a valid document permission."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.BAD_REQUEST
+        return return_data("error", f"Permission '{permission_name}' is not a valid document permission.", HTTP_Code.BAD_REQUEST, session_key)
     
-    permission = permission_dao.get_by_name(permission_name)
-
-    # Add role permission to document
-    document_role_permission_dao.create(document.acl.id, role.id, permission.name)
+    try:
+        permission = permission_dao.get_by_name(permission_name)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     
-    # Construct result
-    result = {
-        "data": f"Permission '{permission.name}' added to role '{role.name}' in document '{document.name}' in organization '{document.org_name}' successfully."
-    }
+    try:    
+        # Add role permission to document
+        document_role_permission_dao.create(document.acl.id, role.id, permission.name)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.BAD_REQUEST, session_key)
     
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    return encrypted_result, HTTP_Code.OK
+    return return_data("data", f"Permission '{permission.name}' added to role '{role.name}' in document '{document.name}' in organization '{document.org_name}' successfully.", HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -865,66 +804,56 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
 
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
     org_acl_id = organization.acl.id
 
-    # Get document
-    document = document_dao.get_metadata(session.id, document_name)
+    try:
+        # Get document
+        document = document_dao.get_metadata(session.id, document_name)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
 
     missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_ACL"])
     if missing_permissions != []:
-        return encrypt_payload({
-                "error": f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
 
     # Get role
     role_name = decrypted_data.get('role')
-    role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
+    try:
+        role = role_dao.get_by_name_and_acl_id(role_name, org_acl_id)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     
     if role.name == "Manager":
-        return encrypt_payload({
-                "error": f"Role '{role_name}' cannot have its permissions modified."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Role '{role_name}' cannot have its permissions modified.", HTTP_Code.FORBIDDEN, session_key)
 
     # Get permission
     permission_name = decrypted_data.get('permission')
     if permission_name not in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
-        return encrypt_payload({
-                "error": f"Permission '{permission_name}' is not a valid document permission."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.BAD_REQUEST
+        return return_data("error", f"Permission '{permission_name}' is not a valid document permission.", HTTP_Code.BAD_REQUEST, session_key)
     
-    permission = permission_dao.get_by_name(permission_name)
+    try:
+        permission = permission_dao.get_by_name(permission_name)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
 
-    # Remove role permission from document
-    document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
+    try:
+        # Remove role permission from document
+        document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     if not document_role_permission:
-        return encrypt_payload({
-                "error": f"Permission '{permission.name}' is not associated with role '{role.name}' in document '{document.name}' in organization '{document.org_name}'."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.BAD_REQUEST
+        return return_data("error", f"Permission '{permission.name}' is not associated with role '{role.name}' in document '{document.name}' in organization '{document.org_name}'.", HTTP_Code.BAD_REQUEST, session_key)
     
     document_role_permission_dao.delete_by_id(document_role_permission.id)
     
-    # Construct result
-    result = {
-        "data": f"Permission '{permission.name}' removed from role '{role.name}' in document '{document.name}' in organization '{document.org_name}' successfully."
-    }
-    
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    
-    return encrypted_result, HTTP_Code.OK
+    return return_data("data", f"Permission '{permission.name}' removed from role '{role.name}' in document '{document.name}' in organization '{document.org_name}' successfully.", HTTP_Code.OK, session_key)
 
 # -------------------------------
 
