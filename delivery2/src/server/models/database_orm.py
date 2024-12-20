@@ -226,6 +226,7 @@ class Role(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(nullable=False)
     acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
+    status: Mapped[str] = mapped_column(nullable=False, default=Status.ACTIVE.value)
     
     # Relationships
     acl: Mapped["OrganizationACL"] = relationship(back_populates="roles")

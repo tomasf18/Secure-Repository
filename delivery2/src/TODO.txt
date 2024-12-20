@@ -18,8 +18,34 @@ TIME TO LIVE OF THE SESSIONS -> DONE
 tirar ao manager todas as permissoes de um documento -> DONE
 rep_suspend_subject         // Vou a todas as sessoes dele e elimio as e depois, no create, session vejo se ele esta suspenso (e no suspend role tmb) -> DONE
 A DOC_ACL access right allows a role holder to add or remove access rights for other roles. At least one role must keep this right for each document, in order to allow an ACL to be updated. -> Doc
+ROLE_ACL: Modify the ACL. At least one role must have this permission. -> Done (manager)
 
 ---
+ROLE_DOWN: Suspend a role, allowing a role to suspend a role from being assumed by subjects of an organization. 
+@João Paulo Barraca Aqui quando diz "suspend a role from being assumed by subjects", implica que não podemos atribuir esse role a nenhum subject enquanto este está suspenso e também que qualquer sujeito que já estivesse associado a esse role o "perdesse" (seria inutilizável até que fosse ativado outra vez), ou só o primeiro caso?
+Imagem
+João Paulo Barraca — Ontem às 21:53
+Não está definido. O texto diz que não pode ser assumida, mas não diz nada sobre ser ou não ser atribuída.
+Para quem já a tem assumida.... undefined behaviour
+
+ROLE_UP: Reactivate a role, allowing a role to put an end on a role’s suspension.
+
+BUT ...
+```txt
+rep_suspend_role <session file> <role>
+rep_reactivate_role <session file> <role>
+
+These commands change the status of a role in the organization with which I have currently a session. These commands require a ROLE_DOWN and ROLE_UP permission, respectively.
+```
+AND ...
+```
+In this sense, they act as groups of subjects in normal ACLs.
+```
+
+It is possible for a subject to maintain simultaneous sessions with different organizations in the Repository. -> I think it's possible
+
+Sessions have a lifetime defined by the Repository, and should be deleted upon a period of inactivity. -> TODO (last_interaction -> update load session)
+Do not allow simultaneous sessions by the same user on the same org
 
 
 CORRECT ERROR MESSAGES FOR EACH COMMAND, SO THAT NO USEFUL MESSAGE FOR ATTACKERS IS SHOWN

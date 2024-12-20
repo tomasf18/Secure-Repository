@@ -1037,11 +1037,7 @@ def rep_suspend_role(session_file, role):
     
     saveContext(session_file, session_file_content)
     
-    suspended_subjects = result["data"]
-    
-    print("Suspended Subjects:")
-    for subject in suspended_subjects:
-        print(" -> ", subject)
+    print(result["data"])
         
     sys.exit(ReturnCode.SUCCESS)
 
@@ -1081,11 +1077,7 @@ def rep_reactivate_role(session_file, role):
     
     saveContext(session_file, session_file_content)
     
-    suspended_subjects = result["data"]
-    
-    print("Reactivated Subjects:")
-    for subject in suspended_subjects:
-        print(" -> ", subject)
+    print(result["data"])
         
     sys.exit(ReturnCode.SUCCESS)
 

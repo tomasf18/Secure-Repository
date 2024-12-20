@@ -164,12 +164,20 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
                 "error": f"Subject '{session_subject.username}' is not bound to role '{role}' in organization '{organization_name}'"
             }, session_key[:32], session_key[32:]
         ), HTTP_Code.FORBIDDEN
+        
+    role = role_dao.get_by_name_and_acl_id(role, organization.acl.id)
+    
+    if role.status == Status.SUSPENDED.value:
+        return encrypt_payload({
+                "error": f"Role '{role.name}' is suspended, therefore can not be assumed."
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
     
     try:
-        role_added = session_dao.add_session_role(session.id, role)
+        role_added = session_dao.add_session_role(session.id, role.name)
     except Exception as e:
         return encrypt_payload({
-                "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
+                "error": f"Error adding role '{e.args}' to session '{session_id}' in organization '{organization_name}'"
             }, session_key[:32], session_key[32:]
         ), HTTP_Code.FORBIDDEN
     

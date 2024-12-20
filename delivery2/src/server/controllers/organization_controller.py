@@ -147,11 +147,11 @@ def organization_role(organization_name, role):
     if request.method == 'PUT':
         data = request.json
         print(f"SERVER: Received data: {data}. Reactivating role {role} in organization {organization_name}")
-        return reactivate_role_subjects(organization_name, role, data, db_session)
+        return reactivate_role(organization_name, role, data, db_session)
     elif request.method == 'DELETE':
         data = request.json
         print(f"SERVER: Received data: {data}. Suspending role {role} in organization {organization_name}")
-        return suspend_role_subjects(organization_name, role, data, db_session)
+        return suspend_role(organization_name, role, data, db_session)
     
 # -------------------------------
 

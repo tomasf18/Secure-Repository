@@ -1,4 +1,5 @@
 from .BaseDAO import BaseDAO
+from models.status import Status
 from models.database_orm import Role, Subject
 from sqlalchemy.exc import IntegrityError
 
@@ -51,3 +52,10 @@ class RoleDAO(BaseDAO):
         return roles
     
 # -------------------------------
+    
+    def update_role_status(self, role_name, acl_id, new_status) -> "Role":
+        """Update the status of a Role."""
+        role = self.get_by_name_and_acl_id(role_name, acl_id)
+        role.status = new_status
+        self.session.commit()
+        return role

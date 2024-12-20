@@ -11,7 +11,7 @@
 ./rep_create_session org1 user1 123 user1_cred_file user1_org1_session_file
 
 # Add subjects (without permission)
-./rep_add_subject user1_org1_session_file user2 User2 user2@gmail.com user2_cred_file
+./rep_add_subject user1_org1_session_file user2 User2 user2@gmail.com user2_cred_file # Should fail
 
 # Assume role (Manager)
 ./rep_assume_role user1_org1_session_file Manager
@@ -23,7 +23,6 @@
 ./rep_add_role user1_org1_session_file ROLE_1
 ./rep_add_role user1_org1_session_file ROLE_2
 ./rep_add_permission user1_org1_session_file ROLE_2 DOC_NEW
-
 
 # List organizations
 ./rep_list_orgs
@@ -85,8 +84,8 @@
 ./rep_list_docs user2_org1_session_file
 
 # Add document ACL
-./rep_acl_doc user1_org1_session_file doc1 + Manager DOC_READ  # Does not have acl permission
-./rep_acl_doc user2_org1_session_file doc1 + Manager DOC_READ 
+./rep_acl_doc user2_org1_session_file doc1 - ROLE_2 DOC_ACL     # Should fail, this role is the only one with DOC_ACL
+./rep_acl_doc user2_org1_session_file doc1 + Manager DOC_READ   
 ./rep_get_doc_metadata user1_org1_session_file doc1 # Can read
 
 ./rep_acl_doc user1_org1_session_file doc1 - Manager DOC_READ  # Does not have acl permission
@@ -101,10 +100,17 @@
 
 #---
 # # Suspend and reactivate roles
+./rep_add_permission user1_org1_session_file ROLE_2 user1
+./rep_assume_role user1_org1_session_file ROLE_2     
 ./rep_suspend_role user1_org1_session_file ROLE_2
-./rep_add_doc user2_org1_session_file doc2 file2.txt    # Should fail
+./rep_list_roles user1_org1_session_file                # Should not list ROLE_2
+./rep_list_roles user2_org1_session_file                # Should not list ROLE_2
+./rep_assume_role user2_org1_session_file ROLE_2        # Should fail
 ./rep_reactivate_role user1_org1_session_file ROLE_2
+./rep_assume_role user2_org1_session_file ROLE_2     
 ./rep_add_doc user2_org1_session_file doc2 file2.txt 
+
+
 ./rep_remove_permission user1_org1_session_file ROLE_2 user2
 ./rep_add_doc user2_org1_session_file doc3 file3.txt  # Should fail
 
@@ -118,5 +124,8 @@
 
 # Manage permissions
 ./rep_assume_role user1_org1_session_file Manager
-./rep_remove_permission user2_org1_session_file ROLE_1 user1 # Should fail because doesn't have ACL permission
+./rep_remove_permission user2_org1_session_file ROLE_1 user1 # Should fail because doesn't have ROLE_MOD permission
 ./rep_remove_permission user1_org1_session_file ROLE_1 user1
+
+./rep_remove_permission user1_org1_session_file Manager ROLE_ACL # Should fail
+./rep_remove_permission user1_org1_session_file Manager user1    # Should fail

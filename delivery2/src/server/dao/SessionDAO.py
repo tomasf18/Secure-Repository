@@ -294,3 +294,28 @@ class SessionDAO(BaseDAO):
                 self.drop_session_role(session.id, role_name)
             except ValueError:
                 pass # If the role is not associated with the session, continue
+    
+# -------------------------------
+
+    def get_by_role(self, role: Role) -> list[Session]:
+        """
+        Retrieve all sessions associated with a given role.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject),
+            joinedload(Session.organization)
+        ).join(Session.session_roles).filter_by(id=role.id).all()
+        
+        
+# -------------------------------
+
+    def remove_role_from_all_sessions(self, role: Role) -> bool:
+        """
+        Remove a role from all sessions.
+        """
+        sessions = self.get_by_role(role)
+        for session in sessions:
+            try:
+                self.drop_session_role(session.id, role.name)
+            except ValueError:
+                pass
