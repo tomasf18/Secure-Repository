@@ -37,8 +37,6 @@ def get_decrypted_request(data, encryption_key):
     encrypted_message = convert_str_to_bytes(data["message"])
     iv = convert_str_to_bytes(data["iv"])
     decrypted_data = decrypt_anonymous_content(encrypted_message, encryption_key, iv).decode()
-    print("\n\n\n\n\n DECRYPTED DATA: \n\n", decrypted_data, "\n\n\n\n")
-    print("\n ENCRYPTION KEY: ", encryption_key)
     
     return json.loads(decrypted_data), encryption_key
 
@@ -66,7 +64,6 @@ def generate_anonymous_signed_shared_secret(client_ephemeral_pub_key: bytes, db_
     })
     
     # Return response to the client
-    print(f"\n\nResult: {result}\n\n")
     return result, encryption_key[:32], HTTP_Code.OK
 
 

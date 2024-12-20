@@ -93,7 +93,7 @@ class ApiConsumer:
             return received_message
 
         except requests.RequestException as e:
-            logging.error(f'Failed to connect to the server!')
+            print(f'Error: Failed to connect to the server!')
             sys.exit(ReturnCode.INPUT_ERROR)
 
 # -------------------------------

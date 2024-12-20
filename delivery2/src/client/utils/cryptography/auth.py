@@ -51,8 +51,8 @@ def verify_signature(response: dict[str, str], public_key: ec.EllipticCurvePubli
 
     try:
         public_key.verify(signature, data_str.encode(), ec.ECDSA(hashing_algorithm))
-        print("Document signature is valid")
+        logging.debug("Document signature is valid")
         return True
     except InvalidSignature:
-        logging.error("Document signature is not valid")
+        logging.debug("Document signature is not valid")
         return False
