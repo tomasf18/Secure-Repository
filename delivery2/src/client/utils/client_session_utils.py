@@ -24,7 +24,7 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     
     data = encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
     
-    logging.debug("\nENCRYPTED_DATA: ", data, "\n\n\n")
+    logging.debug("ENCRYPTED_DATA: ", data)
     logging.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
     
     try:
@@ -42,9 +42,9 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     encrypted_data = convert_str_to_bytes(response_json.get("data"))
     iv = convert_str_to_bytes(response_json.get("iv"))
     
-    logging.debug("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
-    logging.debug("\nENCRYPTION_KEY: ", encryption_key)
-    logging.debug("\nIV:\n", iv, "\n\n\n")
+    logging.debug("ENCRYPTED_DATA: ", encrypted_data)
+    logging.debug("ENCRYPTION_KEY: ", encryption_key)
+    logging.debug("IV:", iv)
 
 
     return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())
@@ -77,7 +77,7 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     try:
         response = requests.request(method, rep_address + endpoint, json=data)
     except requests.RequestException  as e:
-        logging.error(f"Failed to connect to the server at {rep_address}")
+        print(f"Error: Failed to connect to the server at {rep_address}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     logging.debug("RESPONSE: ", response.json())

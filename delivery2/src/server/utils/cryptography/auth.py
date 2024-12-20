@@ -53,8 +53,8 @@ def verify_signature(data: dict[str, str], pub_key: bytes) -> bool:
 
     try:
         public_key.verify(signature, data_str.encode(), ec.ECDSA(hashing_algorithm))
-        logging.info("Document signature is valid")
+        logging.debug("Document signature is valid")
         return True
     except InvalidSignature:
-        logging.error("Document signature is not valid")
+        logging.debug("Document signature is not valid")
         return False

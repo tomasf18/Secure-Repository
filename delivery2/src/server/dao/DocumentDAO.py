@@ -84,9 +84,7 @@ class DocumentDAO(BaseDAO):
             # Step 7: Create the RestrictedMetadata entity
             algorithm, mode = alg.split("-")
             
-            print("DECRYPTED METADATA KEY: ", key)
             encrypted_metadata_key, iv_encrypted_key, salt = self.key_store_dao.create(key, "symmetric")
-            print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key)
 
             metadata = self.restricted_metadata_dao.create(
                 document=document, 

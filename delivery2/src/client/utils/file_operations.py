@@ -9,7 +9,7 @@ from utils.constants.return_code import ReturnCode
 
 def read_file(file: str) -> str | None:
     if not os.path.exists(file):
-        logging.error(f"File {file} does not exist")
+        print(f"Error: File {file} does not exist")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     with open(file, "r") as f:

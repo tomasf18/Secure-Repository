@@ -52,11 +52,6 @@ class SessionDAO(BaseDAO):
 
             encrypted_session_key, iv, salt = self.key_store_dao.create(key, "symmetric")
             
-            print(f"\n\nSession key iv: {iv} with length {len(iv)}")
-            print(f"Decrypted session key: {key}")
-            print(f"Encrypted session key: {encrypted_session_key.key}")
-            print(f'Again, decrypted session key: {self.key_store_dao.decrypt_key(encrypted_session_key.key, iv, salt)}\n\n')
-            
             # Create the session
             new_session = Session(
                 subject_username=subject_username,
