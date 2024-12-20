@@ -324,6 +324,20 @@ def get_serializable_document(document: "Document", document_dao: DocumentDAO):
             "iv": convert_bytes_to_str(document.restricted_metadata.iv),
         }
     }
+    
+def get_serializable_deleted_doc_info(document: "Document", document_dao: DocumentDAO):
+    
+    decrypted_key: bytes = document_dao.get_decrypted_metadata_key(document.id)
+    
+    return {
+        "file_handle": document.file_handle,
+        "encryption_data": {
+            "algorithm": document.restricted_metadata.alg,
+            "mode": document.restricted_metadata.mode,
+            "key": convert_bytes_to_str(decrypted_key),
+            "iv": convert_bytes_to_str(document.restricted_metadata.iv),
+        }
+    }
 
 # ========================================================================================= #
 
@@ -371,18 +385,20 @@ def delete_organization_document(organization_name, document_name, data, db_sess
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
         
+    serializable_return_data = None
+    
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
         missing_permissions = document_role_permission_dao.missing_doc_permissions(session.session_roles, document.acl.id, ["DOC_DELETE"])
         if missing_permissions != []:
             return return_data("error", f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
-        ceasing_file_handle = document_dao.delete(session.id, document_name)
+        serializable_return_data = get_serializable_deleted_doc_info(document, document_dao)
     except ValueError as e:
         return return_data("error", e.args[0], HTTP_Code.NOT_FOUND, session_key)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    return return_data("data", f"Document '{document_name}' with file_handle '{ceasing_file_handle}' deleted from organization '{organization_name}' successfully.", HTTP_Code.OK, session_key)
+    return return_data("data", serializable_return_data, HTTP_Code.OK, session_key)
 
 
 # ==================================== Second Delivery ==================================== #
