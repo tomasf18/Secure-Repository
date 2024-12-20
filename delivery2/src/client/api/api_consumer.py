@@ -78,16 +78,16 @@ class ApiConsumer:
                     )
                     print(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
+                    received_message = response.json()
                     print(f"Error decrypting server response: {e}")
 
             else:
-                                
                 response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
-                
-            if response.status_code in [200, 201, 403, 404]:
-                return received_message if received_message else response.json()
-            else:
-                print(f'\nError: {response.status_code} - {response.json()}\n')
+
+            print("Response.json was: " , response.json())
+            print("Received message was: ", received_message)
+            
+            return received_message
 
         except requests.RequestException as e:
             print(f'\nError: {e}\n')

@@ -19,7 +19,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from utils.server_session_utils import load_session
-from utils.server_session_utils import encrypt_payload
+
+from utils.constants.http_code import HTTP_Code
+from utils.utils import return_data
 
 from utils.constants.http_code import HTTP_Code
 
@@ -62,17 +64,17 @@ def create_session(data, db_session: SQLAlchemySession):
         )
     except ValueError as e:
         message = e.args[0]
-        return json.dumps({"error:": message}), HTTP_Code.NOT_FOUND
+        return return_data("error", message, HTTP_Code.NOT_FOUND) 
 
     if (client is None):
-        return json.dumps(f"User not found!"), HTTP_Code.NOT_FOUND
+        return return_data("error", f"User not found!", HTTP_Code.NOT_FOUND)
     
     # Get client public key
     client_pub_key = keystore_dao.get_by_id(client.pub_key_id).key
 
     # Verify Signature
     if (not verify_signature(data=data, pub_key=client_pub_key)):
-        return json.dumps(f"Invalid signature!"), HTTP_Code.BAD_REQUEST
+        return return_data("error", f"Invalid signature!", HTTP_Code.BAD_REQUEST)
 
     # Derive session key
     session_key: bytes
@@ -92,7 +94,7 @@ def create_session(data, db_session: SQLAlchemySession):
             nonce = nonce,  # for unique session identification
         )
     except IntegrityError:
-        return json.dumps(f"Session for user '{username}' already exists."), HTTP_Code.BAD_REQUEST
+        return return_data("error", f"Session for user '{username}' already exists.", HTTP_Code.BAD_REQUEST)
 
     # TODO: Encrypt
     # Create response
@@ -141,8 +143,8 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
     
     # Verify if the subject is bound to the role in the organization
     session_subject = session.subject
@@ -151,24 +153,25 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     try:
         subjects_with_role = role_dao.get_role_subjects(role, organization.acl.id)
     except Exception as e:
-        return encrypt_payload({
-                "error": e.args[0]
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.NOT_FOUND
+        message = e.args[0]
+        return return_data("error", message, HTTP_Code.NOT_FOUND, session_key)
         
     if session_subject not in subjects_with_role:
-        return encrypt_payload({
-                "error": f"Subject '{session_subject.username}' is not bound to role '{role}' in organization '{organization_name}'"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
-    
+        return return_data(
+            key="error",
+            data=f"Subject '{session_subject.username}' is not bound to role '{role}' in organization '{organization_name}'",
+            code=HTTP_Code.FORBIDDEN,
+            session_key=session_key
+        )
     try:
         role_added = session_dao.add_session_role(session.id, role)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data(
+            key="error",
+            data=f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'",
+            code=HTTP_Code.FORBIDDEN,
+            session_key=session_key
+        )
     
     # Construct result
     result = {
@@ -179,16 +182,13 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-        # print session roles
+    # print session roles
     print(f"\n\n\n\nSession roles: ")
     for role in session.session_roles:
         print(role.__repr__())
     print("\n\n\n\n")
     
-    return json.dumps(encrypted_result), HTTP_Code.OK
+    return return_data("data", result, HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -209,17 +209,21 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key=session_key)
     
     try:
         role_removed = session_dao.drop_session_role(session.id, role)
-    except Exception as e:
-        return encrypt_payload({
-                "error": f"Error removing role '{role}' from session '{session_id}' in organization '{organization_name}'"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
-    
+        # Nao ha exception a ser chamada
+    except ValueError as e:
+        message = e.args[0]
+        return return_data(
+            key = "error",
+            data = message,
+            code = HTTP_Code.FORBIDDEN,
+            session_key = session_key
+        )
+
     # Construct result
     result = {
         "roles": [role.name for role in session.session_roles],
@@ -229,21 +233,18 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
     # print session roles
     print(f"\n\n\n\nSession roles: ")
     for role in session.session_roles:
         print(role.__repr__())
     print("\n\n\n\n")
         
-    return json.dumps(encrypted_result), HTTP_Code.OK
+    return return_data("data", result, HTTP_Code.OK, session_key)
 
 # -------------------------------
 
 def list_session_roles(organization_name, session_id, data, db_session):
-    ''' Handles the listing of roles from a session. 
+    ''' Handles the listing of roles from a session. «
     
     Args:
         data (_type_): Data received from the client
@@ -258,18 +259,25 @@ def list_session_roles(organization_name, session_id, data, db_session):
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data(
+            key = "error",
+            data = message,
+            code = code,
+            session_key=session_key
+        )
     
     # Construct result
-    result = {
-        "data": [role.name for role in session.session_roles],
+    roles =  {
+        "roles": [role.name for role in session.session_roles]
     }
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    
-    return json.dumps(encrypted_result), HTTP_Code.OK
+
+    return return_data(
+        key="data",
+        data=roles,
+        code=HTTP_Code.OK,
+        session_key=session_key
+    )

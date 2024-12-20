@@ -42,7 +42,7 @@ def create_organization(data: dict, db_session: Session):
 
     try:
         organization_dao.create(org_name, username, name, email, public_key)
-    except IntegrityError:
+    except ValueError:
         return return_data("error", f"Organization '{org_name}' already exists.", HTTP_Code.BAD_REQUEST)
     
     return return_data("data", f"Organization '{org_name}' created successfully.", HTTP_Code.CREATED)
@@ -74,8 +74,8 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
 
     try:
         subjects: list["Subject"] = None
@@ -95,23 +95,12 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
             })
     except Exception as e:
         print(f"SERVER: Error getting subjects from organization {organization_name}. Error: {e}")
-        return encrypt_payload({
-                "error": f"Organization '{organization_name}' doesn't exist."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.NOT_FOUND
-    
-    # Construct result
-    result = {
-        "data": serializable_subjects
-    }
+        return return_data("error", f"Organization '{organization_name}' doesn't exist.", HTTP_Code.NOT_FOUND, session_key)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-
-    return json.dumps(encrypted_result), HTTP_Code.OK
+    return return_data("data", serializable_subjects, HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -125,34 +114,26 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
 
     try:
         subject: "Subject" = organization_dao.get_subject_by_username(organization_name, username)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Subject '{username}' doesn't exist in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.NOT_FOUND
+        return return_data("error", f"Subject '{username}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
         
     status = organization_dao.get_org_subj_association(org_name=organization_name, username=username).status
 
     # Create result
     result = {
-        "data": {
-            "username": subject.username,
-            "status": status
-        }
+        "username": subject.username,
+        "status": status
     }
     
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
 
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-
-    return json.dumps(encrypted_result), HTTP_Code.OK
+    return return_data("data", result, HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -166,15 +147,12 @@ def add_organization_subject(organization_name, data, db_session: Session):
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
 
     missing_permissions = session_dao.missing_org_permitions(session.id, ["SUBJECT_NEW"])
     if missing_permissions != []:
-        return encrypt_payload({
-                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
         
     username = decrypted_data.get('username')
     name = decrypted_data.get('name')
@@ -184,23 +162,15 @@ def add_organization_subject(organization_name, data, db_session: Session):
     try:
         organization_dao.add_subject_to_organization(organization_name, username, name, email, public_key)
     except IntegrityError:
-        return encrypt_payload({
-                "error": f"Subject with username '{username}' already exists."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.BAD_REQUEST
-
-    # Construct result
-    result = {
-        "data": f'Subject {username} added to organization {organization_name} successfully'
-    }
+        return return_data("error", f"Subject with username '{username}' already exists.", HTTP_Code.BAD_REQUEST, session_key)
+    except Exception as e:
+        print("\n\n\nSome error occurreed")
+        print(e)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-
-    return json.dumps(encrypted_result), HTTP_Code.OK
+    return return_data("data", f'Subject {username} added to organization {organization_name} successfully', HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -213,42 +183,25 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     try:
         decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
     except ValueError as e:
-        message, code = e.args
-        return message, code
+        message, code, session_key = e.args
+        return return_data("error", message, code, session_key)
     
     missing_permissions = session_dao.missing_org_permitions(session.id, ["SUBJECT_DOWN"])
     if missing_permissions != []:
-        return encrypt_payload({
-                "error": f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}"
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data("error", f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
     
-    if organization_dao.subject_has_role(organization_name, username, "Manager"):
-        return encrypt_payload({
-                "error": f"Subject '{username}' is a Manager and cannot be suspended."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
-        
     try:
-        organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+        if organization_dao.subject_has_role(organization_name, username, "Manager"):
+            return return_data("error", f"Subject '{username}' is a Manager and cannot be suspended.", HTTP_Code.FORBIDDEN, session_key)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
-    
-    # Construct result
-    result = {
-        "data": f"Subject '{username}' in the organization '{organization_name}' has been suspended."
-    }
+        return return_data("error", f"Subject '{username}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
+        
+    organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), HTTP_Code.OK
+    return return_data("data", f"Subject '{username}' in the organization '{organization_name}' has been suspended.", HTTP_Code.OK, session_key)
     
 # -------------------------------
     

@@ -158,7 +158,7 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
     if session is None:
         print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
-                json.dumps(f"Session with id {session_id} not found"), HTTP_Code.NOT_FOUND
+                f"Session with id {session_id} not found", HTTP_Code.NOT_FOUND, None
             )
 
     session_key = session_dao.get_decrypted_key(session_id)
@@ -167,37 +167,33 @@ def load_session(data: dict, session_dao: SessionDAO, organization_name: str) ->
     if decrypted_data is None:
         print("SERVER: Error decrypting data")
         raise ValueError(
-            encrypt_payload({
-                    "error": f"Invalid session key"
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.FORBIDDEN
+            f"Invalid session key",
+            HTTP_Code.FORBIDDEN,
+            session_key
         )
 
     if (decrypted_data.get("counter") is None) or (decrypted_data.get("nonce") is None):
         print("No counter or nonce provided")    
         raise ValueError(
-            encrypt_payload({
-                    "error": f"No counter or nonce provided!"
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.FORBIDDEN
+            f"No counter or nonce provided!",
+            HTTP_Code.FORBIDDEN, 
+            session_key
         )
         
     if not verify_message_order(decrypted_data, counter=session.counter, nonce=session.nonce):
         print("SERVER: Invalid message order")
         raise ValueError(
-            encrypt_payload({
-                    "error": f"Invalid message order"
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.FORBIDDEN
+            f"Invalid message order",
+            HTTP_Code.FORBIDDEN,
+            session_key
         )
 
     if organization_name != session.organization_name:
         print("SERVER: Cannot access organization")
         raise ValueError(
-            encrypt_payload({
-                    "error": f"Cannot access organization {organization_name}"
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.FORBIDDEN
+            f"Cannot access organization {organization_name}",
+            HTTP_Code.FORBIDDEN, 
+            session_key
         )
 
     return decrypted_data, session, session_key

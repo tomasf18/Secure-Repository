@@ -26,7 +26,7 @@ class RoleDAO(BaseDAO):
         """Retrieve a Role by name and ACL ID."""
         role = self.session.query(Role).filter_by(acl_id=acl_id, name=name).first()
         if not role:
-            raise ValueError(f"Role with name '{name}' and ACL ID '{acl_id}' not found.")
+            raise ValueError(f"Role with name '{name}' not found.")
         return role
     
 # -------------------------------

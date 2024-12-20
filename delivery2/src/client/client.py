@@ -397,6 +397,10 @@ def rep_get_file(file_handle, output_file=None, get_doc_file=False):
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET)
     
     if result is None:
+        logger.error("Error getting file")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif "error" in result:
+        print(f"\nError: {result.get("error")}\n")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
         
     file_contents = convert_str_to_bytes(result["data"])
@@ -449,18 +453,24 @@ def rep_assume_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
-    
+
     if result is None:
         logger.error("Error assuming role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
-    roles = result["roles"]
-    session_file_content["roles"] = roles
-    
-    saveContext(session_file, session_file_content)
-    
-    print(result["data"])
-    sys.exit(ReturnCode.SUCCESS)
+
+    elif "error" in result:
+        print(f"\nError: {result.get("error")}\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    elif "data" in result:
+        data = result["data"]
+        roles = data["roles"]
+        session_file_content["roles"] = roles
+        saveContext(session_file, session_file_content)
+
+        print(result["data"])
+        sys.exit(ReturnCode.SUCCESS)
+
 
 # -------------------------------
 
@@ -494,14 +504,19 @@ def rep_drop_role(session_file, role):
     if result is None:
         logger.error("Error dropping role")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
-    roles = result["roles"]
-    session_file_content["roles"] = roles
-    
-    saveContext(session_file, session_file_content)
 
-    print(result["data"])
-    sys.exit(ReturnCode.SUCCESS)
+    elif "error" in result:
+        print(f"\nError: {result.get("error")}\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    elif "data" in result:
+        data = result["data"]
+        roles = data["roles"]
+        session_file_content["roles"] = roles
+        saveContext(session_file, session_file_content)
+
+        print(result["data"])
+        sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
 
@@ -531,20 +546,30 @@ def rep_list_roles(session_file):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
+
     if result is None:
         logger.error("Error listing roles")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
-    roles = result["data"]
-    
-    saveContext(session_file, session_file_content)
 
-    print("Session Roles:")
-    for role in roles:
-        print(" -> ", role)
-        
-    sys.exit(ReturnCode.SUCCESS)
+    elif "error" in result:
+        print(f"\nError: {result.get("error")}\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+
+    elif "data" in result:
+        data = result["data"]
+        roles = data["roles"]
+        session_file_content["roles"] = roles
+        saveContext(session_file, session_file_content)
+
+        if roles:
+            print("Session Roles:")
+            for role in roles:
+                print(" -> ", role)
+        else:
+            print("No roles assumed yet")
+
+
+        sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
 
@@ -581,13 +606,16 @@ def rep_list_subjects(session_file, username=None):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
 
-    if result is None or result.get("error") is not None:
-        print("Error: " + result["error"])
+    if result is None:
+        logger.error("Error listing subjects")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("error") is not None:
+        print("\nError: " + result["error"] + "\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("data") is not None:
+        print(f"\n{result['data']}\n")
 
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
         
 # -------------------------------
@@ -880,13 +908,16 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
 
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data, sessionKey=session_key, sessionId=session_id)
     
-    if result is None or result.get("error") is not None:
+    if result is None:
         logger.error("Error adding subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("error") is not None:
+        print("\nError: " + result["error"] + "\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("data") is not None:
+        print(f"\n{result['data']}\n")
     
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -918,13 +949,16 @@ def rep_suspend_subject(session_file, username):
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
     
-    if result is None or result.get("error") is not None:
+    if result is None:
         logger.error("Error suspending subject")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("error") is not None:
+        print("\nError: " + result["error"] + "\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif result.get("data") is not None:
+        print(f"\n{result['data']}\n")
     
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------

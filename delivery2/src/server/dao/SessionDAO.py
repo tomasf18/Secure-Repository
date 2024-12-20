@@ -189,8 +189,18 @@ class SessionDAO(BaseDAO):
             self.session.refresh(session)
             
             return role_object
+        
         except IntegrityError:
             self.session.rollback()
+            raise ValueError(
+                ""
+            )
+        
+        except ValueError as e:
+            message = e.args[0]
+            raise ValueError(
+                message
+            )
 
 # -------------------------------
  

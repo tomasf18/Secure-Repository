@@ -21,22 +21,27 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     
     if not data:
         data = {}
-        
+    
     data = encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
     
-    print("\nENCRYPTED_DATA: ", data, "\n\n\n")
-    print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+    logging.info("\nENCRYPTED_DATA: ", data, "\n\n\n")
+    logging.info(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
     
     response = requests.request(method, rep_address + endpoint, json=data)
+    logging.info(f"response= {response}")
     response_json = response.json()
-    encrypted_data = convert_str_to_bytes(response_json["data"])
+
+    if "error" in response_json:
+        return response, response_json
+
+    encrypted_data = convert_str_to_bytes(response_json.get("data"))
+    iv = convert_str_to_bytes(response_json.get("iv"))
     
-    iv = convert_str_to_bytes(response_json["iv"])
-    
-    print("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
-    print("\nENCRYPTION_KEY: ", encryption_key)
-    print("\nIV:\n", iv, "\n\n\n")
-    
+    logging.info("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
+    logging.info("\nENCRYPTION_KEY: ", encryption_key)
+    logging.info("\nIV:\n", iv, "\n\n\n")
+
+
     return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())
 
 # -------------------------------
@@ -159,10 +164,12 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     
     if response.status_code not in [201]:
         logging.error(f"Error: Invalid repository response: {response}")
+        print("Error: ", received_message.get("error"))
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # Verify if signature is valid from repository
     if (not verify_signature(received_message, rep_pub_key)):
+        print("Error: Error verifying server authenticity")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # If it is valid, finish calculations
