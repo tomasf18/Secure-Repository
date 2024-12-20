@@ -181,14 +181,17 @@ class SessionDAO(BaseDAO):
             
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
             
-            session.session_roles.remove(role_object)
+            try:
+                session.session_roles.remove(role_object)
+                self.session.commit()
+                
+                self.session.refresh(role_object)
+                self.session.refresh(session)
+                
+                return role_object
+            except ValueError:
+                raise ValueError(f"Role '{role}' is not associated with session '{session_id}'.")
             
-            self.session.commit()
-            
-            self.session.refresh(role_object)
-            self.session.refresh(session)
-            
-            return role_object
         except IntegrityError:
             self.session.rollback()
 
@@ -278,4 +281,16 @@ class SessionDAO(BaseDAO):
             missing_permissions.append(permission_object)
         
         return missing_permissions
-                    
+
+# -------------------------------
+
+    def drop_subject_sessions_role(self, subject_username: str, role_name: str) -> Role:
+        """
+        Drop a role from all sessions associated with a subject.
+        """
+        subject_sessions = self.get_by_subject(subject_username)
+        for session in subject_sessions:
+            try:
+                self.drop_session_role(session.id, role_name)
+            except ValueError:
+                pass # If the role is not associated with the session, continue

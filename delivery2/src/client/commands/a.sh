@@ -21,7 +21,6 @@
 
 # Add roles and permissions
 ./rep_add_role user1_org1_session_file ROLE_1
-./rep_add_permission u1_session_file ROLE_1 SOME_PERMISSION
 ./rep_add_role user1_org1_session_file ROLE_2
 ./rep_add_permission user1_org1_session_file ROLE_2 DOC_NEW
 
@@ -100,34 +99,24 @@
 ./rep_delete_doc user1_org1_session_file doc1 
 ./rep_get_doc_metadata user2_org1_session_file doc1 
 
-
+#---
 # # Suspend and reactivate roles
 ./rep_suspend_role user1_org1_session_file ROLE_2
+./rep_add_doc user2_org1_session_file doc2 file2.txt    # Should fail
+./rep_reactivate_role user1_org1_session_file ROLE_2
+./rep_add_doc user2_org1_session_file doc2 file2.txt 
+./rep_remove_permission user1_org1_session_file ROLE_2 user2
+./rep_add_doc user2_org1_session_file doc3 file3.txt  # Should fail
 
-# ./rep_create_session u2
-# ./rep_reactivate_role u1_session_file ROLE_2
-# ./rep_create_session u2
 
 # # Drop and assume roles
-# ./rep_drop_role u1_session_file Manager
-# ./rep_assume_role u1_session_file ROLE_1
-# ./rep_suspend_subject u1_session_file u2
-# ./rep_activate_subject u1_session_file u2
+./rep_add_permission user1_org1_session_file ROLE_1 SUBJECT_DOWN
 
-# # Manage permissions
-# ./rep_add_permission u1_session_file ROLE_1 SUBJDOWN
-# ./rep_add_permission u1_session_file ROLE_1 SUBJUP
-# ./rep_remove_permission u1_session_file ROLE_1 SUBJDOWN
+./rep_drop_role user1_org1_session_file Manager
+./rep_assume_role user1_org1_session_file ROLE_1
+./rep_suspend_subject user1_org1_session_file user1 # Should fail because can't suspend a manager
 
-# # Suspend subject without permission
-# ./rep_suspend_subject u1_session_file u2
-
-# # Final assume role and session creation
-# ./rep_assume_role u1_session_file Manager
-# ./rep_create_session u2
-
-# # Role management and document addition
-# ./rep_assume_role u2_session_file ROLE_2
-# ./rep_add_doc u2_session_file file1.txt
-# ./rep_remove_permission u1_session_file ROLE_2 u2
-# ./rep_add_doc u2_session_file file2.txt
+# Manage permissions
+./rep_assume_role user1_org1_session_file Manager
+./rep_remove_permission user2_org1_session_file ROLE_1 user1 # Should fail because doesn't have ACL permission
+./rep_remove_permission user1_org1_session_file ROLE_1 user1

@@ -899,6 +899,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
                     ), HTTP_Code.FORBIDDEN
 
             role.subjects.remove(subject)
+            session_dao.drop_subject_sessions_role(subject.username, role.name)
             result = {
                 "data": f"Subject '{subject.username}' removed from role '{role_name}' in organization '{organization_name}' successfully."
             }
