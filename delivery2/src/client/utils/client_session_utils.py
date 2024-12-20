@@ -24,11 +24,11 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     
     data = encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
     
-    logging.info("\nENCRYPTED_DATA: ", data, "\n\n\n")
-    logging.info(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+    logging.debug("\nENCRYPTED_DATA: ", data, "\n\n\n")
+    logging.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
     
     response = requests.request(method, rep_address + endpoint, json=data)
-    logging.info(f"response= {response}")
+    logging.debug(f"response= {response}")
     response_json = response.json()
 
     if "error" in response_json:
@@ -37,9 +37,9 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     encrypted_data = convert_str_to_bytes(response_json.get("data"))
     iv = convert_str_to_bytes(response_json.get("iv"))
     
-    logging.info("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
-    logging.info("\nENCRYPTION_KEY: ", encryption_key)
-    logging.info("\nIV:\n", iv, "\n\n\n") # TODO change to debug
+    logging.debug("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
+    logging.debug("\nENCRYPTION_KEY: ", encryption_key)
+    logging.debug("\nIV:\n", iv, "\n\n\n")
 
 
     return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())

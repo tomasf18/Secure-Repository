@@ -480,7 +480,7 @@ def suspend_role(organization_name, role_name, data, db_session: Session):
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
-    # TODO: check
+
     role = role_dao.update_role_status(role_name, acl_id, Status.SUSPENDED.value)
     
     # From all sessions where this role is being used, remove it
@@ -806,15 +806,17 @@ def remove_role_permission_from_document(organization_name, document_name, data,
         return return_data("error", f"Permission '{permission_name}' is not a valid document permission.", HTTP_Code.BAD_REQUEST, session_key)
     
     permission = permission_dao.get_by_name(permission_name)
-    # TODO change to return_data
+
     if permission.name == "DOC_ACL":
         roles_with_doc_acl = document_role_permission_dao.get_roles_by_document_acl_id_and_permission_name(document.acl.id, permission.name)
         if len(roles_with_doc_acl) == 1:
-            return encrypt_payload({
-                    "error": f"Role '{role.name}' is the only role with permission '{permission.name}' in document '{document.name}' in organization '{document.org_name}'."
-                }, session_key[:32], session_key[32:]
-            ), HTTP_Code.BAD_REQUEST
-    
+            return return_data(
+                key="error",
+                data=f"Role '{role.name}' is the only role with permission '{permission.name}' in document '{document.name}' in organization '{document.org_name}'.",
+                code=HTTP_Code.BAD_REQUEST,
+                session_key=session_key
+            )
+
     # Remove role permission from document
     document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
     if not document_role_permission:
