@@ -211,9 +211,9 @@ def rep_subject_credentials(password, credentials_file):
 
 # -------------------------------
 
-def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
+def rep_decrypt_file(encrypted_file, encryption_metadata_path, get_doc_file=False):
     """
-    rep_decrypt_file <encrypted_file> <encryption_metadata>
+    rep_decrypt_file <encrypted_file> <encryption_metadata_path>
     
     - This command sends to the stdout the contents of an 
     encrypted file upon decryption (and integrity control) 
@@ -221,8 +221,8 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
     used to encrypt its contents and the encryption key.
     """
 
-    encrypted_file = get_encrypted_file_path(encrypted_file)
-    encryption_metadata = get_metadata_path(encryption_metadata)
+    # encrypted_file == <username>_<org_name>/<doc_name>.enc
+    encrypted_file = os.path.join(os.getenv("CLIENT_ENCRYPTED_FILES_PATH"), encrypted_file)
     
     with open(encrypted_file, "rb") as file:
         encrypted_file_content = file.read()
@@ -230,10 +230,13 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
     if encrypted_file_content is None:
         logger.error(f"Error reading encrypted file: {encrypted_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
-    
-    metadata = read_file(encryption_metadata)
+        
+    # encryption_metadata_path == <username>_<org_name>/<doc_name>_metadata.json
+    encryption_metadata_full_path = os.path.join(os.getenv("CLIENT_METADATAS_PATH"), encryption_metadata_path)
+    print(f"\n\n\nDecrypting file {encrypted_file} with metadata {encryption_metadata_path}\n\n\n")
+    metadata = read_file(encryption_metadata_full_path) 
     if metadata is None:
-        logger.error(f"Error reading metadata file: {encryption_metadata}")
+        logger.error(f"Error reading metadata file: {encryption_metadata_full_path}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     doc_name = metadata['document_name']
@@ -252,9 +255,6 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
     decrypted_file_contents_str = decrypted_file_contents.decode()
     
     if not get_doc_file:
-        decrypted_files_path = get_decrypted_file_path(doc_name)
-        with open(decrypted_files_path, "w") as file:
-            file.write(decrypted_file_contents_str)
         print(decrypted_file_contents_str)
         sys.exit(ReturnCode.SUCCESS)
     else:
@@ -385,7 +385,10 @@ def rep_get_file(file_handle, output_file=None, get_doc_file=False):
     file_contents = convert_str_to_bytes(result["data"])
 
     if output_file is not None:
-        encrypted_file_path = get_encrypted_file_path(output_file)
+        # output_file == <username>_<org_name>/<doc_name>.enc
+        encrypted_file_path = os.path.join(os.getenv("CLIENT_ENCRYPTED_FILES_PATH"), output_file)
+        # Make sure the directory exists
+        os.makedirs(os.path.dirname(encrypted_file_path), exist_ok=True)
         with open(encrypted_file_path, "wb") as file:
             file.write(file_contents)
     else:
@@ -972,12 +975,7 @@ def rep_suspend_role(session_file, role):
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
     saveContext(session_file, session_file_content)
     
-    show_result(result, "Error suspending role", print_data=False)
-
-    suspended_subjects = result["data"]
-    print("Suspended Subjects:")
-    for subject in suspended_subjects:
-        print(" -> ", subject)
+    show_result(result, "Error suspending role")
         
     sys.exit(ReturnCode.SUCCESS)
 
@@ -1012,13 +1010,7 @@ def rep_reactivate_role(session_file, role):
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
     saveContext(session_file, session_file_content)
     
-    
-    show_result(result, "Error reactivating role", print_data=False)
-    suspended_subjects = result["data"]
-    print("Reactivated Subjects:")
-    for subject in suspended_subjects:
-        print(" -> ", subject)
-        
+    show_result(result, "Error suspending role")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1181,13 +1173,17 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
 
     data = result["data"]
     document_name = data["document_name"]
-    metadata_path = get_metadata_path(document_name)
+    metadata_path = get_metadata_path(document_name, session_file_content["username"], session_file_content["organization"])
+    print(f"\n\nMetadata path: {metadata_path}\n\n")
+    
+    # Make sure the metadata directory exists
+    os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
     
     with open(metadata_path, "w") as file:
         file.write(json.dumps(data))
     
     if doc_get_file:
-        return data
+        return data, metadata_path, session_file_content
     
     sys.exit(ReturnCode.SUCCESS)
 
@@ -1201,17 +1197,22 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - This commands requires a DOC_READ permission
     - Calls GET /organizations/{organization_name}/documents/{document_name}/file endpoint
     """
-
-    output_encrypted_file = document_name
     
-    document_metadata = rep_get_doc_metadata(session_file, document_name, doc_get_file=True)
+    document_metadata, metadata_path, session_file_content = rep_get_doc_metadata(session_file, document_name, doc_get_file=True)
+ 
+    output_encrypted_file = os.path.join(session_file_content["username"] + "_" + session_file_content["organization"], document_name + ".enc")
     rep_get_file(document_metadata["file_handle"], output_encrypted_file, get_doc_file=True)
-    decrypted_file_content = rep_decrypt_file(document_name, document_name, get_doc_file=True)
+    
+    # metadata_path ==  os.path.join(os.getenv("CLIENT_METADATAS_PATH"), username + "_" + organization, metadata_file_name + "_metadata.json")
+    metadata_path = os.path.join(metadata_path.split("/")[-2], metadata_path.split("/")[-1])
+    decrypted_file_content = rep_decrypt_file(output_encrypted_file, metadata_path, get_doc_file=True)
     
     if output_file is None:
         output_file = document_name
     
-    output_decrypted_file = get_decrypted_file_path(output_file)
+    output_decrypted_file = get_decrypted_file_path(output_file, session_file_content["username"], session_file_content["organization"])
+    # Make sure directory exists
+    os.makedirs(os.path.dirname(output_decrypted_file), exist_ok=True)
     with open(output_decrypted_file, "w") as file:
         file.write(decrypted_file_content)
 

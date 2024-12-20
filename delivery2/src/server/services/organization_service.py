@@ -72,7 +72,7 @@ def list_organization_subjects(organization_name, role, data, db_session: Sessio
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -112,7 +112,7 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -145,7 +145,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
     
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -181,7 +181,7 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     session_dao = SessionDAO(db_session)
     
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -211,7 +211,7 @@ def activate_organization_subject(organization_name, username, data, db_session:
     session_dao = SessionDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -245,7 +245,7 @@ def create_organization_document(organization_name, data, db_session: Session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -264,10 +264,10 @@ def create_organization_document(organization_name, data, db_session: Session):
     
     # Get Manager role
     organization = organization_dao.get_by_name(organization_name)
-    manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
+    role_to_add_doc_permissions = session.session_roles[0]
 
     # Give all the document permissions to the Manager role
-    document_role_permission_dao.add_all_doc_permissions_to_role(new_document.acl.id, manager_role.id)
+    document_role_permission_dao.add_all_doc_permissions_to_role(new_document.acl.id, role_to_add_doc_permissions.id)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
@@ -282,7 +282,7 @@ def list_organization_documents(organization_name, data, username, date_filter, 
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -337,7 +337,7 @@ def get_organization_document_metadata(organization_name, document_name, data, d
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -367,7 +367,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -397,7 +397,7 @@ def create_organization_role(organization_name, data, db_session: Session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -432,7 +432,7 @@ def list_subject_roles(organization_name, username, data, db_session: Session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -456,9 +456,8 @@ def list_subject_roles(organization_name, username, data, db_session: Session):
 
 # -------------------------------
 
-def suspend_role_subjects(organization_name, role_name, data, db_session: Session):
+def suspend_role(organization_name, role_name, data, db_session: Session):
     '''Handles DELETE requests to /organizations/<organization_name>/roles/<role>'''
-    
     
     role_dao = RoleDAO(db_session)
     session_dao = SessionDAO(db_session)
@@ -466,7 +465,7 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -481,34 +480,19 @@ def suspend_role_subjects(organization_name, role_name, data, db_session: Sessio
     # Get organization
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
-
-    try:
-        # Suspend role subjects
-        subjects_to_be_suspended = role_dao.get_role_subjects(role_name, acl_id)
-    except Exception as e:
-        return return_data("error", f"Role '{role_name}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
+    # TODO: check
+    role = role_dao.update_role_status(role_name, acl_id, Status.SUSPENDED.value)
     
-    # Suspend all but the Managers
-    for subject in subjects_to_be_suspended:
-        if not organization_dao.subject_has_role(organization_name, subject.username, "Manager"):
-            organization_dao.update_org_subj_association_status(organization_name, subject.username, Status.SUSPENDED.value)
+    # From all sessions where this role is being used, remove it
+    session_dao.remove_role_from_all_sessions(role)
 
-    serializable_suspended_subjects = []
-    for subject in subjects_to_be_suspended:
-        if not organization_dao.subject_has_role(organization_name, subject.username, "Manager"):
-            status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
-            serializable_suspended_subjects.append({
-                "username": subject.username,
-                "status": status
-            })
-    
-    # Update session
+    # Update session TODO check pls
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    return return_data("data", serializable_suspended_subjects, HTTP_Code.OK, session_key)
+    return return_data("data", f"Role '{role.name}' in the organization '{organization_name}' has been suspended.", HTTP_Code.OK, session_key)
 
 # -------------------------------
 
-def reactivate_role_subjects(organization_name, role_name, data, db_session: Session):
+def reactivate_role(organization_name, role_name, data, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/roles/<role>'''
     
     role_dao = RoleDAO(db_session)
@@ -517,7 +501,7 @@ def reactivate_role_subjects(organization_name, role_name, data, db_session: Ses
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -533,26 +517,11 @@ def reactivate_role_subjects(organization_name, role_name, data, db_session: Ses
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
 
-    try:
-        # Reactivate role subjects
-        subjects_to_be_reactivated = role_dao.get_role_subjects(role_name, acl_id)
-    except Exception as e:
-        return return_data("error", f"Role '{role_name}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
-    
-    for subject in subjects_to_be_reactivated:
-        organization_dao.update_org_subj_association_status(organization_name, subject.username, Status.ACTIVE.value)
-
-    serializable_reactivated_subjects = []
-    for subject in subjects_to_be_reactivated:
-        status = organization_dao.get_org_subj_association(org_name=organization_name, username=subject.username).status
-        serializable_reactivated_subjects.append({
-            "username": subject.username,
-            "status": status
-        })
+    role = role_dao.update_role_status(role_name, acl_id, Status.ACTIVE.value)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    return return_data("data", serializable_reactivated_subjects, HTTP_Code.OK, session_key)
+    return return_data("data", f"Role '{role.name}' in the organization '{organization_name}' has been reactivated.", HTTP_Code.OK, session_key)
 
 # -------------------------------
 
@@ -565,7 +534,7 @@ def get_role_permissions(organization_name, role_name, data, db_session: Session
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -597,7 +566,7 @@ def add_subject_or_permission_to_role(organization_name, role_name, data, db_ses
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -664,7 +633,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -707,6 +676,7 @@ def remove_subject_or_permission_from_role(organization_name, role_name, data, d
                     return return_data("error", f"Role '{role_name}' must have at least one active subject.", HTTP_Code.FORBIDDEN, session_key)
 
             role.subjects.remove(subject)
+            session_dao.drop_subject_sessions_role(subject.username, role.name)
             result = f"Subject '{subject.username}' removed from role '{role_name}' in organization '{organization_name}' successfully."
         except ValueError:
             return return_data("error", f"Subject '{subject.username}' is not associated with role '{role_name}' in organization '{organization_name}'.", HTTP_Code.BAD_REQUEST, session_key)
@@ -739,7 +709,7 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -765,8 +735,7 @@ def add_role_permission_to_document(organization_name, document_name, data, db_s
     except Exception as e:
         return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     
-    if role.name == "Manager":
-        return return_data("error", f"Role '{role_name}' cannot have its permissions modified.", HTTP_Code.FORBIDDEN, session_key)
+
 
     # Get permission
     permission_name = decrypted_data.get('permission')
@@ -799,10 +768,11 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     document_role_permission_dao = DocumentRolePermissionDAO(db_session)
     session_dao = SessionDAO(db_session)
     organization_dao = OrganizationDAO(db_session)
+    
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -828,24 +798,25 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     except Exception as e:
         return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
     
-    if role.name == "Manager":
-        return return_data("error", f"Role '{role_name}' cannot have its permissions modified.", HTTP_Code.FORBIDDEN, session_key)
+
 
     # Get permission
     permission_name = decrypted_data.get('permission')
     if permission_name not in ["DOC_ACL", "DOC_READ", "DOC_DELETE"]:
         return return_data("error", f"Permission '{permission_name}' is not a valid document permission.", HTTP_Code.BAD_REQUEST, session_key)
     
-    try:
-        permission = permission_dao.get_by_name(permission_name)
-    except Exception as e:
-        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
-
-    try:
-        # Remove role permission from document
-        document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
-    except Exception as e:
-        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
+    permission = permission_dao.get_by_name(permission_name)
+    # TODO change to return_data
+    if permission.name == "DOC_ACL":
+        roles_with_doc_acl = document_role_permission_dao.get_roles_by_document_acl_id_and_permission_name(document.acl.id, permission.name)
+        if len(roles_with_doc_acl) == 1:
+            return encrypt_payload({
+                    "error": f"Role '{role.name}' is the only role with permission '{permission.name}' in document '{document.name}' in organization '{document.org_name}'."
+                }, session_key[:32], session_key[32:]
+            ), HTTP_Code.BAD_REQUEST
+    
+    # Remove role permission from document
+    document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
     if not document_role_permission:
         return return_data("error", f"Permission '{permission.name}' is not associated with role '{role.name}' in document '{document.name}' in organization '{document.org_name}'.", HTTP_Code.BAD_REQUEST, session_key)
     
@@ -868,7 +839,7 @@ def list_roles_per_permission(organization_name, permission, data, db_session):
 
     # Get session
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)

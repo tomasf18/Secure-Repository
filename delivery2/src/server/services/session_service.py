@@ -18,12 +18,12 @@ from utils.cryptography.auth import sign, verify_signature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from utils.server_session_utils import load_session
+from utils.server_session_utils import load_session, encrypt_payload, session_expired
 
 from utils.constants.http_code import HTTP_Code
 from utils.utils import return_data
 
-from utils.constants.http_code import HTTP_Code
+from models.status import Status
 
 # -------------------------------
 
@@ -57,11 +57,19 @@ def create_session(data, db_session: SQLAlchemySession):
     org_name = msg_data.get('organization')
     username = msg_data.get('username')
 
+    # Verify if there is no active session for the user in the organization
+    last_session_user_org = session_dao.get_last_session_of_user_in_org(username, org_name)
+    if last_session_user_org is not None:
+        if not session_expired(last_session_user_org):
+            return json.dumps({"error": f"Session for user '{username}' in organization '{org_name}' already exists."}), HTTP_Code.BAD_REQUEST
+
     try:
         client = organization_dao.get_org_subj_association(
             org_name=org_name,
             username=username
         )
+        if client.status == Status.SUSPENDED.value:
+            return json.dumps({"error": f"User '{username}' is suspended."}), HTTP_Code.FORBIDDEN
     except ValueError as e:
         message = e.args[0]
         return return_data("error", message, HTTP_Code.NOT_FOUND) 
@@ -96,7 +104,6 @@ def create_session(data, db_session: SQLAlchemySession):
     except IntegrityError:
         return return_data("error", f"Session for user '{username}' already exists.", HTTP_Code.BAD_REQUEST)
 
-    # TODO: Encrypt
     # Create response
     result = {
         "session_id": session.id,
@@ -141,7 +148,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     role_dao = RoleDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key)
@@ -163,8 +170,17 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
             code=HTTP_Code.FORBIDDEN,
             session_key=session_key
         )
+        
+    role = role_dao.get_by_name_and_acl_id(role, organization.acl.id)
+    
+    if role.status == Status.SUSPENDED.value:
+        return encrypt_payload({
+                "error": f"Role '{role.name}' is suspended, therefore can not be assumed."
+            }, session_key[:32], session_key[32:]
+        ), HTTP_Code.FORBIDDEN
+    
     try:
-        role_added = session_dao.add_session_role(session.id, role)
+        role_added = session_dao.add_session_role(session.id, role.name)
     except Exception as e:
         return return_data(
             key="error",
@@ -207,7 +223,7 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
     session_dao = SessionDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data("error", message, code, session_key=session_key)
@@ -257,7 +273,7 @@ def list_session_roles(organization_name, session_id, data, db_session):
     session_dao = SessionDAO(db_session)
 
     try:
-        decrypted_data, session, session_key = load_session(data, session_dao, organization_name)
+        decrypted_data, session, session_key = load_session(data, db_session, organization_name)
     except ValueError as e:
         message, code, session_key = e.args
         return return_data(

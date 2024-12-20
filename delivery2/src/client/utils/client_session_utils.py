@@ -39,7 +39,7 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     
     logging.info("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
     logging.info("\nENCRYPTION_KEY: ", encryption_key)
-    logging.info("\nIV:\n", iv, "\n\n\n")
+    logging.info("\nIV:\n", iv, "\n\n\n") # TODO change to debug
 
 
     return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())
@@ -163,7 +163,7 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     response, received_message = anonymous_request(rep_pub_key, "post", rep_address, endpoint, body)
     
     if response.status_code not in [201]:
-        logging.error(f"Error: Invalid repository response: {response}")
+        logging.debug(f"Error: Invalid repository response: {response}")
         print("Error: ", received_message.get("error"))
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 

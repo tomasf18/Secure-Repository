@@ -82,6 +82,7 @@ class ApiConsumer:
                     logging.debug(f"Error decrypting server response: {e}")
 
             else:
+                                
                 response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
 
             logging.debug("Response.json was: " , response.json())
