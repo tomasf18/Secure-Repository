@@ -1,9 +1,11 @@
 import logging
+import sys
 import requests
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from utils.constants.return_code import ReturnCode
 from utils.client_session_utils import exchange_keys as exchange_keys_utils
 from utils.client_session_utils import encrypt_payload as encrypt_payload_utils
 from utils.client_session_utils import decrypt_payload as decrypt_payload_utils
@@ -91,7 +93,8 @@ class ApiConsumer:
             return received_message
 
         except requests.RequestException as e:
-            print(f'\nError: {e}\n')
+            logging.error(f'Failed to connect to the server!')
+            sys.exit(ReturnCode.INPUT_ERROR)
 
 # -------------------------------
 
