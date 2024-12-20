@@ -341,3 +341,16 @@ class SessionDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise
+    
+# -------------------------------
+
+    def get_last_session_of_user_in_org(self, subject_username: str, organization_name: str) -> Session:
+        """
+        Retrieve the last session of a subject in an organization.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject),
+            joinedload(Session.organization)
+        ).filter_by(subject_username=subject_username, organization_name=organization_name).order_by(Session.id.desc()).first()
+        
+# -------------------------------

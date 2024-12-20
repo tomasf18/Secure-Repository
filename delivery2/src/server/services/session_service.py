@@ -18,8 +18,7 @@ from utils.cryptography.auth import sign, verify_signature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from utils.server_session_utils import load_session
-from utils.server_session_utils import encrypt_payload
+from utils.server_session_utils import load_session, encrypt_payload, session_expired
 
 from utils.constants.http_code import HTTP_Code
 
@@ -56,6 +55,12 @@ def create_session(data, db_session: SQLAlchemySession):
     client_session_pub_key = msg_data.get("public_key")
     org_name = msg_data.get('organization')
     username = msg_data.get('username')
+
+    # Verify if there is no active session for the user in the organization
+    last_session_user_org = session_dao.get_last_session_of_user_in_org(username, org_name)
+    if last_session_user_org is not None:
+        if not session_expired(last_session_user_org):
+            return json.dumps({"error": f"Session for user '{username}' in organization '{org_name}' already exists."}), HTTP_Code.BAD_REQUEST
 
     try:
         client = organization_dao.get_org_subj_association(

@@ -159,13 +159,17 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     # Send to the server 
     response, received_message = anonymous_request(rep_pub_key, "post", rep_address, endpoint, body)
     
-    if response.status_code not in [201, 403]:
+    if response.status_code not in [201, 400, 403]:
         logging.error(f"Error: Invalid repository response: {response}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     if response.status_code == 403:
         print(f"Error: {received_message["error"]}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
+        
+    if response.status_code == 400:
+        print(f"Error: {received_message["error"]}")
+        sys.exit(ReturnCode.INPUT_ERROR)
 
     # Verify if signature is valid from repository
     if (not verify_signature(received_message, rep_pub_key)):
