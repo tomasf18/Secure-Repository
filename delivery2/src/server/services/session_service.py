@@ -18,7 +18,7 @@ from utils.cryptography.auth import sign, verify_signature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from utils.server_session_utils import load_session, encrypt_payload, session_expired
+from utils.server_session_utils import load_session, session_expired
 
 from utils.constants.http_code import HTTP_Code
 from utils.utils import return_data
@@ -174,10 +174,12 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     role = role_dao.get_by_name_and_acl_id(role, organization.acl.id)
     
     if role.status == Status.SUSPENDED.value:
-        return encrypt_payload({
-                "error": f"Role '{role.name}' is suspended, therefore can not be assumed."
-            }, session_key[:32], session_key[32:]
-        ), HTTP_Code.FORBIDDEN
+        return return_data(
+            key="error",
+            data=f"Role '{role.name}' is suspended, therefore can not be assumed.",
+            code=HTTP_Code.FORBIDDEN,
+            session_key=session_key
+        )
     
     try:
         role_added = session_dao.add_session_role(session.id, role.name)

@@ -14,7 +14,6 @@ from models.status import Status
 from models.database_orm import Organization, Subject, Document, Permission, DocumentRolePermission
 
 from utils.server_session_utils import load_session
-from utils.server_session_utils import encrypt_payload
 
 from utils.constants.http_code import HTTP_Code
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes, return_data
