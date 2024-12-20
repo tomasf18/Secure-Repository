@@ -77,6 +77,7 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     try:
         response = requests.request(method, rep_address + endpoint, json=data)
     except requests.RequestException  as e:
+        print(e)
         print(f"Error: Failed to connect to the server at {rep_address}")
         sys.exit(ReturnCode.INPUT_ERROR)
     

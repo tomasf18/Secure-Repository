@@ -1,3 +1,4 @@
+import hashlib
 import json
 import base64
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from models.status import Status
 from models.database_orm import Organization, Subject, Document, Permission, DocumentRolePermission
 
 from utils.server_session_utils import load_session
+from utils.cryptography.AES import AES, AESModes
 
 from utils.constants.http_code import HTTP_Code
 from utils.utils import convert_bytes_to_str, convert_str_to_bytes, return_data
@@ -254,12 +256,31 @@ def create_organization_document(organization_name, data, db_session: Session):
         return return_data("error", f"Access denied. Missing permissions: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
     
     document_name = decrypted_data.get('document_name')
+    file_handle = decrypted_data.get('file_handle')
+
     encrypted_file_content = convert_str_to_bytes(decrypted_data.get('file'))
-    alg = decrypted_data.get('alg')
+    alg, mode = decrypted_data.get('alg').split("-")
     key = convert_str_to_bytes(decrypted_data.get('key'))
     iv = convert_str_to_bytes(decrypted_data.get('iv'))
+
+    # Decrypt file
+    if alg == "AES256":
+        if mode == "CBC":
+            decryptor = AES(AESModes.CBC)
     
-    new_document = document_dao.create_document(document_name, session.id, encrypted_file_content, alg, key, iv)
+    decrypted_file = decryptor.decrypt_data(encrypted_data=encrypted_file_content, key=key, iv=iv)
+    
+    # Verify if file_handle == digest(decrypted_file)
+    digest = hashlib.sha256(decrypted_file).hexdigest()
+    if file_handle != digest:
+        return return_data(
+            key="error",
+            data=f"Received file does not match sent file!",
+            code=HTTP_Code.BAD_REQUEST,
+            session_key=session_key    
+        )
+
+    new_document = document_dao.create_document(document_name, session.id, digest, encrypted_file_content, alg, mode, key, iv)
     
     # Get Manager role
     organization = organization_dao.get_by_name(organization_name)

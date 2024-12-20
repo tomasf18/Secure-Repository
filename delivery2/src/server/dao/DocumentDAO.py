@@ -48,7 +48,7 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Document '{name}' already exists.")
         
         
-    def create_document(self, name: str, session_id: int, encrypted_data: bytes, alg: str, key: bytes, iv: bytes) -> Document:
+    def create_document(self, name: str, session_id: int, digest: str, encrypted_data: bytes, algorithm: str, mode: str, key: bytes, iv: bytes) -> Document:
         """Create a new document, its ACL, and metadata, and store the encrypted file."""
 
         try:
@@ -64,9 +64,8 @@ class DocumentDAO(BaseDAO):
             creation_date = datetime.now()
 
             # Step 3: Generate the document handle and file handle
-            data_digest = hashlib.sha256(encrypted_data).hexdigest()
             document_handle = f"{organization.name}_{name}"
-            file_handle = f"{organization.name}_{data_digest}"
+            file_handle = f"{organization.name}_{digest}"
             file_path = os.path.join("data", organization.name, file_handle) + ".enc"
 
             # Step 4: Store the data of the encrypted document file in a system file
@@ -82,8 +81,6 @@ class DocumentDAO(BaseDAO):
             self.session.add(document_acl)
 
             # Step 7: Create the RestrictedMetadata entity
-            algorithm, mode = alg.split("-")
-            
             encrypted_metadata_key, iv_encrypted_key, salt = self.key_store_dao.create(key, "symmetric")
 
             metadata = self.restricted_metadata_dao.create(
