@@ -211,9 +211,9 @@ def rep_subject_credentials(password, credentials_file):
 
 # -------------------------------
 
-def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
+def rep_decrypt_file(encrypted_file, encryption_metadata_path, get_doc_file=False):
     """
-    rep_decrypt_file <encrypted_file> <encryption_metadata>
+    rep_decrypt_file <encrypted_file> <encryption_metadata_path>
     
     - This command sends to the stdout the contents of an 
     encrypted file upon decryption (and integrity control) 
@@ -221,8 +221,8 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
     used to encrypt its contents and the encryption key.
     """
 
-    encrypted_file = get_encrypted_file_path(encrypted_file)
-    encryption_metadata = get_metadata_path(encryption_metadata)
+    # encrypted_file == <username>_<org_name>/<doc_name>.enc
+    encrypted_file = os.path.join(os.getenv("CLIENT_ENCRYPTED_FILES_PATH"), encrypted_file)
     
     with open(encrypted_file, "rb") as file:
         encrypted_file_content = file.read()
@@ -230,10 +230,13 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
     if encrypted_file_content is None:
         logger.error(f"Error reading encrypted file: {encrypted_file}")
         sys.exit(ReturnCode.INPUT_ERROR)
-    
-    metadata = read_file(encryption_metadata)
+        
+    # encryption_metadata_path == <username>_<org_name>/<doc_name>_metadata.json
+    encryption_metadata_full_path = os.path.join(os.getenv("CLIENT_METADATAS_PATH"), encryption_metadata_path)
+    print(f"\n\n\nDecrypting file {encrypted_file} with metadata {encryption_metadata_path}\n\n\n")
+    metadata = read_file(encryption_metadata_full_path) 
     if metadata is None:
-        logger.error(f"Error reading metadata file: {encryption_metadata}")
+        logger.error(f"Error reading metadata file: {encryption_metadata_full_path}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
     doc_name = metadata['document_name']
@@ -252,9 +255,6 @@ def rep_decrypt_file(encrypted_file, encryption_metadata, get_doc_file=False):
     decrypted_file_contents_str = decrypted_file_contents.decode()
     
     if not get_doc_file:
-        decrypted_files_path = get_decrypted_file_path(doc_name)
-        with open(decrypted_files_path, "w") as file:
-            file.write(decrypted_file_contents_str)
         print(decrypted_file_contents_str)
         sys.exit(ReturnCode.SUCCESS)
     else:
@@ -299,11 +299,7 @@ def rep_create_org(org, username, name, email, pub_key_file):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data)
     
-    if result is None:
-        logger.error("Error creating organization")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
-    print(result)
+    show_result(result, "Error creating organization")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -319,11 +315,7 @@ def rep_list_org():
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET)
     
-    if result is None:
-        logger.error("Error listing organizations")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-
-    print(result)
+    show_result(result, "Error listing organizations")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -388,17 +380,19 @@ def rep_get_file(file_handle, output_file=None, get_doc_file=False):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET)
     
-    if result is None:
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    show_result(result, "Error getting file", print_data=False)
         
     file_contents = convert_str_to_bytes(result["data"])
 
     if output_file is not None:
-        encrypted_file_path = get_encrypted_file_path(output_file)
+        # output_file == <username>_<org_name>/<doc_name>.enc
+        encrypted_file_path = os.path.join(os.getenv("CLIENT_ENCRYPTED_FILES_PATH"), output_file)
+        # Make sure the directory exists
+        os.makedirs(os.path.dirname(encrypted_file_path), exist_ok=True)
         with open(encrypted_file_path, "wb") as file:
             file.write(file_contents)
     else:
-        print(file_contents)
+        print(f"\n{file_contents}\n")
             
     if not get_doc_file:
         sys.exit(ReturnCode.SUCCESS)
@@ -441,18 +435,18 @@ def rep_assume_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error assuming role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
-    roles = result["roles"]
-    session_file_content["roles"] = roles
+
+    data = result.get("data", {})
+    roles = data.get("roles")
+
+    if roles is not None:
+        session_file_content["roles"] = roles
     
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
+    show_result(result, "Error assuming role")
+
     sys.exit(ReturnCode.SUCCESS)
+
 
 # -------------------------------
 
@@ -482,17 +476,17 @@ def rep_drop_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error dropping role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
-    roles = result["roles"]
-    session_file_content["roles"] = roles
+
+
+    data = result.get("data", {})
+    roles = data.get("roles")
+
+    if roles is not None:
+        session_file_content["roles"] = roles
     
     saveContext(session_file, session_file_content)
+    show_result(result, "Error assuming role")
 
-    print(result["data"])
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -523,19 +517,18 @@ def rep_list_roles(session_file):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error listing roles")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
-    roles = result["data"]
-    
     saveContext(session_file, session_file_content)
 
-    print("Session Roles:")
-    for role in roles:
-        print(" -> ", role)
-        
+    show_result(result, "Error listing roles", print_data=False)
+    data = result["data"]
+    roles = data["roles"]
+    if roles:
+        print("Session Roles:")
+        for role in roles:
+            print(" -> ", role)
+    else:
+        print("No roles assumed yet")
+
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -569,17 +562,11 @@ def rep_list_subjects(session_file, username=None):
     }
     
     logger.debug(f"NOUNCE: {session_file_content['nonce']}")
-    
-    
+        
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
-
-    if result is None or result.get("error") is not None:
-        print("Error: " + result["error"])
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error listing subjects")
     sys.exit(ReturnCode.SUCCESS)
         
 # -------------------------------
@@ -611,19 +598,14 @@ def rep_list_role_subjects(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error listing role subjects")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
     saveContext(session_file, session_file_content)
-    
+        
     subjects = result["data"]
-    
+    show_result(result, "Error listing role subjects", print_data=False)
     print("Role Subjects:")
     for subject in subjects:
         print(" -> ", subject)
-    
+        
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -655,19 +637,14 @@ def rep_list_subject_roles(session_file, username):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error listing subject roles")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
     saveContext(session_file, session_file_content)
     
+    show_result(result, "Error listing subject roles", print_data=False)
     roles = result["data"]
-    
     print("Role Subjects:")
     for role in roles:
         print(" -> ", role)
-    
+        
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -699,15 +676,11 @@ def rep_list_role_permissions(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error listing subject roles")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
     saveContext(session_file, session_file_content)
     
+        
+    show_result(result, "Error listing role permissions", print_data=False)
     permissions = result["data"]
-    
     print("Role Permissions:")
     for permission in permissions:
         print(" -> ", permission)
@@ -747,16 +720,13 @@ def rep_list_permission_roles(session_file, permission):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error listing permission roles")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-        
     saveContext(session_file, session_file_content)
     
+    result = result.get("data")    
     is_doc_perm = result.get("document_permission")
     data = result.get("data")
-    
+
+    show_result(result, "Error listing permission roles", print_data=False)
     if is_doc_perm:
         print("Roles per document that have the permission:")
         for doc_data in data:
@@ -809,13 +779,9 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     }
         
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error listing documents")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
-    print(result["data"])
+    
+    show_result(result, "Error listing documents")
     sys.exit(ReturnCode.SUCCESS)
 
 # ****************************************************
@@ -871,14 +837,9 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     }
 
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data, sessionKey=session_key, sessionId=session_id)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error adding subject")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error adding subject")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -909,14 +870,9 @@ def rep_suspend_subject(session_file, username):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error suspending subject")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error suspending subject")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -948,14 +904,9 @@ def rep_activate_subject(session_file, username):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error activating subject")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error activating subject")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -988,14 +939,9 @@ def rep_add_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error suspending subject")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error adding role")
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -1027,18 +973,9 @@ def rep_suspend_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error suspending role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    suspended_subjects = result["data"]
-    
-    print("Suspended Subjects:")
-    for subject in suspended_subjects:
-        print(" -> ", subject)
+    show_result(result, "Error suspending role")
         
     sys.exit(ReturnCode.SUCCESS)
 
@@ -1071,19 +1008,9 @@ def rep_reactivate_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error reactivating role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    suspended_subjects = result["data"]
-    
-    print("Reactivated Subjects:")
-    for subject in suspended_subjects:
-        print(" -> ", subject)
-        
+    show_result(result, "Error suspending role")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1119,14 +1046,9 @@ def rep_add_permission(session_file, role, object):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error adding permission or subject to role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error adding permission or subject to role")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1137,7 +1059,7 @@ def rep_remove_permission(session_file, role, object):
     - This command change the properties of a role of the organization with which I have currently a session,
     by removing a subject/permission. 
     - This commands requires a ROLE_MOD permission.
-    - Calls ... endpoint
+    - Calls DELETE /organizations/<organization_name>/roles/<role>/subject-permissions endpoint
     """
     
     session_file = get_session_file(session_file)
@@ -1160,14 +1082,9 @@ def rep_remove_permission(session_file, role, object):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error removing permission or subject from role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error removing permission or subject from role")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1217,14 +1134,9 @@ def rep_add_doc(session_file, document_name, file):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error adding document")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-
     saveContext(session_file, session_file_content)
-    
-    print(result["data"])
+
+    show_result(result, "Error adding document")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1248,7 +1160,6 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     session_key = convert_str_to_bytes(session_file_content["session_key"])
 
     endpoint = f"/organizations/{session_file_content['organization']}/documents/{document_name}"
-    
     data = {
         "session_id": session_id,
         "counter": session_file_content["counter"] + 1,
@@ -1256,23 +1167,23 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     }
 
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None:
-        logger.error("Error getting document metadata")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-
     saveContext(session_file, session_file_content)
     
+    show_result(result, "Error getting document metadata", print_data=False)
+
     data = result["data"]
-    
     document_name = data["document_name"]
-    metadata_path = get_metadata_path(document_name)
+    metadata_path = get_metadata_path(document_name, session_file_content["username"], session_file_content["organization"])
+    print(f"\n\nMetadata path: {metadata_path}\n\n")
+    
+    # Make sure the metadata directory exists
+    os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
     
     with open(metadata_path, "w") as file:
         file.write(json.dumps(data))
     
     if doc_get_file:
-        return data
+        return data, metadata_path, session_file_content
     
     sys.exit(ReturnCode.SUCCESS)
 
@@ -1286,21 +1197,26 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     - This commands requires a DOC_READ permission
     - Calls GET /organizations/{organization_name}/documents/{document_name}/file endpoint
     """
-
-    output_encrypted_file = document_name
     
-    document_metadata = rep_get_doc_metadata(session_file, document_name, doc_get_file=True)
+    document_metadata, metadata_path, session_file_content = rep_get_doc_metadata(session_file, document_name, doc_get_file=True)
+ 
+    output_encrypted_file = os.path.join(session_file_content["username"] + "_" + session_file_content["organization"], document_name + ".enc")
     rep_get_file(document_metadata["file_handle"], output_encrypted_file, get_doc_file=True)
-    decrypted_file_content = rep_decrypt_file(document_name, document_name, get_doc_file=True)
+    
+    # metadata_path ==  os.path.join(os.getenv("CLIENT_METADATAS_PATH"), username + "_" + organization, metadata_file_name + "_metadata.json")
+    metadata_path = os.path.join(metadata_path.split("/")[-2], metadata_path.split("/")[-1])
+    decrypted_file_content = rep_decrypt_file(output_encrypted_file, metadata_path, get_doc_file=True)
     
     if output_file is None:
         output_file = document_name
     
-    output_decrypted_file = get_decrypted_file_path(output_file)
+    output_decrypted_file = get_decrypted_file_path(output_file, session_file_content["username"], session_file_content["organization"])
+    # Make sure directory exists
+    os.makedirs(os.path.dirname(output_decrypted_file), exist_ok=True)
     with open(output_decrypted_file, "w") as file:
         file.write(decrypted_file_content)
-        
-    print("\n", decrypted_file_content)
+
+    print(f"\n{decrypted_file_content}\n")
 
 # -------------------------------
 
@@ -1331,13 +1247,9 @@ def rep_delete_doc(session_file, document_name):
     }
         
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
-
-    if result is None:
-        logger.error("Error deleting document")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
-    print(result["data"])
+
+    show_result(result, "Error deleting document")
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1377,16 +1289,35 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
         method = HTTPMethod.DELETE
     
     result = apiConsumer.send_request(endpoint=endpoint, method=method, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    if result is None or result.get("error") is not None:
-        logger.error("Error adding permission or subject to role")
-        sys.exit(ReturnCode.REPOSITORY_ERROR)
-    
     saveContext(session_file, session_file_content)
     
-    print(result["data"])
+    show_result(result, "Error adding permission or subject to role")
     sys.exit(ReturnCode.SUCCESS)
+    
+    
+# ****************************************************
+# Auxiliar Functions in Client
+#
+# This section contains auxiliar functions used in
+# the client commands.
+#
+# ****************************************************
 
+def show_result(result: dict, error_message: str, print_data: bool = True):
+    """
+    Shows the result of an API call.
+    
+    :param result: The result of the API call.
+    :param error_message: The message to show in case of error.
+    """
+    if not result:
+        logger.error(error_message)
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif "error" in result:
+        print("\nError: " + result["error"] + "\n")
+        sys.exit(ReturnCode.REPOSITORY_ERROR)
+    elif "data" in result and print_data:
+        print(f"\n{result['data']}\n")
 
 # ****************************************************
 # Arguments Validation and Command Execution

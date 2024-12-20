@@ -1,9 +1,11 @@
 import logging
+import sys
 import requests
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from utils.constants.return_code import ReturnCode
 from utils.client_session_utils import exchange_keys as exchange_keys_utils
 from utils.client_session_utils import encrypt_payload as encrypt_payload_utils
 from utils.client_session_utils import decrypt_payload as decrypt_payload_utils
@@ -54,7 +56,7 @@ class ApiConsumer:
             if sessionKey:
                 encryption_key, integrity_key = sessionKey[:32], sessionKey[32:]
 
-                print(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
+                logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
 
                 # Create and encrypt Payload
                 body = self.encrypt_payload(
@@ -64,11 +66,11 @@ class ApiConsumer:
                 )
                 body["session_id"] = sessionId
 
-                print(f"Encrypted payload = {body}")
+                logging.debug(f"Encrypted payload = {body}")
                 
                 # Send Encrypted Payload
                 response = requests.request(method, self.rep_address + endpoint, json=body)
-                print(f"Server Response = {response.json()}")
+                logging.debug(f"Server Response = {response.json()}")
 
                 try:
                     received_message = self.decrypt_payload(
@@ -76,21 +78,23 @@ class ApiConsumer:
                         encryption_key=encryption_key,
                         integrity_key=integrity_key
                     )
-                    print(f"Decrypted Server Response = {received_message}")
+                    logging.debug(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
-                    print(f"Error decrypting server response: {e}")
+                    received_message = response.json()
+                    logging.debug(f"Error decrypting server response: {e}")
 
             else:
                                 
                 response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
-                
-            if response.status_code in [200, 201, 403, 404]:
-                return received_message if received_message else response.json()
-            else:
-                print(f'\nError: {response.status_code} - {response.json()}\n')
+
+            logging.debug("Response.json was: " , response.json())
+            logging.debug("Received message was: ", received_message)
+            
+            return received_message
 
         except requests.RequestException as e:
-            print(f'\nError: {e}\n')
+            logging.error(f'Failed to connect to the server!')
+            sys.exit(ReturnCode.INPUT_ERROR)
 
 # -------------------------------
 

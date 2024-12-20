@@ -65,7 +65,7 @@ class DocumentDAO(BaseDAO):
 
             # Step 3: Generate the document handle and file handle
             data_digest = hashlib.sha256(encrypted_data).hexdigest()
-            document_handle = data_digest
+            document_handle = f"{organization.name}_{name}"
             file_handle = f"{organization.name}_{data_digest}"
             file_path = os.path.join("data", organization.name, file_handle) + ".enc"
 
@@ -75,16 +75,7 @@ class DocumentDAO(BaseDAO):
             # Step 5: Create the Document entity
             document = self.create(document_handle, name, creation_date, file_handle, creator.username, organization.name)
 
-            # Step 6: Create the DocumentACL '''and link it to the Manager''' 
-            ''' 
-            DO NOT LINK! THE MANAGER ROLE IS AT ORGANIZATION LEVEL, AND HAS THE FULL SET OF POSSIBLE PERMISSIONS 
-            THERE'S ONLY ONE MANAGER ROLE PER ORGANIZATION, AND IT'S CREATED WHEN THE ORGANIZATION IS CREATED
-            '''
-            
-            # self.role_dao = RoleDAO(self.session)
-            # manager_role = self.role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
-            # if not manager_role:
-            #     raise ValueError("Manager role not found for the organization.")
+            # Step 6: Create the DocumentACL
 
             document_acl = self.document_acl_dao.create(document.id)
             # document_acl.roles.append(manager_role)

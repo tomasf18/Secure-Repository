@@ -226,11 +226,17 @@ class Role(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(nullable=False)
     acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
+    status: Mapped[str] = mapped_column(nullable=False, default=Status.ACTIVE.value)
     
     # Relationships
     acl: Mapped["OrganizationACL"] = relationship(back_populates="roles")
     permissions: Mapped[list["Permission"]] = relationship(secondary=RolePermissions)
     subjects: Mapped[list["Subject"]] = relationship(secondary=RoleSubjects)
+    
+    # One role must have a unique name within an ACL
+    __table_args__ = (
+        UniqueConstraint("name", "acl_id", name="uq_role_name_acl_id"),
+    )
     
     def __repr__(self):
         return f"<Role(name={self.name}, acl_id={self.acl_id})>"
@@ -271,6 +277,8 @@ class Session(Base):
 
     nonce: Mapped[str] = mapped_column(nullable=True)
     counter: Mapped[int] = mapped_column(nullable=True)
+    
+    last_interaction: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now())
     
     # Relationships
     subject: Mapped["Subject"] = relationship()

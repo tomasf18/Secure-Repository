@@ -1,4 +1,5 @@
 from .BaseDAO import BaseDAO
+from models.status import Status
 from models.database_orm import Role, Subject
 from sqlalchemy.exc import IntegrityError
 
@@ -26,7 +27,7 @@ class RoleDAO(BaseDAO):
         """Retrieve a Role by name and ACL ID."""
         role = self.session.query(Role).filter_by(acl_id=acl_id, name=name).first()
         if not role:
-            raise ValueError(f"Role with name '{name}' and ACL ID '{acl_id}' not found.")
+            raise ValueError(f"Role with name '{name}' not found.")
         return role
     
 # -------------------------------
@@ -34,6 +35,8 @@ class RoleDAO(BaseDAO):
     def get_by_username_and_acl_id(self, username: str, acl_id: int) -> list["Role"]:
         """Retrieve all Roles associated with a given username and ACL ID."""
         subject_roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.subjects).filter_by(username=username).all()
+        if not subject_roles:
+            raise ValueError(f"Roles for username '{username}' not found.")
         return subject_roles
     
 # -------------------------------
@@ -51,3 +54,10 @@ class RoleDAO(BaseDAO):
         return roles
     
 # -------------------------------
+    
+    def update_role_status(self, role_name, acl_id, new_status) -> "Role":
+        """Update the status of a Role."""
+        role = self.get_by_name_and_acl_id(role_name, acl_id)
+        role.status = new_status
+        self.session.commit()
+        return role

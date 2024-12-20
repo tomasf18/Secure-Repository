@@ -21,22 +21,32 @@ def anonymous_request(rep_pub_key, method, rep_address, endpoint, data=None) -> 
     
     if not data:
         data = {}
-        
+    
     data = encrypt_anonymous(data, encryption_key, client_ephemeral_public_key)
     
-    print("\nENCRYPTED_DATA: ", data, "\n\n\n")
-    print(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
+    logging.debug("\nENCRYPTED_DATA: ", data, "\n\n\n")
+    logging.debug(f"Sending ({method}) to \'{endpoint}\' with data= \"{data}\"")
     
-    response = requests.request(method, rep_address + endpoint, json=data)
+    try:
+        response = requests.request(method, rep_address + endpoint, json=data)
+    except requests.RequestException  as e:
+        logging.error(f"Failed to connect to the server at {rep_address}")
+        sys.exit(ReturnCode.INPUT_ERROR)
+    
+    logging.debug(f"response= {response}")
     response_json = response.json()
-    encrypted_data = convert_str_to_bytes(response_json["data"])
+
+    if "error" in response_json:
+        return response, response_json
+
+    encrypted_data = convert_str_to_bytes(response_json.get("data"))
+    iv = convert_str_to_bytes(response_json.get("iv"))
     
-    iv = convert_str_to_bytes(response_json["iv"])
-    
-    print("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
-    print("\nENCRYPTION_KEY: ", encryption_key)
-    print("\nIV:\n", iv, "\n\n\n")
-    
+    logging.debug("\n\n\nENCRYPTED_DATA: ", encrypted_data, "")
+    logging.debug("\nENCRYPTION_KEY: ", encryption_key)
+    logging.debug("\nIV:\n", iv, "\n\n\n")
+
+
     return response, json.loads(decrypt_anonymous(encrypted_data, encryption_key, iv).decode())
 
 # -------------------------------
@@ -64,12 +74,16 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     }
 
     # Send to the server 
-    response = requests.request(method, rep_address + endpoint, json=data)
+    try:
+        response = requests.request(method, rep_address + endpoint, json=data)
+    except requests.RequestException  as e:
+        logging.error(f"Failed to connect to the server at {rep_address}")
+        sys.exit(ReturnCode.INPUT_ERROR)
     
-    print("\n\n\nRESPONSE: ", response.json(), "\n\n\n")
+    logging.debug("RESPONSE: ", response.json())
     
     if response.status_code not in [200]:
-        logging.error(f"Error: Invalid repository response: {response}")
+        logging.debug(f"Error: Invalid repository response: {response}")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # Verify if signature is valid from repository
@@ -158,11 +172,13 @@ def exchange_keys(private_key: ec.EllipticCurvePrivateKey, data: dict, rep_addre
     response, received_message = anonymous_request(rep_pub_key, "post", rep_address, endpoint, body)
     
     if response.status_code not in [201]:
-        logging.error(f"Error: Invalid repository response: {response}")
+        logging.debug(f"Error: Invalid repository response: {response}")
+        print("Error: ", received_message.get("error"))
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # Verify if signature is valid from repository
     if (not verify_signature(received_message, rep_pub_key)):
+        print("Error: Error verifying server authenticity")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # If it is valid, finish calculations
@@ -232,7 +248,7 @@ def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
     
     # Verify digest of received data and check integrity
     if ( not verify_digest(data_to_digest, received_mac, integrity_key) ):
-        print("Digest verification failed")
+        logging.debug("Digest verification failed")
         return None
     
     encrypted_message = convert_str_to_bytes(message_str)
