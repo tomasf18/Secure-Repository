@@ -54,7 +54,7 @@ class ApiConsumer:
             if sessionKey:
                 encryption_key, integrity_key = sessionKey[:32], sessionKey[32:]
 
-                print(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
+                logging.debug(f"Sending ({method}) to \'{endpoint}\' in session with sessionKey: {sessionKey}, with (decrypted) payload: \"{data}\"")
 
                 # Create and encrypt Payload
                 body = self.encrypt_payload(
@@ -64,11 +64,11 @@ class ApiConsumer:
                 )
                 body["session_id"] = sessionId
 
-                print(f"Encrypted payload = {body}")
+                logging.debug(f"Encrypted payload = {body}")
                 
                 # Send Encrypted Payload
                 response = requests.request(method, self.rep_address + endpoint, json=body)
-                print(f"Server Response = {response.json()}")
+                logging.debug(f"Server Response = {response.json()}")
 
                 try:
                     received_message = self.decrypt_payload(
@@ -76,16 +76,16 @@ class ApiConsumer:
                         encryption_key=encryption_key,
                         integrity_key=integrity_key
                     )
-                    print(f"Decrypted Server Response = {received_message}")
+                    logging.debug(f"Decrypted Server Response = {received_message}")
                 except Exception as e:
                     received_message = response.json()
-                    print(f"Error decrypting server response: {e}")
+                    logging.debug(f"Error decrypting server response: {e}")
 
             else:
                 response, received_message = anonymous_request(self.rep_pub_key, method, self.rep_address, endpoint, data)
 
-            print("Response.json was: " , response.json())
-            print("Received message was: ", received_message)
+            logging.debug("Response.json was: " , response.json())
+            logging.debug("Received message was: ", received_message)
             
             return received_message
 
