@@ -433,12 +433,15 @@ def rep_assume_role(session_file, role):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
 
+    data = result.get("data", {})
+    roles = data.get("roles")
+
+    if roles is not None:
+        session_file_content["roles"] = roles
+    
+    saveContext(session_file, session_file_content)
     show_result(result, "Error assuming role")
 
-    data = result["data"]
-    roles = data["roles"]
-    session_file_content["roles"] = roles
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 
@@ -471,12 +474,16 @@ def rep_drop_role(session_file, role):
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
 
-    show_result(result, "Error dropping role")
 
-    data = result["data"]
-    roles = data["roles"]
-    session_file_content["roles"] = roles
+    data = result.get("data", {})
+    roles = data.get("roles")
+
+    if roles is not None:
+        session_file_content["roles"] = roles
+    
     saveContext(session_file, session_file_content)
+    show_result(result, "Error assuming role")
+
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -507,22 +514,18 @@ def rep_list_roles(session_file):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
 
     show_result(result, "Error listing roles", print_data=False)
-
     data = result["data"]
     roles = data["roles"]
-    session_file_content["roles"] = roles
-    
     if roles:
         print("Session Roles:")
         for role in roles:
             print(" -> ", role)
     else:
         print("No roles assumed yet")
-    saveContext(session_file, session_file_content)
 
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -556,12 +559,11 @@ def rep_list_subjects(session_file, username=None):
     }
     
     logger.debug(f"NOUNCE: {session_file_content['nonce']}")
-    
-    
+        
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionKey=session_key, sessionId=session_id)
-
-    show_result(result, "Error listing subjects")
     saveContext(session_file, session_file_content)
+    
+    show_result(result, "Error listing subjects")
     sys.exit(ReturnCode.SUCCESS)
         
 # -------------------------------
@@ -593,15 +595,14 @@ def rep_list_role_subjects(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    show_result(result, "Error listing role subjects", print_data=False)
+    saveContext(session_file, session_file_content)
         
     subjects = result["data"]
+    show_result(result, "Error listing role subjects", print_data=False)
     print("Role Subjects:")
     for subject in subjects:
         print(" -> ", subject)
         
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -633,15 +634,14 @@ def rep_list_subject_roles(session_file, username):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error listing subject roles", print_data=False)
-        
     roles = result["data"]
     print("Role Subjects:")
     for role in roles:
         print(" -> ", role)
         
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -673,15 +673,15 @@ def rep_list_role_permissions(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
-    show_result(result, "Error listing role permissions", print_data=False)
         
+    show_result(result, "Error listing role permissions", print_data=False)
     permissions = result["data"]
     print("Role Permissions:")
     for permission in permissions:
         print(" -> ", permission)
     
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -717,13 +717,13 @@ def rep_list_permission_roles(session_file, permission):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
-    
-    show_result(result, "Error listing permission roles", print_data=False)
+    saveContext(session_file, session_file_content)
     
     result = result.get("data")    
     is_doc_perm = result.get("document_permission")
     data = result.get("data")
-    
+
+    show_result(result, "Error listing permission roles", print_data=False)
     if is_doc_perm:
         print("Roles per document that have the permission:")
         for doc_data in data:
@@ -735,7 +735,6 @@ def rep_list_permission_roles(session_file, permission):
         for role in data:
             print(" -> ", role)
     
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -777,9 +776,9 @@ def rep_list_docs(session_file, username=None, date_filter=None, date=None):
     }
         
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error listing documents")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # ****************************************************
@@ -835,9 +834,9 @@ def rep_add_subject(session_file, username, name, email, credentials_file):
     }
 
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.POST, data=data, sessionKey=session_key, sessionId=session_id)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error adding subject")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -868,9 +867,9 @@ def rep_suspend_subject(session_file, username):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error suspending subject")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -902,10 +901,9 @@ def rep_activate_subject(session_file, username):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error activating subject")
-    
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -938,9 +936,9 @@ def rep_add_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error adding role")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
     
 # -------------------------------
@@ -972,15 +970,15 @@ def rep_suspend_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error suspending role", print_data=False)
-    
+
     suspended_subjects = result["data"]
     print("Suspended Subjects:")
     for subject in suspended_subjects:
         print(" -> ", subject)
         
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1012,15 +1010,15 @@ def rep_reactivate_role(session_file, role):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
+    
     
     show_result(result, "Error reactivating role", print_data=False)
-    
     suspended_subjects = result["data"]
     print("Reactivated Subjects:")
     for subject in suspended_subjects:
         print(" -> ", subject)
         
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1056,9 +1054,9 @@ def rep_add_permission(session_file, role, object):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.PUT, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error adding permission or subject to role")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1092,9 +1090,9 @@ def rep_remove_permission(session_file, role, object):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error removing permission or subject from role")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1144,9 +1142,9 @@ def rep_add_doc(session_file, document_name, file):
     }
     
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.POST, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
 
     show_result(result, "Error adding document")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1170,7 +1168,6 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     session_key = convert_str_to_bytes(session_file_content["session_key"])
 
     endpoint = f"/organizations/{session_file_content['organization']}/documents/{document_name}"
-    
     data = {
         "session_id": session_id,
         "counter": session_file_content["counter"] + 1,
@@ -1178,11 +1175,11 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     }
 
     result = apiConsumer.send_request(endpoint=endpoint,  method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error getting document metadata", print_data=False)
 
     data = result["data"]
-    
     document_name = data["document_name"]
     metadata_path = get_metadata_path(document_name)
     
@@ -1192,7 +1189,6 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     if doc_get_file:
         return data
     
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1218,7 +1214,7 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     output_decrypted_file = get_decrypted_file_path(output_file)
     with open(output_decrypted_file, "w") as file:
         file.write(decrypted_file_content)
-        
+
     print(f"\n{decrypted_file_content}\n")
 
 # -------------------------------
@@ -1250,9 +1246,9 @@ def rep_delete_doc(session_file, document_name):
     }
         
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.DELETE, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
 
     show_result(result, "Error deleting document")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
 
 # -------------------------------
@@ -1292,9 +1288,9 @@ def rep_acl_doc(session_file, document_name, operator, role, permission):
         method = HTTPMethod.DELETE
     
     result = apiConsumer.send_request(endpoint=endpoint, method=method, data=data, sessionId=session_id, sessionKey=session_key)
+    saveContext(session_file, session_file_content)
     
     show_result(result, "Error adding permission or subject to role")
-    saveContext(session_file, session_file_content)
     sys.exit(ReturnCode.SUCCESS)
     
     

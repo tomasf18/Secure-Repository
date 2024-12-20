@@ -71,7 +71,7 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     # Send to the server 
     response = requests.request(method, rep_address + endpoint, json=data)
     
-    print("\n\n\nRESPONSE: ", response.json(), "\n\n\n")
+    logging.debug("RESPONSE: ", response.json())
     
     if response.status_code not in [200]:
         logging.error(f"Error: Invalid repository response: {response}")
@@ -239,7 +239,7 @@ def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
     
     # Verify digest of received data and check integrity
     if ( not verify_digest(data_to_digest, received_mac, integrity_key) ):
-        print("Digest verification failed")
+        logging.debug("Digest verification failed")
         return None
     
     encrypted_message = convert_str_to_bytes(message_str)
