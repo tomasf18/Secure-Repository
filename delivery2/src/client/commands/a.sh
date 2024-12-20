@@ -79,8 +79,8 @@
 # Document metadata and access
 ./rep_get_doc_metadata user1_org1_session_file doc1 # Should fail, only the owner can access
 ./rep_get_doc_metadata user2_org1_session_file doc1 
-# ./rep_get_file <file handle> doc1_encrypted
-# ./rep_decrypt_file doc1_encrypted doc1_metadata.json
+# ./rep_get_file org1_a2e86de4670ad42936825ce9eb9fac5b2c3a1f14a186a4413d3068c1f7ab5d5b doc1_encrypted
+# ./rep_decrypt_file doc1_encrypted user2_org1/doc1_metadata.json
 ./rep_get_doc_file user2_org1_session_file doc1
 ./rep_list_docs user2_org1_session_file
 
@@ -97,7 +97,7 @@
 ./rep_delete_doc user1_org1_session_file doc1 # Should fail, only the owner can delete
 ./rep_acl_doc user2_org1_session_file doc1 + Manager DOC_DELETE  
 ./rep_delete_doc user1_org1_session_file doc1 
-./rep_get_doc_metadata user2_org1_session_file doc1 
+./rep_get_doc_metadata user1_org1_session_file doc1 
 
 #---
 # # Suspend and reactivate roles
