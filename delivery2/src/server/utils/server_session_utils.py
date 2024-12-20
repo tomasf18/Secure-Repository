@@ -1,7 +1,9 @@
+import os
 import json
 import base64
 import logging
 import datetime
+from dotenv import load_dotenv
 
 from utils.cryptography.ECC import ECC
 from utils.cryptography.AES import AES
@@ -18,8 +20,9 @@ from dao.OrganizationDAO import OrganizationDAO
 from models.status import Status
 from models.database_orm import Session
 
+load_dotenv()
 
-SESSION_LIFETIME = 60 * 10 # 10 minutes
+SESSION_LIFETIME = eval(os.getenv("SESSION_LIFETIME"))
 
 # -------------------------------
 
@@ -160,6 +163,7 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
         tuple[dict, Session, bytes]: Decrypted data, Session, Session key
     """
     
+    print(f"\n\n\nSESSION LIFETIME: {SESSION_LIFETIME}\n\n\n")
     session_dao = SessionDAO(db_session)
     
     # Get session
