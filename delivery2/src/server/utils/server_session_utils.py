@@ -19,7 +19,7 @@ from models.status import Status
 from models.database_orm import Session
 
 
-SESSION_TIME_LIMIT = 60 * 10 # 10 minutes
+SESSION_LIFETIME = 60 * 10 # 10 minutes
 
 # -------------------------------
 
@@ -184,6 +184,8 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
                 json.dumps(f"Session with id {session_id} expired"), HTTP_Code.FORBIDDEN
             ) 
 
+    session_dao.update_last_interaction(session.id)
+    
     session_key = session_dao.get_decrypted_key(session_id)
     
     decrypted_data = decrypt_payload(data, session_key[:32], session_key[32:])
@@ -228,9 +230,9 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
 # -------------------------------
 
 def session_expired(session: Session) -> bool:
-    session_creation_time = session.creation_timestamp
+    session_last_interaction = session.last_interaction
     current_time = datetime.datetime.now()
-    return (current_time - session_creation_time).total_seconds() > SESSION_TIME_LIMIT
+    return (current_time - session_last_interaction).total_seconds() > SESSION_LIFETIME
 
 def subject_invalid(session: Session, db_session: SQLAlchemySession) -> bool:
     organization_dao = OrganizationDAO(db_session)

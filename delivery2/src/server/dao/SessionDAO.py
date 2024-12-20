@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from .BaseDAO import BaseDAO
 from .RoleDAO import RoleDAO
 from .SubjectDAO import SubjectDAO
@@ -319,3 +321,23 @@ class SessionDAO(BaseDAO):
                 self.drop_session_role(session.id, role.name)
             except ValueError:
                 pass
+            
+# -------------------------------
+
+    def update_last_interaction(self, session_id: int) -> Session:
+        """
+        Update the last interaction time of a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+            
+            session.last_interaction = datetime.now()
+            self.session.commit()
+            self.session.refresh(session)
+            
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise
