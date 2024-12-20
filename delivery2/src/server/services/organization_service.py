@@ -1015,6 +1015,7 @@ def remove_role_permission_from_document(organization_name, document_name, data,
     document_role_permission_dao = DocumentRolePermissionDAO(db_session)
     session_dao = SessionDAO(db_session)
     organization_dao = OrganizationDAO(db_session)
+    
 
     # Get session
     try:
@@ -1056,7 +1057,15 @@ def remove_role_permission_from_document(organization_name, document_name, data,
         ), HTTP_Code.BAD_REQUEST
     
     permission = permission_dao.get_by_name(permission_name)
-
+    
+    if permission.name == "DOC_ACL":
+        roles_with_doc_acl = document_role_permission_dao.get_roles_by_document_acl_id_and_permission_name(document.acl.id, permission.name)
+        if len(roles_with_doc_acl) == 1:
+            return encrypt_payload({
+                    "error": f"Role '{role.name}' is the only role with permission '{permission.name}' in document '{document.name}' in organization '{document.org_name}'."
+                }, session_key[:32], session_key[32:]
+            ), HTTP_Code.BAD_REQUEST
+    
     # Remove role permission from document
     document_role_permission: DocumentRolePermission = document_role_permission_dao.get_by_document_acl_id_and_role_id_and_permission_name(document.acl.id, role.id, permission.name)
     if not document_role_permission:
