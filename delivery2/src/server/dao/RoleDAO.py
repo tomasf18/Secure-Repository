@@ -34,6 +34,8 @@ class RoleDAO(BaseDAO):
     def get_by_username_and_acl_id(self, username: str, acl_id: int) -> list["Role"]:
         """Retrieve all Roles associated with a given username and ACL ID."""
         subject_roles = self.session.query(Role).filter_by(acl_id=acl_id).join(Role.subjects).filter_by(username=username).all()
+        if not subject_roles:
+            raise ValueError(f"Roles for username '{username}' not found.")
         return subject_roles
     
 # -------------------------------

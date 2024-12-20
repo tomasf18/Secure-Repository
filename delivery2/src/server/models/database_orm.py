@@ -232,6 +232,11 @@ class Role(Base):
     permissions: Mapped[list["Permission"]] = relationship(secondary=RolePermissions)
     subjects: Mapped[list["Subject"]] = relationship(secondary=RoleSubjects)
     
+    # One role must have a unique name within an ACL
+    __table_args__ = (
+        UniqueConstraint("name", "acl_id", name="uq_role_name_acl_id"),
+    )
+    
     def __repr__(self):
         return f"<Role(name={self.name}, acl_id={self.acl_id})>"
     
