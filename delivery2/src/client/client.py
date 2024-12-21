@@ -688,8 +688,9 @@ def rep_list_role_permissions(session_file, role):
         
     show_result(result, "Error listing role permissions", print_data=False)
     
-    org_permissions = result["data"]["org_permissions"]
-    doc_permissions = result["data"]["doc_permissions"]
+    data = result["data"]
+    org_permissions = data["org_permissions"]
+    doc_permissions = data["doc_permissions"]
 
     print(f"\nOrganization permissions of Role {role}:")
     print("-------------------------------------------")
@@ -743,9 +744,8 @@ def rep_list_permission_roles(session_file, permission):
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
     saveContext(session_file, session_file_content)
     
-    result = result.get("data")    
+    data = result.get("data", {})
     is_doc_perm = result.get("document_permission")
-    data = result.get("data")
 
     show_result(result, "Error listing permission roles", print_data=False)
     if is_doc_perm:
