@@ -672,13 +672,29 @@ def add_subject_or_permission_to_role(organization_name, role_name, data, db_ses
             org_subj_assoc = organization_dao.get_org_subj_association(organization_name, subject.username)
             if org_subj_assoc.status == Status.SUSPENDED.value:
                 return return_data("error", f"Subject '{subject.username}' is suspended and cannot be added to role '{role_name}'.", HTTP_Code.FORBIDDEN, session_key)
-            
+        
+        if subject in role.subjects:
+            return return_data(
+                key="error",
+                data=f"Subject '{subject.username}' already bounded to role '{role_name}' in organization '{organization_name}'",
+                code=HTTP_Code.BAD_REQUEST,
+                session_key=session_key
+            )
+
         role.subjects.append(subject)
         result = f"Subject '{subject.username}' added to role '{role_name}' in organization '{organization_name}' successfully."
         
     if permission:
         if role.name == "Manager":
             return return_data("error", f"Role '{role_name}' cannot have its permissions modified.", HTTP_Code.FORBIDDEN, session_key)
+        
+        if permission in role.permissions:
+            return return_data(
+                key="error",
+                data=f"Role '{role_name}' in organization '{organization_name}' already has permission '{permission.name}'",
+                code=HTTP_Code.BAD_REQUEST,
+                session_key=session_key
+            )
         role.permissions.append(permission)
         result = f"Permission '{permission.name}' added to role '{role_name}' in organization '{organization_name}' successfully."
         
