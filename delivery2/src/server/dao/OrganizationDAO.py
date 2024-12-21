@@ -136,6 +136,12 @@ class OrganizationDAO(BaseDAO):
             new_subject = self.subject_dao.get_by_username(subject_username)
         except ValueError:
             new_subject = self.subject_dao.create(subject_username, subject_full_name, subject_email)
+
+        if new_subject in org.subjects:
+            raise ValueError(
+                f"Subject with username '{subject_username}' or email '{subject_email}' already exists."
+            )
+        
         key = self.key_store_dao.create(subject_pub_key, "public")
         self.add_subject_with_key(org, new_subject, key)
         
