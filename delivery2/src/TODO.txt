@@ -25,10 +25,10 @@ Sessions have a lifetime defined by the Repository, and should be deleted upon a
 Do not allow simultaneous sessions by the same user on the same org -> DONE
 Verify subjects names equal to permissions -> DONE
 Corrigir bug ao adicionar 2 users iguais, mas so adiciona 1 em vez de dar erro -> DONE
+No comando rep_list_role_permissions nós retornamos as permissões de um dado role incluindo as permissões do role nos documentos. -> DONE
 
 ---
 
-No comando rep_list_role_permissions nós retornamos as permissões de um dado role incluindo as permissões do role nos documentos.
 Fazer testes
 
 It is possible for a subject to maintain simultaneous sessions with different organizations in the Repository. -> I think it's possible

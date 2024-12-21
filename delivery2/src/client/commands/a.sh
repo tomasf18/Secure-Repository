@@ -56,9 +56,6 @@
 # List subjects who have a role
 ./rep_list_role_subjects user1_org1_session_file ROLE_1
 
-# List permissions of a role
-./rep_list_role_permissions user2_org1_session_file Manager
-
 # List the roles which have a permission
 ./rep_list_permission_roles user1_org1_session_file ROLE_ACL
 
@@ -134,3 +131,12 @@
 
 ./rep_assume_role user2_org1_session_file Manager
 ./rep_remove_permission user2_org1_session_file Manager user1
+
+./rep_add_doc user2_org1_session_file doc3 file3.txt
+./rep_acl_doc user2_org1_session_file doc3 + Manager DOC_ACL
+./rep_acl_doc user2_org1_session_file doc3 + Manager DOC_READ
+./rep_acl_doc user2_org1_session_file doc3 + Manager DOC_DELETE
+
+
+# List permissions of a role
+./rep_list_role_permissions user2_org1_session_file Manager
