@@ -32,6 +32,8 @@ INPUT_FILE=file1.txt
 ./rep_create_session org2 user1 123 user1_cred_file $USER1_ORG2_SESSION
 ./rep_assume_role $USER1_ORG1_SESSION Manager
 ./rep_assume_role $USER1_ORG2_SESSION Manager
+./rep_add_role $USER1_ORG1_SESSION ROLE1
+
 ./rep_add_subject $USER1_ORG1_SESSION user2 User2 user2@gmail.com user2_cred_file
 # ORG1 -> (user1: Manager), (user2: None)
 # ORG2 -> (user1: Manager)
@@ -49,13 +51,38 @@ INPUT_FILE=file1.txt
 # SHOULD FAIL
 ./rep_create_session org2 user2 123 user2_cred_file $USER2_SESSION
 
-clear
-# List roles
-# SHOULD FAIL
+
+
+## SHOULD FAIL
 ./rep_list_permission_roles $USER1_ORG1_SESSION invalid_permission
-
-# SHOULD FAIL
 ./rep_list_role_permissions $USER1_ORG1_SESSION invalid_role
-
-# Should fail
 ./rep_list_subject_roles $USER1_ORG1_SESSION invalid_user
+
+./rep_reactivate_role $USER1_ORG1_SESSION invalid_role
+./rep_suspend_role $USER1_ORG1_SESSION invalid_user
+
+
+    # Invalid roles
+./rep_add_permission $USER1_ORG1_SESSION invalid_role user2
+./rep_remove_permission $USER1_ORG1_SESSION invalid_role user2
+./rep_add_permission $USER1_ORG1_SESSION invalid_role DOC_NEW
+./rep_remove_permission $USER1_ORG1_SESSION invalid_role DOC_NEW
+
+    # Invalid users
+./rep_add_permission $USER1_ORG1_SESSION ROLE1 invalid_user
+./rep_remove_permission $USER1_ORG1_SESSION ROLE1 invalid_user
+    # Invalid permission
+./rep_add_permission $USER1_ORG1_SESSION ROLE1 invalid_permission
+./rep_remove_permission $USER1_ORG1_SESSION ROLE1 invalid_permission
+##
+
+# Add documents
+./rep_add_doc $USER1_ORG1_SESSION $DOCUMENT $INPUT_FILE
+## SHOULD FAIL
+./rep_add_doc $USER1_ORG1_SESSION $DOCUMENT $INPUT_FILE
+##
+
+./rep_acl_doc $USER1_ORG1_SESSION $DOCUMENT + invalid_role DOC_READ
+./rep_acl_doc $USER1_ORG1_SESSION $DOCUMENT + ROLE1 invalid_permission
+./rep_acl_doc $USER1_ORG1_SESSION $DOCUMENT - invalid_role DOC_READ
+./rep_acl_doc $USER1_ORG1_SESSION $DOCUMENT - ROLE1 invalid_permission
