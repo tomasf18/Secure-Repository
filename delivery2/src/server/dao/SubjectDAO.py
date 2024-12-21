@@ -2,6 +2,10 @@ from .BaseDAO import BaseDAO
 from models.database_orm import Subject
 from sqlalchemy.exc import IntegrityError
 
+permissions =  [
+    "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD", "DOC_ACL", "DOC_READ", "DOC_DELETE"
+]
+
 class SubjectDAO(BaseDAO):
     
     def __init__(self, session):
@@ -11,6 +15,10 @@ class SubjectDAO(BaseDAO):
 
     def create(self, username: str, full_name: str, email: str) -> "Subject":
         """Create a new Subject instance."""
+        
+        if username in permissions:
+            raise ValueError(f"Subjects may not have the same name as permissions")
+        
         try:
             new_subject = Subject(username=username, full_name=full_name, email=email)
             self.session.add(new_subject)
