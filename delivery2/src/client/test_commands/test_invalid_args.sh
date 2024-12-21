@@ -11,7 +11,7 @@ INPUT_FILE=file1.txt
 
 # Test invalid key
 ./rep_subject_credentials 123 user1_cred_file
-# SHOULD FAIL
+## SHOULD FAIL
 ./rep_create_org -k '../keys/subject_keys/pub_user1_cred_file.pub' org1 user1 User1 user1@gmail.com user1_cred_file 
 ./rep_create_org -r 'localhost:5001' org1 user1 User1 user1@gmail.com user1_cred_file 
 
@@ -50,7 +50,7 @@ INPUT_FILE=file1.txt
 ./rep_create_session org1 user2 123 user2_cred_file $USER2_SESSION
 # Create session at org2 for user2
 # SHOULD FAIL
-./rep_create_session org2 user2 123 user2_cred_file $USER2_SESSION
+./rep_create_session org2 user2 123 user2_cred_file $USER2_SESSION #User2 doest exist at org2
 
 
 
