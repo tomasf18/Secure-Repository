@@ -22,14 +22,14 @@ def get_client_file(file: str):
     client_file_path = os.getenv("CLIENT_FILES_PATH") + file
     return client_file_path
 
-def get_metadata_path(metadata_file_name: str) -> str:
-    return os.getenv("CLIENT_METADATAS_PATH") + metadata_file_name + "_metadata.json"
+def get_metadata_path(metadata_file_name: str, username: str, organization: str) -> str:
+    return os.path.join(os.getenv("CLIENT_METADATAS_PATH"), username + "_" + organization, metadata_file_name + "_metadata.json")
 
-def get_encrypted_file_path(encrypted_file_name: str) -> str:
-    return os.getenv("CLIENT_ENCRYPTED_FILES_PATH") + encrypted_file_name + ".enc"
+def get_encrypted_file_path(encrypted_file_name: str, username: str, organization: str) -> str:
+    return os.getenv("CLIENT_ENCRYPTED_FILES_PATH") + username + "_" + organization + "/" + encrypted_file_name + ".enc"
 
-def get_decrypted_file_path(decrypted_file_name: str) -> str:
-    return os.getenv("CLIENT_DECRYPTED_FILES_PATH") + decrypted_file_name + ".dec"
+def get_decrypted_file_path(decrypted_file_name: str, username: str, organization: str) -> str:
+    return os.getenv("CLIENT_DECRYPTED_FILES_PATH") + username + "_" + organization + "/" + decrypted_file_name + ".dec"
 
 def convert_bytes_to_str(data: bytes) -> str:
     return base64.b64encode(data).decode('utf-8')

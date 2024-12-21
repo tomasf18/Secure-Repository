@@ -47,7 +47,7 @@
                 /file
                 (GET) - Get fileof a document [Authorized API]
 
-                /ACL
+                /acl
                     (PUT) - Update document ACL [Authorized API]
                     (DELETE) - Update document ACL [Authorized API]
 

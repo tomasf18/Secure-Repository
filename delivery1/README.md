@@ -333,3 +333,9 @@ python3 server.py
 ```bash
 pytest tests/test.py -v
 ```
+
+# After delivering the project, these were the noticed lilttle mistakes/changes (after asking the teacher):
+
+## 1. Create document (change on file `src/server/dao/OrganizationDAO`, create_document() function -> commented lines) 
+When creating a document, we thought it would be easier to deal with roles when working on the 2nd delivery if we added now the Role Manager of the Organization to the document being created. But we didn't notice that, when executing the command `document_acl.roles.append(manager_role)`, SQLAlchemy was doing this: the role was being added to the document ACL, but, at the same time, removed from the organization. So, the command worked when adding the first document, but, when adding the second for the same organization, the line `manager_role = role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)` would result in an error, since the role was already removed from the organization when creating the first document. 
+So, after discussing with the teacher, the final decision was to comment the line `document_acl.roles.append(manager_role)`, because the Roles weren't a requirement to this delivery, and it was the root of the problem.

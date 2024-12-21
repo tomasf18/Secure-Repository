@@ -110,6 +110,8 @@ class RestrictedMetadata(Base):
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
     iv: Mapped[bytes] = mapped_column(nullable=True)
     
+    # Salt used to derive the key used to encrypt the metadata key
+    salt: Mapped[bytes] = mapped_column(nullable=False)
     # IV used to encrypt the encryption file key
     iv_encrypted_key: Mapped[bytes] = mapped_column(nullable=False)
     
@@ -224,11 +226,17 @@ class Role(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(nullable=False)
     acl_id: Mapped[int] = mapped_column(ForeignKey('acl.id'), nullable=False)
+    status: Mapped[str] = mapped_column(nullable=False, default=Status.ACTIVE.value)
     
     # Relationships
     acl: Mapped["OrganizationACL"] = relationship(back_populates="roles")
     permissions: Mapped[list["Permission"]] = relationship(secondary=RolePermissions)
     subjects: Mapped[list["Subject"]] = relationship(secondary=RoleSubjects)
+    
+    # One role must have a unique name within an ACL
+    __table_args__ = (
+        UniqueConstraint("name", "acl_id", name="uq_role_name_acl_id"),
+    )
     
     def __repr__(self):
         return f"<Role(name={self.name}, acl_id={self.acl_id})>"
@@ -264,10 +272,13 @@ class Session(Base):
     subject_username: Mapped[str] = mapped_column(ForeignKey('subject.username'), nullable=False)
     organization_name: Mapped[str] = mapped_column(ForeignKey('organization.name'), nullable=False)
     key_id: Mapped[int] = mapped_column(ForeignKey('key_store.id'), nullable=False)  # Foreign key column
+    key_salt: Mapped[bytes] = mapped_column(nullable=False)
     key_iv: Mapped[bytes] = mapped_column(nullable=False)
 
     nonce: Mapped[str] = mapped_column(nullable=True)
     counter: Mapped[int] = mapped_column(nullable=True)
+    
+    last_interaction: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now())
     
     # Relationships
     subject: Mapped["Subject"] = relationship()

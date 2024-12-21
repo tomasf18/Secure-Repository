@@ -1,6 +1,7 @@
 import logging
 from flask import Blueprint, request, g
 from services.organization_service import *
+from utils.utils import get_ephemeral_server_public_key, get_decrypted_request, get_shared_secret, encrypt_anonymous_content
 
 organization_blueprint = Blueprint("organizations", __name__)
 
@@ -8,16 +9,39 @@ organization_blueprint = Blueprint("organizations", __name__)
 
 # -------------------------------
 
+
 @organization_blueprint.route("/organizations", methods=["GET", "POST"])
 def organizations():
     db_session = g.db_session
     if request.method == 'GET':
         print("SERVER: Getting organizations")
-        return list_organizations(db_session)
+        data = request.json
+        if data and "public_key" in data:
+            return get_ephemeral_server_public_key(data, db_session)
+    
+        encryption_key = get_shared_secret(data["client_ephemeral_public_key"]) # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it    
+        return_data, code = list_organizations(db_session)
+        encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
+        
+        return json.dumps({"data": convert_bytes_to_str(encrypted_return_data), 
+                           "iv": convert_bytes_to_str(iv_encrypted_return_data)
+                           }), code
+        
     if request.method == 'POST':
         data = request.json
         print(f"SERVER: Received data: {data}. Creating organization")
-        return create_organization(data, db_session)
+        
+        if "public_key" in data:
+            return get_ephemeral_server_public_key(data, db_session)
+
+        encryption_key = get_shared_secret(data["client_ephemeral_public_key"]) # Might not be necessary to always send the client ephemeral pub_key, because whenever I add it to the ephemeral_keys dict, on the same command I remove it
+        decrypted_data, encryption_key = get_decrypted_request(data, encryption_key)
+        return_data, code = create_organization(decrypted_data, db_session)
+        encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
+        
+        return json.dumps({"data": convert_bytes_to_str(encrypted_return_data), 
+                           "iv": convert_bytes_to_str(iv_encrypted_return_data)
+                           }), code
 
 # -------------------------------
 
@@ -84,19 +108,10 @@ def organization_document(organization_name, document_name):
         data = request.json
         print(f"SERVER: Received data: {data}. Deleting document {document_name} from organization {organization_name}")
         return delete_organization_document(organization_name, document_name, data, db_session)
-    
-# -------------------------------
-    
-# @organization_blueprint.route('/organizations/<organization_name>/documents/<document_name>/file', methods=['GET'])
-# def organization_document_file(organization_name, document_name):
-#     db_session = g.db_session
-#     data = request.json
-#     print(f"SERVER: Received data: {data}. Getting file from document {document_name} from organization {organization_name}")
-#     return get_organization_document_file(organization_name, document_name, data, db_session)
 
 
 # ==================================== Second Delivery ==================================== #
-# GET /organizations/{organization_name}/roles?permission={permission} endpoint
+
 @organization_blueprint.route('/organizations/<organization_name>/roles', methods=['GET', 'POST'])
 def organization_roles(organization_name):
     db_session = g.db_session
@@ -128,11 +143,11 @@ def organization_role(organization_name, role):
     if request.method == 'PUT':
         data = request.json
         print(f"SERVER: Received data: {data}. Reactivating role {role} in organization {organization_name}")
-        return reactivate_role_subjects(organization_name, role, data, db_session)
+        return reactivate_role(organization_name, role, data, db_session)
     elif request.method == 'DELETE':
         data = request.json
         print(f"SERVER: Received data: {data}. Suspending role {role} in organization {organization_name}")
-        return suspend_role_subjects(organization_name, role, data, db_session)
+        return suspend_role(organization_name, role, data, db_session)
     
 # -------------------------------
 

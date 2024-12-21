@@ -2,6 +2,10 @@ from .BaseDAO import BaseDAO
 from models.database_orm import Subject
 from sqlalchemy.exc import IntegrityError
 
+permissions =  [
+    "ROLE_ACL", "SUBJECT_NEW", "SUBJECT_DOWN", "SUBJECT_UP", "DOC_NEW", "ROLE_NEW", "ROLE_DOWN", "ROLE_UP", "ROLE_MOD", "DOC_ACL", "DOC_READ", "DOC_DELETE"
+]
+
 class SubjectDAO(BaseDAO):
     
     def __init__(self, session):
@@ -11,6 +15,10 @@ class SubjectDAO(BaseDAO):
 
     def create(self, username: str, full_name: str, email: str) -> "Subject":
         """Create a new Subject instance."""
+        
+        if username in permissions:
+            raise ValueError(f"Subjects may not have the same name as permissions")
+        
         try:
             new_subject = Subject(username=username, full_name=full_name, email=email)
             self.session.add(new_subject)
@@ -28,31 +36,5 @@ class SubjectDAO(BaseDAO):
         if not subject:
             raise ValueError(f"Subject with username '{username}' not found.")
         return subject
-    
-    def get_all(self) -> list["Subject"]:
-        """Retrieve all Subjects."""
-        return self.session.query(Subject).all()
-    
-# -------------------------------
-    
-    def update(self, username: str, full_name: str = None, email: str = None) -> "Subject":
-        """Update an existing Subject's details."""
-        subject = self.get_by_username(username)
-        if full_name:
-            subject.full_name = full_name
-        if email:
-            subject.email = email
-        self.session.commit()
-        return subject
-    
-# -------------------------------
-    
-    def delete_subject(self, username: str) -> None:
-        """Delete a Subject by username."""
-        subject = self.get_by_username(username)
-        self.session.delete(subject)
-        self.session.commit()
 
-
-    
-    
+# -------------------------------

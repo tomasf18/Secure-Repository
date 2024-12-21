@@ -1,11 +1,13 @@
+from datetime import datetime
+
 from .BaseDAO import BaseDAO
 from .RoleDAO import RoleDAO
 from .SubjectDAO import SubjectDAO
 from .KeyStoreDAO import KeyStoreDAO
+from .PermissionDAO import PermissionDAO
 from .OrganizationDAO import OrganizationDAO
 
-from models.database_orm import Role
-from models.database_orm import Session
+from models.database_orm import Role, Session, Permission
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
@@ -19,6 +21,7 @@ class SessionDAO(BaseDAO):
         self.key_store_dao = KeyStoreDAO(session)
         self.organization_dao = OrganizationDAO(session)
         self.role_dao = RoleDAO(session)
+        self.permission_dao = PermissionDAO(session)
 
 # -------------------------------
 
@@ -47,18 +50,14 @@ class SessionDAO(BaseDAO):
             if not organization:
                 raise ValueError(f"Organization with name '{organization_name}' does not exist.")
 
-            encrypted_session_key, iv = self.key_store_dao.create(key, "symmetric")
-            
-            print(f"\n\nSession key iv: {iv} with length {len(iv)}")
-            print(f"Decrypted session key: {key}")
-            print(f"Encrypted session key: {encrypted_session_key.key}")
-            print(f'Again, decrypted session key: {self.key_store_dao.decrypt_key(encrypted_session_key.key, iv)}\n\n')
+            encrypted_session_key, iv, salt = self.key_store_dao.create(key, "symmetric")
             
             # Create the session
             new_session = Session(
                 subject_username=subject_username,
                 organization_name=organization_name,
                 key_id=encrypted_session_key.id,
+                key_salt=salt,
                 key_iv=iv,
                 nonce=nonce,
                 counter=counter
@@ -120,7 +119,8 @@ class SessionDAO(BaseDAO):
             raise ValueError(f"Session with ID '{session_id}' does not exist.")
         encrypted_key = self.get_encrypted_key(session_id)
         iv = session.key_iv
-        return self.key_store_dao.decrypt_key(encrypted_key, iv)
+        salt = session.key_salt
+        return self.key_store_dao.decrypt_key(encrypted_key, iv, salt)
     
 # -------------------------------    
     
@@ -154,13 +154,13 @@ class SessionDAO(BaseDAO):
                 raise ValueError(f"Session with ID '{session_id}' does not exist.")
             
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
+
+            session_roles = session.session_roles
+
+            if role_object in session.session_roles:
+                raise ValueError(f"Role '{role}' already added to Session with session ID '{session_id}'")
             
-            session.session_roles.append(role_object)
-            role_object.subjects.append(session.subject)    # Eu não posso dar append do subject ao role!!! Supostamente roles na sessao sao diferented de roles na organizaçao
-                                                            # Esta parte de dar append do subect ao role é suposto ser feita no rep_add_permission
-                                                            # E depois, na sessao, o subject assume roles QUE ELE POSSUI na organizaçáo, e nao qualquer um!! (retirar role_object.subjects.remove(session.subject)
-                                                            # da função drop_session_role tambem, e fazer a verificação de se o subject está a tentar asuumir um role que lhe é valido na organizacao
-            
+            session_roles.append(role_object)
             self.session.commit()
             
             self.session.refresh(role_object)
@@ -183,17 +183,28 @@ class SessionDAO(BaseDAO):
             
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
             
-            session.session_roles.remove(role_object)
-            role_object.subjects.remove(session.subject)
+            try:
+                session.session_roles.remove(role_object)
+                self.session.commit()
+                
+                self.session.refresh(role_object)
+                self.session.refresh(session)
+                
+                return role_object
+            except ValueError:
+                raise ValueError(f"Role '{role}' is not associated with session '{session_id}'.")
             
-            self.session.commit()
-            
-            self.session.refresh(role_object)
-            self.session.refresh(session)
-            
-            return role_object
         except IntegrityError:
             self.session.rollback()
+            raise ValueError(
+                ""
+            )
+        
+        except ValueError as e:
+            message = e.args[0]
+            raise ValueError(
+                message
+            )
 
 # -------------------------------
  
@@ -264,3 +275,91 @@ class SessionDAO(BaseDAO):
         except IntegrityError:
             self.session.rollback()
             raise
+        
+# -------------------------------
+
+    def missing_org_permitions(self, session_id: int, permissions: list[str]) -> list["Permission"]:
+        """
+        Check if a subject within a session has the given permission(s).
+        """
+        missing_permissions = []
+        session = self.get_by_id(session_id)
+        session_roles = session.session_roles
+        for permission in permissions:
+            permission_object = self.permission_dao.get_by_name(permission)
+            if any(permission_object in role.permissions for role in session_roles):
+                continue
+            missing_permissions.append(permission_object)
+        
+        return missing_permissions
+
+# -------------------------------
+
+    def drop_subject_sessions_role(self, subject_username: str, role_name: str) -> Role:
+        """
+        Drop a role from all sessions associated with a subject.
+        """
+        subject_sessions = self.get_by_subject(subject_username)
+        for session in subject_sessions:
+            try:
+                self.drop_session_role(session.id, role_name)
+            except ValueError:
+                pass # If the role is not associated with the session, continue
+    
+# -------------------------------
+
+    def get_by_role(self, role: Role) -> list[Session]:
+        """
+        Retrieve all sessions associated with a given role.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject),
+            joinedload(Session.organization)
+        ).join(Session.session_roles).filter_by(id=role.id).all()
+        
+        
+# -------------------------------
+
+    def remove_role_from_all_sessions(self, role: Role) -> bool:
+        """
+        Remove a role from all sessions.
+        """
+        sessions = self.get_by_role(role)
+        for session in sessions:
+            try:
+                self.drop_session_role(session.id, role.name)
+            except ValueError:
+                pass
+            
+# -------------------------------
+
+    def update_last_interaction(self, session_id: int) -> Session:
+        """
+        Update the last interaction time of a session.
+        """
+        try:
+            session = self.get_by_id(session_id)
+            if not session:
+                raise ValueError(f"Session with ID '{session_id}' does not exist.")
+            
+            session.last_interaction = datetime.now()
+            self.session.commit()
+            self.session.refresh(session)
+            
+            return session
+        except IntegrityError:
+            self.session.rollback()
+            raise
+    
+# -------------------------------
+
+    def get_last_session_of_user_in_org(self, subject_username: str, organization_name: str) -> Session:
+        """
+        Retrieve the last session of a subject in an organization.
+        """
+        return self.session.query(Session).options(
+            joinedload(Session.subject),
+            joinedload(Session.organization)
+        ).filter_by(subject_username=subject_username, organization_name=organization_name).order_by(Session.id.desc()).first()
+        
+# -------------------------------

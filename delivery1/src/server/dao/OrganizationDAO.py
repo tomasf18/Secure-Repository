@@ -284,7 +284,7 @@ class OrganizationDAO(BaseDAO):
                 raise ValueError("Manager role not found for the organization.")
 
             document_acl = DocumentACL(document=document)
-            document_acl.roles.append(manager_role)
+            # document_acl.roles.append(manager_role)
             self.session.add(document_acl)
 
             # Step 7: Create the RestrictedMetadata entity

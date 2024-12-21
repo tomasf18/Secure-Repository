@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ../commands
 
 # Add subjects credentials
 ./rep_subject_credentials 123 user1_cred_file

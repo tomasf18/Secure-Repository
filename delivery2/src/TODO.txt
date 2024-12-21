@@ -1,27 +1,119 @@
-rep_decrypt_file <encrypted file> <encryption metadata>
-rep_get_file <file handle> [file]
-rep_list_docs <session file> [-s username] [-d nt/ot/et date]
 
-WHEN A SUBJECT IS SUSPENDED, I MUST ENSURE THAT, IF HE IS A MANAGER, THERE IS AT LEAST ONE MORE MANAGER IN THET ORG
-CORRECT ERROR MESSAGES FOR EACH COMMAND, SO THAT NO USEFUL MESSAGE FOR ATTACKERS IS SHOWN
-WHEN A DOCUMENT IS ADDED, ADD TO DocumentRolePermission TABLE ALL THE DOCUMENT PERMISSIONS TO MANAGER ROLE!
-WHEN ADDING A SUBJECT TO A MANAGER ROLE, MAKE SURE TO GIV HIM ALL THE PERMISSIONS
+WHEN A SUBJECT IS SUSPENDED/REMOVED FROM A MANAGER ROLE, I MUST ENSURE THAT, IF HE IS A MANAGER, THERE IS AT LEAST ONE MORE MANAGER AT THET ORG -> DONE
+WHEN A DOCUMENT IS ADDED, ADD TO DocumentRolePermission TABLE ALL THE DOCUMENT PERMISSIONS TO MANAGER ROLE! -> DONE
+WHEN ADDING A SUBJECT TO A MANAGER ROLE, MAKE SURE TO GIV HIM ALL THE PERMISSIONS (it's the manager who has the permissions, not the subject) -> DONE 
+VERIFY IF THE SUBJECT, WHEN ASSMING A ROLE, HAS THAT ROLE IN THE ORG -> DONE
+ALSO STORE THE SALT USED TO ENCRYPT THE CONTENT STORED BY THE REPO -> DONE
+# TODO: Encrypt
+# Create response
+result = {
+    "session_id": session.id,
+    "username": session.subject_username,
+    "organization": session.organization_name,
+    "roles": [role.name for role in session.session_roles],
+    "public_key": base64.b64encode(session_server_public_key).decode('utf-8'), # So that the client can generate the shared secret (key for the session symmetric encryption)
+    "nonce": nonce,
+}
+TIME TO LIVE OF THE SESSIONS -> DONE
+tirar ao manager todas as permissoes de um documento -> DONE
+rep_suspend_subject         // Vou a todas as sessoes dele e elimio as e depois, no create, session vejo se ele esta suspenso (e no suspend role tmb) -> DONE
+A DOC_ACL access right allows a role holder to add or remove access rights for other roles. At least one role must keep this right for each document, in order to allow an ACL to be updated. -> Doc
+ROLE_ACL: Modify the ACL. At least one role must have this permission. -> DONE (manager)
+CORRECT ERROR MESSAGES FOR EACH COMMAND, SO THAT NO USEFUL MESSAGE FOR ATTACKERS IS SHOWN .> DONE
+ROLE_DOWN: Suspend a role, allowing a role to suspend a role from being assumed by subjects of an organization. -> done
+Sessions have a lifetime defined by the Repository, and should be deleted upon a period of inactivity. -> DONE (last_interaction -> update load session)
+Do not allow simultaneous sessions by the same user on the same org -> DONE
+Verify subjects names equal to permissions -> DONE
+Corrigir bug ao adicionar 2 users iguais, mas so adiciona 1 em vez de dar erro -> DONE
+No comando rep_list_role_permissions nós retornamos as permissões de um dado role incluindo as permissões do role nos documentos. -> DONE
 
-rep_assume_role <session file> <role>
-rep_drop_role <session file> <role>
-rep_list_roles <session file> <role>
-rep_list_role_subjects <session file> <role>
-rep_list_subject_roles <session file> <username>
-rep_list_role_permissions <session file> <role>
-rep_list_permission_roles <session file> <permission>
-rep_add_role <session file> <role>
-rep_suspend_role <session file> <role>
-rep_reactivate_role <session file> <role>
-rep_add_permission <session file> <role> <username>
-rep_remove_permission <session file> <role> <username>
-rep_add_permission <session file> <role> <permission>
-rep_remove_permission <session file> <role> <permission>
-rep_acl_doc <session file> <document name> [+/-] <role> <permission>
+---
+
+Fazer testes
+
+It is possible for a subject to maintain simultaneous sessions with different organizations in the Repository. -> I think it's possible
+
+TRY WIRESHARK TO SEE ENCRYPTED/PLAINTEXT CONTENT
+
+DONT FORGET: DO NOT RESET THE DATABASE BETWEEN SERVER REINITS, BUT USE THAT AS A THIRD FUNCTION INSTEAD (add an endpoint do that client can delete all the data from the repo)
 
 
 
+FEATURES
+
+-> Files are stored in a encrypted format
+- The delete operation does not destroy information, it just clears the file_handle. Upon a delete operation, the file’s contents remain available to those that know their file_handle and encryption key. 
+-> Files can be publicly accessible given their file_handle
+-> A DOC_ACL access right allows a role holder to add or remove access rights for other roles; At least one role must keep this right for each document
+-> A DOC_READ access right allows a role holder to read the encrypted file contents and to decrypt them upon recovering the encryption key.
+-> A DOC_DELETE access right allows a role holder to clear the file_handle in a document metadata.
+-> Documents’ metadata must be stored in a physical storage (e.g. a database or a file system), which is different from the one used to store the related files.
+-> The keys used to encrypt documents’ files must be stored encrypted by the Repository.
+-> 
+    ROLE_ACL: Modify the ACL. At least one role must have this permission.
+    SUBJECT_NEW: Add a new subject, allowing a role to add a new subject to the organization.
+    SUBJECT_DOWN: Suspend a subject, allowing a role to suspend the association of a subject with the organization, while not removing its profile.
+    SUBJECT_UP: Reactivate a subject, allowing a role to put an end on a subject’s suspension.
+    DOC_NEW: Add a new document, allowing a role to add a new document to the organization’s repository.
+-> Each session must have an identifier and one or more keys.
+-> It is possible for a subject to maintain simultaneous sessions with different organizations in the Repository.
+-> The session keys must be used to enforce the confidentiality (when necessary) and the integrity (correctness and freshness) of messages exchanged during a session. 
+-> ifferent keys can be used for the different protections
+Sessions must be robust to the following attacks:
+    Eavesdropping
+    Impersonation
+    Manipulation
+    Replay
+-> Sessions have a lifetime defined by the Repository
+-> documents’ ACLs must link access rights to roles
+
+-> By default, subjects have no default role upon logging in into a session. 
+-> They need to explicitly ask for a role they are bound to, and can do so for more than one role per session. 
+-> They can also release a role during the session. 
+-> The set of roles associated to each session is stored by the Repository, in the context of each active session.
+-> Each organization can have a variable set of roles
+-> Each role has a name, a set of permissions and a list of subjects. 
+-> It is possible, for any subject of an organization, to query which users have a role and which roles a subject can assume and to query which roles have a permission and which permissions a role has
+-> Subjects not belonging to an organization cannot do these operations (session_file)
+-> 
+    ROLE_NEW: Add a new role, allowing a role to add a new role to the organization that the requesting subject belongs to.
+    ROLE_DOWN: Suspend a role, allowing a role to suspend a role from being assumed by subjects of an organization (elimina todas as que estao assumidas)
+    ROLE_UP: Reactivate a role, allowing a role to put an end on a role’s suspension.
+    ROLE_MOD: Update a role, allowing a role to add/remove a subject to/from an existing role or add/remove a permission to/from an existing role.
+    Managers: This is, by default, the role that has the full set of permissions on an organization.
+    This role is created by default when an organization is created by a subject, and that subject initially belongs to it. 
+    This relationship can change over time.
+-> The Managers can never be suspended.
+-> The Managers role must have at any time an active subject (not suspended).
+
+-> Upload a new document
+    - A subject logs-in to the Repository, within one organization, selects one of its roles with a permission to add a new document.
+    - A random encryption key (file key) is generated by the uploader, and is used to encrypt the document’s file. The subject then uploads the document with:
+        - the encrypted file;
+        - some of its metadata (name, file handle, encryption key and cryptographic descriptions, ACL).
+    - The file_handle should be a digest (cryptographic hash) of the original file contents, a value that the Repository must verify. (ja fazemos isto na mensagem, para nao estar a fazer duas coisas -> o file vai encrypted e a mensagem que leva o file tmb, COM UM DIGEST)
+
+-> Download a document   
+    - A subject logs-in in to the Repository, within one organization, and selects one of its roles with a permission to read a given document. 
+    - Then it gets confidentially the document’s metadata (namely, file handle, encryption algorithms alg and encryption key).
+    - Fetches the encrypted file using the file handle, decrypts it and verifies if its contents are correct (using again the file_handle).
+-> Delete a document
+    - A subject logs-in in to the Repository, within one organization, and selects one of its roles with a permission to delete a given document. 
+    - Then it deletes the document’s and receives, confidentially and for its own future record, the file_handle, the encryption algorithms alg and the encryption key.
+
+-> Anonymous API - all implemented
+-> Authenticated API - all implemented
+-> Authorized API - all implemented
+
+-> The Repository must have a well-known public key that client applications can use for confidentiality and source authentication. 
+-> This key must be used to protect anonymous client-Repository interactions that require some security protection (not all of them require).
+
+-> Authenticated and authorized APIs must always use session keys for adding confidentiality to sensitive items and add integrity control and source authentication.
+-> The Repository should use some kind of master key, possibly derived from a password, to protect the confidentiality of file’s keys.
+
+-> For facilitating the authentication of subjects, you can use elliptic cryptography (EC) key pairs for subjects and for the Repository.
+-> Each command that produces a useful persistent result 
+-> All commands should follow the UNIX semantics of returning 0 in case of success, a positive value in case of input errors, and a negative 
+value in case of errors reported by the Repository.
+-> Since the Repository’s public key, stored in a file, must be used in some commands, you can use the environment variable REP_PUB_KEY to indicate its path.
+-> For the Internet address of the Repository, you can use the environment variable REP_ADDRESS to indicate its IP address and port number. 

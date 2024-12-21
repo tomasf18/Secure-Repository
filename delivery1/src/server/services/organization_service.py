@@ -4,7 +4,8 @@ from dao.OrganizationDAO import OrganizationDAO, SessionDAO
 from dao.DocumentDAO import DocumentDAO
 # from dao.SessionDAO import SessionDAO
 from dao.KeyStoreDAO import KeyStoreDAO
-from utils.utils import encrypt_payload
+from delivery2.src.server.utils.constants.http_code import HTTP_Code
+from delivery2.src.server.utils.utils import return_data
 from utils.loadSession import load_session
 from dao.DocumentDAO import DocumentDAO
 from models.orm import Organization, Subject, Document
@@ -63,10 +64,12 @@ def add_organization_subject(organization_name, data, db_session: Session):
     try:
         organization_dao.add_subject_to_organization(organization_name, username, name, email, public_key)
     except IntegrityError:
-        return encrypt_payload({
-                "error": f"Subject with username '{username}' already exists."
-            }, session_key[:32], session_key[32:]
-        ), 400
+        return return_data(
+            key="error",
+            data=f"Subject with username '{username}' already exists.",
+            code=HTTP_Code.BAD_REQUEST,
+            session_key=session_key
+        )
 
     ## Construct result
     result = {
@@ -77,11 +80,13 @@ def add_organization_subject(organization_name, data, db_session: Session):
     ## Update session
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return return_data(
+        key="data",
+        data=result,
+        code=HTTP_Code.OK,
+        session_key=session_key
+    )
 
 
 def list_organization_subjects(organization_name, data, db_session: Session):
@@ -106,11 +111,13 @@ def list_organization_subjects(organization_name, data, db_session: Session):
                 "status": status
             })
     except Exception as e:
-        ## TODO: Fix error message
-        return encrypt_payload({
-                "error": str(e)
-            }, session_key[:32], session_key[32:]
-        ), 400
+        message = str(e)
+        return return_data(
+            key="error",
+            data=message,
+            code=HTTP_Code.BAD_REQUEST,
+            session_key=session_key
+        )
     
     ## Construct result
     result = {
@@ -121,11 +128,14 @@ def list_organization_subjects(organization_name, data, db_session: Session):
     ## Update session
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return return_data(
+        key="data",
+        data=result,
+        code=HTTP_Code.OK,
+        session_key=session_key
+    )
+
 
 
 def get_organization_subject(organization_name, username, data, db_session: Session):
@@ -156,10 +166,12 @@ def get_organization_subject(organization_name, username, data, db_session: Sess
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
 
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-
-    return json.dumps(encrypted_result), 200
+    return return_data(
+        key="data",
+        data=result,
+        code=HTTP_Code.OK,
+        session_key=session_key
+    )
     
 def activate_organization_subject(organization_name, username, data, db_session: Session):
     '''Handles PUT requests to /organizations/<organization_name>/subjects/<subject_name>'''
@@ -175,10 +187,12 @@ def activate_organization_subject(organization_name, username, data, db_session:
     try:
         organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), 403
+            return return_data(
+            key="error",
+            data=f"Subject '{username}' doesn't exists in the organization '{organization_name}'.",
+            code=HTTP_Code.FORBIDDEN,
+            session_key=session_key
+        )
     
     ## Construct result
     result = {
@@ -190,9 +204,12 @@ def activate_organization_subject(organization_name, username, data, db_session:
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return json.dumps(encrypted_result), 200
+    return return_data(
+        key="data",
+        data=result,
+        code=HTTP_Code.OK,
+        session_key=session_key
+    )
     
 
 def suspend_organization_subject(organization_name, username, data, db_session: Session):
@@ -209,10 +226,12 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     try:
         organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Subject '{username}' doesn't exists in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), 403
+        return return_data(
+            key="error",
+            data=f"Subject '{username}' doesn't exists in the organization '{organization_name}'.",
+            code=HTTP_Code.FORBIDDEN,
+            session_key=session_key
+        )
     
     ## Construct result
     result = {
@@ -223,11 +242,13 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
     ## Update session
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
 
-    return json.dumps(encrypted_result), 200
+    return return_data(
+            key="data",
+            data=result,
+            code=HTTP_Code.OK,
+            session_key=session_key
+        )
 
 def create_organization_document(organization_name, data, db_session: Session):
     '''Handles POST requests to /organizations/<organization_name>/documents'''
@@ -258,10 +279,13 @@ def create_organization_document(organization_name, data, db_session: Session):
     ## Update session
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return encrypted_result, 201
+
+    return return_data(
+        key="data",
+        data=result,
+        code=HTTP_Code.CREATED,
+        session_key=session_key
+    )
 
 def list_organization_documents(organization_name, data, username, date_filter, date, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents'''
@@ -278,10 +302,12 @@ def list_organization_documents(organization_name, data, username, date_filter, 
 
     documents: list["Document"] = document_dao.get(session.id, username, date_filter, date)
     if not documents:
-        return encrypt_payload({
-                "error": "No documents found."
-            }, session_key[:32], session_key[32:]
-        ), 404
+        return return_data(
+            key="error",
+            data="No documents found.",
+            code=HTTP_Code.NOT_FOUND,
+            session_key=session_key
+        )
 
     serializable_documents = []
     for doc in documents:
@@ -299,9 +325,12 @@ def list_organization_documents(organization_name, data, username, date_filter, 
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return encrypted_result, 201
+    return return_data(
+            key="data",
+            data=result,
+            code=HTTP_Code.CREATED,
+            session_key=session_key
+        )
 
 # =================================== Auxiliar Function =================================== #
 
@@ -339,10 +368,12 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     try:
         document: "Document" = document_dao.get_metadata(session.id, document_name)
     except Exception as e:
-        return encrypt_payload({
-                "error": f"Document '{document_name}' doesn't exists in the organization '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), 404
+        return return_data(
+            key="error",
+            data=f"Document '{document_name}' doesn't exists in the organization '{organization_name}'.",
+            code=HTTP_Code.NOT_FOUND,
+            session_key=session_key
+        )
     
     serializable_document = get_serializable_document(document)
 
@@ -356,9 +387,12 @@ def get_organization_document_metadata(organization_name, document_name, data, d
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return encrypted_result, 201
+    return return_data(
+            key="data",
+            data=result,
+            code=HTTP_Code.CREATED,
+            session_key=session_key
+        )
 
 def get_organization_document_file(organization_name, document_name, data, db_session: Session):
     '''Handles GET requests to /organizations/<organization_name>/documents/<document_name>/file'''
@@ -375,10 +409,12 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     
     document: "Document" = document_dao.get_metadata(session.id, document_name)
     if not document.file_handle:
-        return encrypt_payload({
-                "error": f"ERROR 404 - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'."
-            }, session_key[:32], session_key[32:]
-        ), 404
+        return return_data(
+            key="error",
+            data=f"ERROR 404 - Document '{document_name}' does not have an associated file handle in Organization: '{organization_name}'.",
+            code=HTTP_Code.NOT_FOUND,
+            session_key=session_key
+        )
     
     serializable_document = get_serializable_document(document)
     serializable_document["encryption_data"]["key"] = organization_dao.decrypt_metadata_key(
@@ -396,9 +432,12 @@ def get_organization_document_file(organization_name, document_name, data, db_se
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return encrypted_result, 201
+    return return_data(
+            key="data",
+            data=result,
+            code=HTTP_Code.CREATED,
+            session_key=session_key
+        )
 
 
 def delete_organization_document(organization_name, document_name, data, db_session: Session):
@@ -416,10 +455,13 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     try:
         ceasing_file_handle = document_dao.delete(session.id, document_name)
     except ValueError as e:
-        return encrypt_payload({
-                "error": e.args[0]
-            }, session_key[:32], session_key[32:]
-        ), 400
+        message = e.args[0]
+        return return_data(
+            key="error",
+            data=message,
+            code=HTTP_Code.BAD_REQUEST,
+            session_key=session_key
+        )
     
     ## Construct result
     result = {
@@ -431,6 +473,9 @@ def delete_organization_document(organization_name, document_name, data, db_sess
     session_dao.update_nonce(session.id, result["nonce"])
     session_dao.update_counter(session.id, decrypted_data["counter"])
     
-    ## Encrypt result
-    encrypted_result = encrypt_payload(result, session_key[:32], session_key[32:])
-    return encrypted_result, 200
+    return return_data(
+            key="data",
+            data=result,
+            code=HTTP_Code.OK,
+            session_key=session_key
+        )

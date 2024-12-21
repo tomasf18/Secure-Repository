@@ -48,7 +48,7 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Document '{name}' already exists.")
         
         
-    def create_document(self, name: str, session_id: int, encrypted_data: bytes, alg: str, key: bytes, iv: bytes) -> Document:
+    def create_document(self, name: str, session_id: int, digest: str, encrypted_data: bytes, algorithm: str, mode: str, key: bytes, iv: bytes) -> Document:
         """Create a new document, its ACL, and metadata, and store the encrypted file."""
 
         try:
@@ -64,9 +64,8 @@ class DocumentDAO(BaseDAO):
             creation_date = datetime.now()
 
             # Step 3: Generate the document handle and file handle
-            data_digest = hashlib.sha256(encrypted_data).hexdigest()
-            document_handle = data_digest
-            file_handle = f"{organization.name}_{data_digest}"
+            document_handle = f"{organization.name}_{name}"
+            file_handle = f"{organization.name}_{digest}"
             file_path = os.path.join("data", organization.name, file_handle) + ".enc"
 
             # Step 4: Store the data of the encrypted document file in a system file
@@ -75,27 +74,14 @@ class DocumentDAO(BaseDAO):
             # Step 5: Create the Document entity
             document = self.create(document_handle, name, creation_date, file_handle, creator.username, organization.name)
 
-            # Step 6: Create the DocumentACL '''and link it to the Manager''' 
-            ''' 
-            DO NOT LINK! THE MANAGER ROLE IS AT ORGANIZATION LEVEL, AND HAS THE FULL SET OF POSSIBLE PERMISSIONS 
-            THERE'S ONLY ONE MANAGER ROLE PER ORGANIZATION, AND IT'S CREATED WHEN THE ORGANIZATION IS CREATED
-            '''
-            
-            # self.role_dao = RoleDAO(self.session)
-            # manager_role = self.role_dao.get_by_name_and_acl_id("Manager", organization.acl.id)
-            # if not manager_role:
-            #     raise ValueError("Manager role not found for the organization.")
+            # Step 6: Create the DocumentACL
 
             document_acl = self.document_acl_dao.create(document.id)
             # document_acl.roles.append(manager_role)
             self.session.add(document_acl)
 
             # Step 7: Create the RestrictedMetadata entity
-            algorithm, mode = alg.split("-")
-            
-            print("DECRYPTED METADATA KEY: ", key)
-            encrypted_metadata_key, iv_encrypted_key = self.key_store_dao.create(key, "symmetric")
-            print("ENCRYPTED METADATA KEY: ", encrypted_metadata_key.key)
+            encrypted_metadata_key, iv_encrypted_key, salt = self.key_store_dao.create(key, "symmetric")
 
             metadata = self.restricted_metadata_dao.create(
                 document=document, 
@@ -103,6 +89,7 @@ class DocumentDAO(BaseDAO):
                 mode=mode, 
                 encrypted_metadata_key_id=encrypted_metadata_key.id,    # Store the key encrypted (used to encrypt the document file)
                 iv=iv,                                                  # Store the IV used to encrypt the document file
+                salt=salt,                                              # Store the salt used to derive the key used to encrypt the metadata key
                 iv_encrypted_key=iv_encrypted_key                       # Store the IV used to encrypt the metadata key
             )
 
@@ -138,7 +125,8 @@ class DocumentDAO(BaseDAO):
             raise ValueError(f"Session with ID '{document_id}' does not exist.")
         encrypted_key = self.get_encrypted_metadata_key(document_id)
         iv = restricted_metadata.iv_encrypted_key
-        return self.key_store_dao.decrypt_key(encrypted_key, iv)
+        salt = restricted_metadata.salt
+        return self.key_store_dao.decrypt_key(encrypted_key, iv, salt)
         
 # -------------------------------
     
@@ -231,3 +219,5 @@ class DocumentDAO(BaseDAO):
         self.session.commit()
 
         return ceasing_file_handle
+    
+# -------------------------------
