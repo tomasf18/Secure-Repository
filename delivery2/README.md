@@ -31,8 +31,8 @@ python3 server.py
 ### **Important Note about passing arguments to some commands** -> See the tests files for reference on how to run these commands
 - On most commands that require a file path as an argument, you **do not need** to pass neither the full path nor the file extension. The command will automatically store/search the file on the respective directories.
 - For the command `rep_subject_credentials <password> <credentials file>` and `rep_add_subject <session file> <username> <name> <email> <credentials file>`, for the `credentials file` you should only pass the name of the file (these files are sothred on the `delivery2/src/client/data/keys/subject_keys` folder).
-- For the command `rep_decrypt_file <encrypted file> <encyption metadata>`, for the `encrypted file` you should only pass the file name (or path, inside the `delivery2/src/client/data/encrypted_files` folder). And as it is a local command, the encryption metadata can be found on the `delivery2/src/client/data/metadatas` folder, and you only need to pass the path **inside this folder** (e.g.: for file `delivery2/src/client/data/metadatas/user1_org1/doc1_metadata.json`, you only need to pass `user1_org1/doc1` - the path inside `metadatas` folder, which includes the name of the document - as an argument).
-- On `rep_create_org <organization> <username> <name> <email> <public key file>`, for the public key file, yu should do the same as described on the second bullet point for credentials file. These files are stored on the `delivery2/src/client/keys/subject_keys` folder.
+- For the command `rep_decrypt_file <encrypted file> <encyption metadata>`, `encrypted file` should be the file name (or path, inside the `delivery2/src/client/data/encrypted_files` folder). And, as it is a local command, the encryption metadata can be found on the `delivery2/src/client/data/metadatas` folder, and you only need to pass the path **inside this folder** (e.g.: for file `delivery2/src/client/data/metadatas/user1_org1/doc1_metadata.json`, you only need to pass `user1_org1/doc1` - the path inside `metadatas` folder, which includes the name of the document - as an argument).
+- On `rep_create_org <organization> <username> <name> <email> <public key file>`, for the public key file, you should do the same as described on the second bullet point for credentials file. These files are stored on the `delivery2/src/client/keys/subject_keys` folder.
 - Here: `rep_create_session <organization> <username> <password> <credentials file> <session file>`, for the `credentials file`, you should do the same as described on the second bullet point for credentials file, and for the `session file`, you only need to pass the name of the file, and the command will automatically store the file on the respective directory with the `.json` extension. These files are stored on the `delivery2/src/client/sessions` folder.
 - On `rep_get_file <file handle> [file]`, for the [file] argument, you can pass either the name of the file or some path. This path will be inside the `delivery2/src/client/data/encrypted_files` folder.
 - For the commands that require a session file, you should only pass the name of the file (without the `.json` extension or the path) that is stored on the `delivery2/src/client/sessions` folder.
@@ -43,7 +43,7 @@ python3 server.py
 ## Tests
 In order to test the implementation, a few scripts were created independently, where a big set of possible actions while using the application were taken.
 Those scripts live on the folder `delivery2/src/client/test_commands`.
-To test the repository, firstly the server must be restarted in between each run of each script.
+To test the repository, firstly the database must be cleaned in between each run of each script.
 
 -- To run the tests:
 1. Navigate to `delivery2/src/client/test_commands` folder.
@@ -171,6 +171,13 @@ To test the repository, firstly the server must be restarted in between each run
 
 ## <i class="fa-solid fa-terminal"></i> Implemented Commands
 
+### Commands Return Codes
+
+All client commands follow UNIX semantics on return codes:
+* **0** - The command ran and finished with sucess
+* **1** - The command terminated earlier because of an input error, happens when user try to run a command with invalid values, such as passing a file that does not exists. This means that no connection to the server was made
+* **-1** - The command terminated earlier because of an error in the repository, happens when the command was sucessfuly sent to the repository, but some error ocurred, e.g. `role not bound to user` when attempting to assume a new role in the session
+
 ### Local Commands
 
 #### `rep_subject_credentials <password> <credentials file>`
@@ -194,9 +201,9 @@ To test the repository, firstly the server must be restarted in between each run
 - Then, the client can use the shared secret to encrypt the anonymous message to be sent to the server.
 - The server decrypts the message using the shared secret.
 - When sending the response, the server uses the shared secret to encrypt the message.
-- The client decrypts the message using the shared secret and oes what it needs to do with the response.
+- The client decrypts the message using the shared secret and does what it needs to do with the response.
 - This way, we can guarantee that the communication is secure and that the client is talking to the correct server.
-- As in this kind of communication the client is anonymous, we don't need to worry about the server authenticating the client.
+- As, in this kind of communication, the client is anonymous, we don't need to worry about the server authenticating the client.
 
 The following diagram takes a closer look at how this is done in the code:
 ![Session Messages Diagram](./docs/AnonymousAPICommunication.pdf)
@@ -220,9 +227,9 @@ The following diagram takes a closer look at how this is done in the code:
 - All the security of a session comes from its creation moment.
 - The client generates a random ECC public key, this one is to obtain the **session shared key**. We refer to the ECC public keys generated on both sides as **session public keys**.
 - And, having already shared its credentials with the repository, signs the session info (with the generated session public key included) he wants to send to the server (namely the organization and username).
-- Then, as this still is an anonymous communication, the same process described above is used to generate an ephemeral shared secret, just for this command (this is, just to take the session - signed - information form the client to the server). Here, we refer to the ECC public keys generated on both sides as **ephemeral**.
+- Then, as this still is an anonymous communication, the same process described above is used to generate an ephemeral shared secret, just for this command (this is, just to take the session - signed - information from the client to the server). Here, we refer to the ECC public keys generated on both sides as **ephemeral**.
 - Once the **ephemeral** secret is agreed, the client sends the signed session info to the server, securely encrypted.
-- The server decrypts the message.
+- The server then decrypts the message.
 - With the session info decrypted, on `create_session()` function, the server verifies the signature using the public key of the client on that organization.
 - After that, he generates its own **session public key**.
 - Then, the server generates the **session shared key/secret** using the **session public key** of the client.
@@ -313,7 +320,6 @@ The following diagram takes a closer look at how this is done in the code:
 
 ## Implemented Features
 
-// TODO: Data that needs to be encrypted on the repo (symmetric/private keys, files, etc) is encrypted with a key that is generated with a key derivation function using the repository password as argument. The seed is always different at each encryption. (explain this well)
 
 All previous commands where completely implemented, with the following requirements:
 * When an organization is created, its creator becomes a Manager of the organization
@@ -333,6 +339,7 @@ All previous commands where completely implemented, with the following requireme
 * Sessions have:
     * One or mode keys
         * Keys are used for integrity check and to ensure confidentiality
+        * Keys are generated through ECDH and passed through an Hash Based Key Derivation Function to get a session key with a length of 64 bytes, of which the first 32 are used to encrypt the sent data and the remaining 32 to generate a Message Authentication Code (a signed digest)
     * An identifier
     * An organization
     * A predefined Time To Live, that is refreshed on each operation
@@ -354,7 +361,8 @@ All previous commands where completely implemented, with the following requireme
 * Subjects can download files from the repository
     * Subjects who have access to the metadata can also decrypt the file using the file_handle provided in the metadata
     * Uppon a decryption, the file handle provided in the metadata is used to carry out an integrity check.
-* Sensitive data is encrypted on the server by a master key before being saved in disk
 * Repository has a well-known public key that is used by the client to verify integrity and source authentication of the returned data
-* All cal
-
+    * All assymmetric keys used in the repository and in the client are generated through Elliptic Cryptography
+* Sensitive data is encrypted on the server by a master key before being saved in disk
+    * Data that needs to be encrypted on the repository, such as (as)symmetric keys, files, etc. are encrypted with a key generated from a password based key derivation function (PBKDF) using the repository password as argument. 
+    * In order to create entropy in the generated key used to encrypt the data, a different, random, salt is passed to the PBKDF each time a key is needed. This salt value is saved in the database for future use when decrypting the data
