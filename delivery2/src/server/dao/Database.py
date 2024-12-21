@@ -38,6 +38,8 @@ class Database:
 
         if reset:
             self.reset()
+        else:
+            self.startup()
 
     def __enter__(self):
         return self
@@ -45,14 +47,17 @@ class Database:
     def close_session(self):
         self.session.close()
         
-    def reset(self):
-        Base.metadata.drop_all(bind=self.engine)
+    def startup(self):
         Base.metadata.create_all(bind=self.engine)    
         self.create_session()
         self.initialize_repository()
         self.initialize_permissions()
         self.close_session()
-    
+
+    def reset(self):
+        Base.metadata.drop_all(bind=self.engine)
+        self.startup()
+
     def create_session(self):
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.session = SessionLocal()
