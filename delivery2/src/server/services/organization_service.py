@@ -427,6 +427,7 @@ def delete_organization_document(organization_name, document_name, data, db_sess
         if missing_permissions != []:
             return return_data("error", f"Access denied. Missing permissions for document {document.name}: {', '.join(permission.name for permission in missing_permissions)}", HTTP_Code.FORBIDDEN, session_key)
         serializable_return_data = get_serializable_deleted_doc_info(document, document_dao)
+        document_dao.delete(session.id, document_name)
     except ValueError as e:
         return return_data("error", e.args[0], HTTP_Code.NOT_FOUND, session_key)
 

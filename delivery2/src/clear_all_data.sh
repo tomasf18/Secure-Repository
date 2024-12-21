@@ -45,5 +45,5 @@ fi
 
 echo "Cleaning $SERVER_DATA_DIR except .gitkeep..."
 find $SERVER_DATA_DIR -type f ! -name ".gitkeep" -exec rm -v {} \;
-
+rm ./server/dao/database/repo.db
 echo "Cleanup complete!"
