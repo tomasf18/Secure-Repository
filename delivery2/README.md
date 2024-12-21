@@ -1,5 +1,64 @@
 # SIO Project
 
+## <i class="fa-solid fa-file-code"></i> How to run the project
+
+### 1. Install dependencies
+
+-- To install the dependencies go to the `delivery2` folder and run the following commands:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Run the server
+
+-- To start the Flask server go to the `delivery2/src/server` folder and run the following command:
+
+```bash
+python3 server.py
+```
+
+### 3. Run a command
+
+-- Before running a command, ensure you are in the `delivery2/src/client/commands` folder. From there, execute the desired command with the appropriate parameters. For example:
+
+```bash
+./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
+```
+
+### **Important Note about passing arguments to some commands** -> See the tests files for reference on how to run these commands
+- On most commands that require a file path as an argument, you **do not need** to pass neither the full path nor the file extension. The command will automatically store/search the file on the respective directories.
+- For the command `rep_subject_credentials <password> <credentials file>` and `rep_add_subject <session file> <username> <name> <email> <credentials file>`, for the `credentials file` you should only pass the name of the file (these files are sothred on the `delivery2/src/client/data/keys/subject_keys` folder).
+- For the command `rep_decrypt_file <encrypted file> <encyption metadata>`, for the `encrypted file` you should only pass the file name (or path, inside the `delivery2/src/client/data/encrypted_files` folder). And as it is a local command, the encryption metadata can be found on the `delivery2/src/client/data/metadatas` folder, and you only need to pass the path **inside this folder** (e.g.: for file `delivery2/src/client/data/metadatas/user1_org1/doc1_metadata.json`, you only need to pass `user1_org1/doc1` - the path inside `metadatas` folder, which includes the name of the document - as an argument).
+- On `rep_create_org <organization> <username> <name> <email> <public key file>`, for the public key file, yu should do the same as described on the second bullet point for credentials file. These files are stored on the `delivery2/src/client/keys/subject_keys` folder.
+- Here: `rep_create_session <organization> <username> <password> <credentials file> <session file>`, for the `credentials file`, you should do the same as described on the second bullet point for credentials file, and for the `session file`, you only need to pass the name of the file, and the command will automatically store the file on the respective directory with the `.json` extension. These files are stored on the `delivery2/src/client/sessions` folder.
+- On `rep_get_file <file handle> [file]`, for the [file] argument, you can pass either the name of the file or some path. This path will be inside the `delivery2/src/client/data/encrypted_files` folder.
+- For the commands that require a session file, you should only pass the name of the file (without the `.json` extension or the path) that is stored on the `delivery2/src/client/sessions` folder.
+- For `rep_add_doc <session file> <document name> <file>` command, the file argument should be only the name of the file that is stored on the `delivery2/src/client/data/files` folder.
+- On `rep_get_doc_file <session file> <document name> [file]` command, the file argument should be only the name of the file that is stored on the `delivery2/src/client/data/decrypted_files` folder (or relative path inside this folder).
+
+
+## Tests
+In order to test the implementation, a few scripts were created independently, where a big set of possible actions while using the application were taken.
+Those scripts live on the folder `delivery2/src/client/test_commands`.
+To test the repository, firstly the server must be restarted in between each run of each script.
+
+-- To run the tests:
+1. Navigate to `delivery2/src/client/test_commands` folder.
+2. Run the following command 
+    ```bash 
+    ./{test_script_name}.sh
+    ```
+3. Analyze the output given the command ran and the arguments passed into the command 
+4. Clear the server database:
+    1. Navigate to `delivery2/src`
+    2. Run the cleaning script
+        ```bash 
+        ./clear_all_data.sh
+        ```
+
 ## <i class="fa-solid fa-people-group"></i> Our Team 
 
 | <div align="center"><a href="https://github.com/tomasf18"><img src="https://avatars.githubusercontent.com/u/122024767?v=4" width="150px;" alt="Tomás Santos"/></a><br/><strong>Tomás Santos</strong><br/>112981</div> | <div align="center"><a href="https://github.com/DaniloMicael"><img src="https://avatars.githubusercontent.com/u/115811245?v=4" width="150px;" alt="Danilo Silva"/></a><br/><strong>Danilo Silva</strong><br/>113384</div> | <div align="center"><a href="https://github.com/Affapple"><img src="https://avatars.githubusercontent.com/u/65315165?v=4" width="150px;" alt="João Gaspar"/></a><br/><strong>João Gaspar</strong><br/>114514</div> |
@@ -110,7 +169,7 @@
 ---
 
 
-## <i class="fa-solid fa-terminal"></i> Commands Implemented
+## <i class="fa-solid fa-terminal"></i> Implemented Commands
 
 ### Local Commands
 
@@ -126,6 +185,22 @@
 
 ### Anonymous API Commands
 
+#### How do we make this communication secure?
+- To secure an anonymous communication between the client and the server, we use ECDH to generate a shared secret.
+- Client generates a random public key and sends it in plaintext to the server.
+- Server uses the public key sent by the client to generate the shared secret.
+- Then, the server generates a random public key and sends it **signed** with the repository private key to the client.
+- Client verifies the signature and generates the shared secret.
+- Then, the client can use the shared secret to encrypt the anonymous message to be sent to the server.
+- The server decrypts the message using the shared secret.
+- When sending the response, the server uses the shared secret to encrypt the message.
+- The client decrypts the message using the shared secret and oes what it needs to do with the response.
+- This way, we can guarantee that the communication is secure and that the client is talking to the correct server.
+- As in this kind of communication the client is anonymous, we don't need to worry about the server authenticating the client.
+
+The following diagram takes a closer look at how this is done in the code:
+![Session Messages Diagram](./docs/AnonymousAPICommunication.pdf)
+
 #### `rep_create_org <organization> <username> <name> <email> <public key file>`
 - This command creates an organization in a Repository and defines its first subject.
 
@@ -139,6 +214,36 @@
 - This command downloads a file given its handle. The file contents are written to stdout or to the file referred in the optional last argument.
 
 ### Authenticated API Commands
+
+#### How do we make this communication secure?
+- To secure the communication between the client and the server during a session, we generate a 64-bit shared secret using ECDH.
+- All the security of a session comes from its creation moment.
+- The client generates a random ECC public key, this one is to obtain the **session shared key**. We refer to the ECC public keys generated on both sides as **session public keys**.
+- And, having already shared its credentials with the repository, signs the session info (with the generated session public key included) he wants to send to the server (namely the organization and username).
+- Then, as this still is an anonymous communication, the same process described above is used to generate an ephemeral shared secret, just for this command (this is, just to take the session - signed - information form the client to the server). Here, we refer to the ECC public keys generated on both sides as **ephemeral**.
+- Once the **ephemeral** secret is agreed, the client sends the signed session info to the server, securely encrypted.
+- The server decrypts the message.
+- With the session info decrypted, on `create_session()` function, the server verifies the signature using the public key of the client on that organization.
+- After that, he generates its own **session public key**.
+- Then, the server generates the **session shared key/secret** using the **session public key** of the client.
+- The server creates a response message with all the session information for the client's session file. This information also includes the **session public key** of the server, so that the client can generate the **session shared key/secret**.
+- The server signs the response message with the **repository private key**.
+- Then, all this information is encrypted with the **ephemeral shared key/secret** agreed for this command execution.
+- The server sends the encrypted message to the client.
+- The client decrypts the message.
+- The client verifies the signature using the **repository public key**.
+- The client generates the **session shared key/secret** using the **session public key** of the server.
+- Finally, the client stores the session information in the session file.
+
+- The following diagram shows how the session secret is obtained, and, consequently, how the session is created.
+![Session Messages Diagram](./docs/CreatingSecureSession.pdf)
+
+- The following diagram shows how the session contents are encrypted on both sides.
+![Session Messages Diagram](./docs/EncryptionDiagram.pdf)
+
+- The following diagram shows how the session contents are decrypted on both sides.
+![Session Messages Diagram](./docs/DecryptionDiagram.pdf)
+
 
 #### `rep_assume_role <session file> <role>`
 - This command requests the given role for the session.
@@ -207,6 +312,9 @@
 ---
 
 ## Implemented Features
+
+// TODO: Data that needs to be encrypted on the repo (symmetric/private keys, files, etc) is encrypted with a key that is generated with a key derivation function using the repository password as argument. The seed is always different at each encryption. (explain this well)
+
 All previous commands where completely implemented, with the following requirements:
 * When an organization is created, its creator becomes a Manager of the organization
     * Each Organization must always have a role Manager
@@ -250,57 +358,3 @@ All previous commands where completely implemented, with the following requireme
 * Repository has a well-known public key that is used by the client to verify integrity and source authentication of the returned data
 * All cal
 
-
-## <i class="fa-solid fa-key"></i> Encryption Documentation
-Diagrams of message exchange between client-server
-
-![Session Messages Diagram](./docs/SessionMessagesDiagram.pdf)
-
-
-## <i class="fa-solid fa-file-code"></i> How to run the project
-
-### 1. Install dependencies
-
--- To install the dependencies go to the `delivery2` folder and run the following commands:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 2. Run the server
-
--- To start the Flask server go to the `delivery2/src/server` folder and run the following command:
-
-```bash
-python3 server.py
-```
-
-### 3. Run a command
-
--- Before running a command, ensure you are in the `delivery2/src/client/commands` folder. From there, execute the desired command with the appropriate parameters. For example:
-
-```bash
-./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
-```
-
-
-## Tests
-In order to test the implementation, a few scripts were created independently, where a big set of possible actions while using the application were taken.
-Those scripts live on the folder `delivery2/src/client/test_commands`.
-To test the repository, firstly the server must be restarted in between each run of each script.
-
--- To run the tests:
-1. Navigate to `delivery2/src/client/test_commands` folder.
-2. Run the following command 
-    ```bash 
-    ./{test_script_name}.sh
-    ```
-3. Analyze the output given the command ran and the arguments passed into the command 
-4. Clear the server database:
-    1. Navigate to `delivery2/src`
-    2. Run the cleaning script
-        ```bash 
-        ./clear_all_data.sh
-        ```
