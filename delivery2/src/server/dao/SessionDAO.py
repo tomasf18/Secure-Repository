@@ -154,8 +154,13 @@ class SessionDAO(BaseDAO):
                 raise ValueError(f"Session with ID '{session_id}' does not exist.")
             
             role_object = self.role_dao.get_by_name_and_acl_id(role, session.organization.acl.id)
+
+            session_roles = session.session_roles
+
+            if role_object in session.session_roles:
+                raise ValueError(f"Role '{role}' already added to Session with session ID '{session_id}'")
             
-            session.session_roles.append(role_object)
+            session_roles.append(role_object)
             self.session.commit()
             
             self.session.refresh(role_object)

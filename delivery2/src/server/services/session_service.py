@@ -180,10 +180,11 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
     
     try:
         role_added = session_dao.add_session_role(session.id, role.name)
-    except Exception as e:
+    except ValueError as e:
+        message = e.args[0]
         return return_data(
             key="error",
-            data=f"Error adding role '{role}' to session '{session_id}' in organization '{organization_name}'",
+            data=message,
             code=HTTP_Code.FORBIDDEN,
             session_key=session_key
         )
