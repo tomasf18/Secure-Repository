@@ -6,7 +6,6 @@ USER3_SESSION=user3_org2_session_file
 DOCUMENT=doc1
 
 INPUT_FILE=file1.txt
-OUTPUT_FILE=output.txt
 
 # Create Users
 ./rep_subject_credentials 123 user1_cred_file
@@ -23,7 +22,7 @@ OUTPUT_FILE=output.txt
 # Non existent docs
 ./rep_list_docs $USER1_SESSION
 ./rep_get_doc_metadata  $USER1_SESSION $DOCUMENT
-./rep_get_doc_file $USER1_SESSION $DOCUMENT $OUTPUT_FILE
+./rep_get_doc_file $USER1_SESSION $DOCUMENT
 ./rep_delete_doc $USER1_SESSION $DOCUMENT
 
 
@@ -33,12 +32,14 @@ OUTPUT_FILE=output.txt
 
 # Fetch added docs WITHOUT PERMISSION
 ./rep_get_doc_metadata $USER2_SESSION $DOCUMENT
-./rep_get_doc_file $USER2_SESSION $DOCUMENT $OUTPUT_FILE
+./rep_get_doc_file $USER2_SESSION $DOCUMENT
 
+clear
 # Fetch added docs WITH PERMISSION
 ./rep_get_doc_metadata $USER1_SESSION $DOCUMENT
-./rep_get_doc_file $USER1_SESSION $DOCUMENT $OUTPUT_FILE
+./rep_get_doc_file $USER1_SESSION $DOCUMENT
 
+exit
 
 # Delete docs WITHOUT PERMISSION
 ./rep_delete_doc $USER2_SESSION $DOCUMENT
@@ -51,4 +52,4 @@ OUTPUT_FILE=output.txt
 
 # Fetch deleted docs
 ./rep_get_doc_metadata  $USER1_SESSION $DOCUMENT
-./rep_get_doc_file $USER1_SESSION $DOCUMENT $OUTPUT_FILE
+./rep_get_doc_file $USER1_SESSION $DOCUMENT

@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import json
@@ -240,6 +241,8 @@ def rep_decrypt_file(encrypted_file, encryption_metadata_path, get_doc_file=Fals
         sys.exit(ReturnCode.INPUT_ERROR)
     
     doc_name = metadata['document_name']
+    file_handle = metadata['file_handle'].split("_")[1]
+
     encryption_data = metadata['encryption_data']
     algorithm = encryption_data['algorithm']
     mode = encryption_data['mode']
@@ -247,12 +250,17 @@ def rep_decrypt_file(encrypted_file, encryption_metadata_path, get_doc_file=Fals
     iv = convert_str_to_bytes(encryption_data['iv'])
 
     if algorithm == "AES256":
-        aes = AES(AESModes.CBC)
         if mode == "CBC":
-            decrypted_file_contents = aes.decrypt_data(encrypted_data=encrypted_file_content, key=key, iv=iv)
+            decryptor = AES(AESModes.CBC)
         # elif mode == "GCM": (...)
-    
+
+    decrypted_file_contents = decryptor.decrypt_data(encrypted_data=encrypted_file_content, key=key, iv=iv)
     decrypted_file_contents_str = decrypted_file_contents.decode()
+
+    digest = hashlib.sha256(decrypted_file_contents).hexdigest()
+    if file_handle != digest:
+        print("Decrypted file does not match expected file!")
+        sys.exit(ReturnCode.INPUT_ERROR)
     
     if not get_doc_file:
         print(decrypted_file_contents_str)
@@ -1118,6 +1126,7 @@ def rep_add_doc(session_file, document_name, file):
     aes = AES(AESModes.CBC)
     random_key = aes.generate_random_key()
     encrypted_file_content, iv = aes.encrypt_data(str(file_contents).encode(), random_key)
+    digest = hashlib.sha256(file_contents.encode()).hexdigest()
     
     endpoint = f"/organizations/{session_file_content['organization']}/documents"
     
@@ -1125,6 +1134,7 @@ def rep_add_doc(session_file, document_name, file):
         "session_id": session_id,
         "document_name": document_name,
         "file": convert_bytes_to_str(encrypted_file_content),
+        "file_handle": digest,
         "alg": algorithm + "-" + mode,
         "key": convert_bytes_to_str(random_key),
         "iv": convert_bytes_to_str(iv),
