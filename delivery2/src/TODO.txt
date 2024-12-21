@@ -31,7 +31,6 @@ No comando rep_list_role_permissions nós retornamos as permissões de um dado r
 
 Fazer testes
 
-It is possible for a subject to maintain simultaneous sessions with different organizations in the Repository. -> I think it's possible
 
 TRY WIRESHARK TO SEE ENCRYPTED/PLAINTEXT CONTENT
 
