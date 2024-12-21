@@ -24,11 +24,12 @@ ROLE_DOWN: Suspend a role, allowing a role to suspend a role from being assumed 
 Sessions have a lifetime defined by the Repository, and should be deleted upon a period of inactivity. -> DONE (last_interaction -> update load session)
 Do not allow simultaneous sessions by the same user on the same org -> DONE
 Verify subjects names equal to permissions -> DONE
+Corrigir bug ao adicionar 2 users iguais, mas so adiciona 1 em vez de dar erro -> DONE
 
 ---
 
-Corrigir bug ao adicionar 2 users iguais, mas so adiciona 1 em vez de dar erro
 No comando rep_list_role_permissions nós retornamos as permissões de um dado role incluindo as permissões do role nos documentos.
+Fazer testes
 
 It is possible for a subject to maintain simultaneous sessions with different organizations in the Repository. -> I think it's possible
 
