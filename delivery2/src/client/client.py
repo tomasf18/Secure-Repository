@@ -1312,7 +1312,7 @@ def show_result(result: dict, error_message: str, print_data: bool = True):
         logger.error(error_message)
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     elif "error" in result:
-        print("Error: " + result["error"])
+        print("Error: ", result["error"])
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     elif "data" in result and print_data:
         print(f"{result['data']}")
