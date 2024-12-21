@@ -11,33 +11,38 @@
 
 ```plaintext
 .
-├── docs/                     # Documentation files                   
-├── src/                      # Source code
-│   ├── client/               # Client-side code
-│   │   ├── api/              # API consumer
-│   │   ├── commands/         # Repository commands
-│   │   ├── data/             # Data from the client
-│   │   ├── keys/             # Keys used in the client
-│   │   ├── sessions/         # Sessions created by the client
-│   │   ├── utils/            # Utility functions
-│   │   └── client.py         # Main client script
-│   ├── server/               # Server-side code
-│   │   ├── controllers/      # Request handlers
-│   │   ├── dao/              # Data access objects
-│   │   ├── data/             # Data from the server
-│   │   ├── models/           # Data models
-│   │   ├── repkeys/          # Repository keys
-│   │   ├── services/         # Business logic
-│   │   ├── utils/            # Utility functions
-│   │   └── server.py         # Main server script
-│   ├── tests/                # Test files
-│   │   ├── test.py           # Test script
-│   │   └── data.json         # Test data
-│   └── clear_all_data.sh     # Script to clear all data
-├── .env                      # Environment variables
-├── .gitignore                # Git ignore file
-├── requirements.txt          # Python dependencies
-└── README.md                 # Project README
+├── docs/                         # Documentation files                   
+├── src/                          # Source code
+│   ├── client/                   # Client-side code
+│   │   ├── api/                  # API consumer
+│   │   ├── test_commands/        # Scripts used to test Repository commands
+│   │   ├── commands/             # Repository commands
+│   │   ├── data/                 # Data from the client
+│   │   │   ├── decrypted_files/  # Files that have been decrypted
+│   │   │   ├── encrypted_files/  # Fetched encrypted files
+│   │   │   ├── files/            # Files to be uploaded to the repository
+│   │   │   └── metadatas/        # Saved fetched document metadatas
+│   │   ├── keys/                 # Keys used in the client
+│   │   ├── sessions/             # Sessions created by the client
+│   │   ├── utils/                # Utility functions
+│   │   └── client.py             # Main client script
+│   ├── server/                   # Server-side code
+│   │   ├── controllers/          # Request handlers
+│   │   ├── dao/                  # Data access objects
+│   │   ├── data/                 # Data from the server
+│   │   ├── models/               # Data models
+│   │   ├── repkeys/              # Repository keys
+│   │   ├── services/             # Business logic
+│   │   ├── utils/                # Utility functions
+│   │   └── server.py             # Main server script
+│   ├── tests/                    # Test files
+│   │   ├── test.py               # Test script
+│   │   └── data.json             # Test data
+│   └── clear_all_data.sh         # Script to clear all data
+├── .env                          # Environment variables
+├── .gitignore                    # Git ignore file
+├── requirements.txt              # Python dependencies
+└── README.md                     # Project README
 ```
 
 ---
@@ -89,6 +94,9 @@
 
 #### <i class="fa-solid fa-check"></i> Success Codes
 
+- **200 OK**: The requested action was sucessful.
+- **201 CREATED**: The requested data insertion/update was sucessfuly saved on the database.
+
 #### <i class="fa-solid fa-user-xmark"></i> Client Error Codes
 
 - **400 Bad Request**: The request is malformed or missing required parameters.
@@ -97,6 +105,7 @@
 - **404 Not Found**: The requested resource could not be found.
 
 #### <i class="fa-solid fa-circle-exclamation"></i> Server Error Codes
+- **500 Internal Server Error**: Something went wrong in the server while completing the request, no useful data returned.
 
 ---
 
@@ -197,10 +206,56 @@
 
 ---
 
+## Implemented Features
+All previous commands where completely implemented, with the following requirements:
+* When an organization is created, its creator becomes a Manager of the organization
+    * Each Organization must always have a role Manager
+    * Each Organization must have, at all times, at least one subject with the role Manager
+        * When a subject is suspended/removed, it's ensured that the operation is only sucessful if exists other managers in the organization
+* Subjects can be added to organizations by other subjects 
+    * Subject can be also suspendend/reactivated by users in the organization who have permission SUBJECT_DOWN/SUBJECT_UP
+    * Subject Manager can never be suspended
+* Roles must have:
+    * A name
+    * A set of permissions
+    * A List of Subjects associated to it
+* New Roles can be created in the context of each organization with the permission ROLE_NEW
+    * Permissions can be added to roles by users with the permission ROLE_MOD
+    * Roles can be deactivated/reactivated by subjects who have the permission ROLE_DOWN/ROLE_UP
+* Sessions have:
+    * One or mode keys
+        * Keys are used for integrity check and to ensure confidentiality
+    * An identifier
+    * An organization
+    * A predefined Time To Live, that is refreshed on each operation
+    * Active Roles
+* Subjects can assume roles in a session, but only if it's bounded to him
+    * A subject can request to activate roles that are bounded to him
+    * When a user assumes roles, he becomes allowed to perform actions based on all the permissions of all the active roles in the current session
+* Documents can be added to the repository
+    * When a file is uploaded, it must be encrypted with a given algorithm and mode
+        * The key to encrypt the file is randomly generated
+    * File Integrity must be checked after being received by the Repository
+        * When user uploads a file, he also uploads a file_handle that consist of the digest of the original file which is used by the server to carry out a integrity check
+    * A document has an ACL that link roles to permissions on that document
+    * Only the creator has full access to the document, when created, however permissions can be added to the each role on the document, initally by the creator and then by users who also get access to permission DOC_ACL
+    * There must be always one subject in the document with access to permission DOC_ACL
+    * A document can also be "deleted"
+        * When a document is "deleted", the file_handle entry is nullified
+        * The file must always be accessible by subjects who have the file handle of the original file
+* Subjects can download files from the repository
+    * Subjects who have access to the metadata can also decrypt the file using the file_handle provided in the metadata
+    * Uppon a decryption, the file handle provided in the metadata is used to carry out an integrity check.
+* Sensitive data is encrypted on the server by a master key before being saved in disk
+* Repository has a well-known public key that is used by the client to verify integrity and source authentication of the returned data
+* All cal
+
+
 ## <i class="fa-solid fa-key"></i> Encryption Documentation
 Diagrams of message exchange between client-server
 
 ![Session Messages Diagram](./docs/SessionMessagesDiagram.pdf)
+
 
 ## <i class="fa-solid fa-file-code"></i> How to run the project
 
@@ -230,22 +285,22 @@ python3 server.py
 ./rep_create_org org1 user1 User1 user1@gmail.com user1_cred_file
 ```
 
-**Note:** stopping and starting the server will automatically clear all data both from database and from the local files.
 
 ## Tests
+In order to test the implementation, a few scripts were created independently, where a big set of possible actions while using the application were taken.
+Those scripts live on the folder `delivery2/src/client/test_commands`.
+To test the repository, firstly the server must be restarted in between each run of each script.
 
--- To run the tests: 
-1. Navigate to `delivery2/src` folder.
-2. Run the following command:
-
-```bash
-pytest tests/test.py -v
-```
-
-- For more detailed information, you can run the following command that will show the output of the tests:
-
-```bash
-pytest tests/test.py -v -s
-```
-
-**Note:** make sure the server is **stopped** before running the tests. The test script will automatically clear all data, start the server and stop it after the tests are done.
+-- To run the tests:
+1. Navigate to `delivery2/src/client/test_commands` folder.
+2. Run the following command 
+    ```bash 
+    ./{test_script_name}.sh
+    ```
+3. Analyze the output given the command ran and the arguments passed into the command 
+4. Clear the server database:
+    1. Navigate to `delivery2/src`
+    2. Run the cleaning script
+        ```bash 
+        ./clear_all_data.sh
+        ```
