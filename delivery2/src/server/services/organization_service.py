@@ -161,12 +161,10 @@ def add_organization_subject(organization_name, data, db_session: Session):
     public_key = base64.b64decode(decrypted_data.get('public_key'))
     
     try:
-        organization_dao.add_subject_to_organization(organization_name, username, name, email, public_key)
-    except IntegrityError:
-        return return_data("error", f"Subject with username '{username}' already exists.", HTTP_Code.BAD_REQUEST, session_key)
-    except Exception as e:
-        print("Some error occurred adding subject to organization")
-        print(e)
+        sub = organization_dao.add_subject_to_organization(organization_name, username, name, email, public_key)
+    except ValueError as e:
+        message = e.args[0]
+        return return_data("error", message, HTTP_Code.BAD_REQUEST, session_key)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
