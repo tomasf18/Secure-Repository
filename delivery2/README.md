@@ -29,7 +29,7 @@ python3 server.py
 ```
 
 ### **Important Note about passing arguments to some commands** -> See the tests files for reference on how to run these commands
-- On most commands that require a file path as an argument, you **do not need** to pass neither the full path nor the file extension. The command will automatically store/search the file on the respective directories.
+- On most commands that require a file path as an argument, you **do not need** to pass the full path nor the file extension. The command will automatically store/search the file on the respective directories.
 - For the command `rep_subject_credentials <password> <credentials file>` and `rep_add_subject <session file> <username> <name> <email> <credentials file>`, for the `credentials file` you should only pass the name of the file (these files are sothred on the `delivery2/src/client/data/keys/subject_keys` folder).
 - For the command `rep_decrypt_file <encrypted file> <encyption metadata>`, `encrypted file` should be the file name (or path, inside the `delivery2/src/client/data/encrypted_files` folder). And, as it is a local command, the encryption metadata can be found on the `delivery2/src/client/data/metadatas` folder, and you only need to pass the path **inside this folder** (e.g.: for file `delivery2/src/client/data/metadatas/user1_org1/doc1_metadata.json`, you only need to pass `user1_org1/doc1` - the path inside `metadatas` folder, which includes the name of the document - as an argument).
 - On `rep_create_org <organization> <username> <name> <email> <public key file>`, for the public key file, you should do the same as described on the second bullet point for credentials file. These files are stored on the `delivery2/src/client/keys/subject_keys` folder.
@@ -82,6 +82,7 @@ To test the repository, firstly the database must be cleaned in between each run
 │   │   │   ├── files/            # Files to be uploaded to the repository
 │   │   │   └── metadatas/        # Saved fetched document metadatas
 │   │   ├── keys/                 # Keys used in the client
+│   │   │   └── subject_keys/     # Subject generated keypairs
 │   │   ├── sessions/             # Sessions created by the client
 │   │   ├── utils/                # Utility functions
 │   │   └── client.py             # Main client script
@@ -137,6 +138,9 @@ To test the repository, firstly the database must be cleaned in between each run
 | `/organizations/{organization_name}/documents/{document_name}/file`           | GET        | Download file of a document                      | Authorized API          | -                                   |
 | `/organizations/{organization_name}/documents/{document_name}/ACL`            | PUT        | Update document ACL                              | Authorized API          | -                                   |
 | `/organizations/{organization_name}/documents/{document_name}/ACL`            | DELETE     | Remove document ACL                              | Authorized API          | -                                   |
+| `/organizations/{sorganization_name}/sessions/{session_id}/roles`              | GET        | List active roles in the session                 | Authenticated API       | -                                   |
+| `/organizations/{organization_name}/sessions/{session_id}/roles/{role}`       | PUT        | Assume a role in the session                     | Authenticated API       | -                                   |
+| `/organizations/{organization_name}/sessions/{session_id}/roles/{role}`       | DELETE     | Drop an assumed role in the session              | Authorized API          | -                                   |
 | `/files/{file_handle}`                                                        | GET        | Download a file                                  | Anonymous API           | -                                   |
 
 ---
@@ -320,12 +324,16 @@ The following diagram takes a closer look at how this is done in the code:
 
 ## Implemented Features
 
-
 All previous commands where completely implemented, with the following requirements:
 * When an organization is created, its creator becomes a Manager of the organization
     * Each Organization must always have a role Manager
     * Each Organization must have, at all times, at least one subject with the role Manager
         * When a subject is suspended/removed, it's ensured that the operation is only sucessful if exists other managers in the organization
+* Subjects have:
+    * An Elliptic Curve Key Pair, used to be authenticated in a session
+    * An unique username
+    * An unique email
+    * Full name
 * Subjects can be added to organizations by other subjects 
     * Subject can be also suspendend/reactivated by users in the organization who have permission SUBJECT_DOWN/SUBJECT_UP
     * Subject Manager can never be suspended
@@ -341,9 +349,12 @@ All previous commands where completely implemented, with the following requireme
         * Keys are used for integrity check and to ensure confidentiality
         * Keys are generated through ECDH and passed through an Hash Based Key Derivation Function to get a session key with a length of 64 bytes, of which the first 32 are used to encrypt the sent data and the remaining 32 to generate a Message Authentication Code (a signed digest)
     * An identifier
-    * An organization
+    * An associated organization
     * A predefined Time To Live, that is refreshed on each operation
     * Active Roles
+    * A message counter, that is strictly increasing, in order to prevent out of order messages
+        * If a message with a counter lower than the last message, message is discarded
+    * A nonce, a random value, that ensures that replay attack is impossible, especially when combined with the message counter
 * Subjects can assume roles in a session, but only if it's bounded to him
     * A subject can request to activate roles that are bounded to him
     * When a user assumes roles, he becomes allowed to perform actions based on all the permissions of all the active roles in the current session
