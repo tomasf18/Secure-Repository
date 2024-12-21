@@ -565,6 +565,7 @@ def get_role_permissions(organization_name, role_name, data, db_session: Session
     role_dao = RoleDAO(db_session)
     session_dao = SessionDAO(db_session)
     organization_dao = OrganizationDAO(db_session)
+    document_role_permission_dao = DocumentRolePermissionDAO(db_session)
 
     # Get session
     try:
@@ -583,9 +584,15 @@ def get_role_permissions(organization_name, role_name, data, db_session: Session
     except Exception as e:
         return return_data("error", f"Role '{role_name}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
     
+    doc_permissions = document_role_permission_dao.separate_role_permissions_per_document(role.id)
+    serializable_return = {
+        "org_permissions": [permission.name for permission in role.permissions],
+        "doc_permissions": doc_permissions
+    }
+    
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    return return_data("data", [permission.__repr__() for permission in role.permissions], HTTP_Code.OK, session_key)
+    return return_data("data", serializable_return, HTTP_Code.OK, session_key)
 
 # -------------------------------
 

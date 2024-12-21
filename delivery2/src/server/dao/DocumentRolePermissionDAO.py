@@ -100,6 +100,23 @@ class DocumentRolePermissionDAO(BaseDAO):
             missing_permissions.append(permission_object)
             
         return missing_permissions
+    
+# -------------------------------
+
+    def get_by_role_id(self, role_id) -> list["DocumentRolePermission"]:
+        return self.session.query(DocumentRolePermission).filter(DocumentRolePermission.role_id == role_id).all()
+    
+    def separate_role_permissions_per_document(self, role_id) -> dict[str, list[str]]:
+        """ Get all document names and their permissions for a given role. """
+        doc_roles_by_permission = {}
+        doc_role_permissions = self.get_by_role_id(role_id)
+        for doc_role_perm in doc_role_permissions:
+            doc_name = doc_role_perm.document_acl.document.name
+            if doc_name not in doc_roles_by_permission:
+                doc_roles_by_permission[doc_name] = []
+            doc_roles_by_permission[doc_name].append(doc_role_perm.permission_name)
+            
+        return doc_roles_by_permission
         
 
         

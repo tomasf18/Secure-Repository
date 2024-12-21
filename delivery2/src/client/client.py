@@ -687,10 +687,24 @@ def rep_list_role_permissions(session_file, role):
     
         
     show_result(result, "Error listing role permissions", print_data=False)
-    permissions = result["data"]
-    print("Role Permissions:")
-    for permission in permissions:
+    
+    org_permissions = result["data"]["org_permissions"]
+    doc_permissions = result["data"]["doc_permissions"]
+
+    print(f"\nOrganization permissions of Role {role}:")
+    print("-------------------------------------------")
+    for permission in org_permissions:
         print(" -> ", permission)
+    print("-------------------------------------------")
+    print(f"\nDocument permissions of Role {role}:")
+    print("-------------------------------------------")
+    for doc, permissions in doc_permissions.items():
+        print(f"Document: {doc}")
+        for permission in permissions:
+            print(" -> ", permission)
+        print("--------------------------")
+            
+
     
     sys.exit(ReturnCode.SUCCESS)
     
@@ -1126,7 +1140,7 @@ def rep_add_doc(session_file, document_name, file):
     aes = AES(AESModes.CBC)
     random_key = aes.generate_random_key()
     encrypted_file_content, iv = aes.encrypt_data(str(file_contents).encode(), random_key)
-    digest = hashlib.sha256(file_contents.encode()).hexdigest()
+    digest = hashlib.sha256(str(file_contents).encode()).hexdigest()
     
     endpoint = f"/organizations/{session_file_content['organization']}/documents"
     
