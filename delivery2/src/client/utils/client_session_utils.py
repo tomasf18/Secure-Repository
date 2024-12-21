@@ -77,7 +77,6 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     try:
         response = requests.request(method, rep_address + endpoint, json=data)
     except requests.RequestException  as e:
-        print(e)
         print(f"Error: Failed to connect to the server at {rep_address}")
         sys.exit(ReturnCode.INPUT_ERROR)
     
@@ -90,6 +89,7 @@ def exchange_anonymous_keys(rep_address: str, endpoint: str, method: str, rep_pu
     # Verify if signature is valid from repository
     response = response.json()
     if (not verify_signature(response, rep_pub_key)):
+        logging.error("Error verifying repository signature!")
         sys.exit(ReturnCode.REPOSITORY_ERROR)
 
     # If it is valid, finish calculations

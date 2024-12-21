@@ -278,7 +278,16 @@ def create_organization_document(organization_name, data, db_session: Session):
             session_key=session_key    
         )
 
-    new_document = document_dao.create_document(document_name, session.id, digest, encrypted_file_content, alg, mode, key, iv)
+    try:
+        new_document = document_dao.create_document(document_name, session.id, digest, encrypted_file_content, alg, mode, key, iv)
+    except ValueError as e:
+        message = e.args[0]
+        return return_data(
+            key="error",
+            data=message,
+            code=HTTP_Code.BAD_REQUEST,
+            session_key=session_key
+        )
     
     # Get Manager role
     organization = organization_dao.get_by_name(organization_name)
@@ -515,7 +524,12 @@ def suspend_role(organization_name, role_name, data, db_session: Session):
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
 
-    role = role_dao.update_role_status(role_name, acl_id, Status.SUSPENDED.value)
+    
+    try:
+        role = role_dao.update_role_status(role_name, acl_id, Status.SUSPENDED.value)
+    except ValueError as e:
+        message = e.args[0]
+        return return_data("error", message, HTTP_Code.NOT_FOUND, session_key)
     
     # From all sessions where this role is being used, remove it
     session_dao.remove_role_from_all_sessions(role)
@@ -551,7 +565,12 @@ def reactivate_role(organization_name, role_name, data, db_session: Session):
     organization = organization_dao.get_by_name(organization_name)
     acl_id = organization.acl.id
 
-    role = role_dao.update_role_status(role_name, acl_id, Status.ACTIVE.value)
+    try:
+        role = role_dao.update_role_status(role_name, acl_id, Status.ACTIVE.value)
+    except ValueError as e:
+        message = e.args[0]
+        return return_data("error", message, HTTP_Code.NOT_FOUND, session_key)
+
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
