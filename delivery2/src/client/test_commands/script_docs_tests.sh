@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ../commands
 
 USER1_SESSION=user1_org1_session_file
 USER2_SESSION=user2_org1_session_file

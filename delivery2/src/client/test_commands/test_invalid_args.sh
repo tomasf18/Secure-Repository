@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ../commands
 
 USER1_ORG1_SESSION=user1_org1_session_file
 USER1_ORG2_SESSION=user1_org2_session_file
@@ -14,7 +15,7 @@ INPUT_FILE=file1.txt
 ./rep_create_org -k '../keys/subject_keys/pub_user1_cred_file.pub' org1 user1 User1 user1@gmail.com user1_cred_file 
 ./rep_create_org -r 'localhost:5001' org1 user1 User1 user1@gmail.com user1_cred_file 
 
-                                    
+                      
 
 # Create Users
 ./rep_subject_credentials 123 user2_cred_file
