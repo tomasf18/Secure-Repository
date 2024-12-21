@@ -6,6 +6,7 @@ USER3_SESSION=user3_org2_session_file
 DOCUMENT=doc1
 
 INPUT_FILE=file1.txt
+OUTPUT_FILE=output.txt
 
 # Create Users
 ./rep_subject_credentials 123 user1_cred_file
@@ -20,28 +21,38 @@ INPUT_FILE=file1.txt
 
 
 # Non existent docs
+# SHOULD FAIL (No documents)
 ./rep_list_docs $USER1_SESSION
 ./rep_get_doc_metadata  $USER1_SESSION $DOCUMENT
 ./rep_get_doc_file $USER1_SESSION $DOCUMENT
 ./rep_delete_doc $USER1_SESSION $DOCUMENT
+./rep_get_file $DOCUMENT # Anonymous
 
 
-# Add doc
+# Add doc WITHOUT PERMISSION
+# (SHOULD FAIL) (NO DOC_NEW)
+./rep_add_doc $USER2_SESSION $DOCUMENT $INPUT_FILE
+./rep_list_docs $USER2_SESSION
+
+# Add doc WITH PERMISSION
 ./rep_add_doc $USER1_SESSION $DOCUMENT $INPUT_FILE
 ./rep_list_docs $USER1_SESSION
 
+
 # Fetch added docs WITHOUT PERMISSION
+# (SHOULD FAIL)
 ./rep_get_doc_metadata $USER2_SESSION $DOCUMENT
 ./rep_get_doc_file $USER2_SESSION $DOCUMENT
 
-clear
 # Fetch added docs WITH PERMISSION
 ./rep_get_doc_metadata $USER1_SESSION $DOCUMENT
 ./rep_get_doc_file $USER1_SESSION $DOCUMENT
-
-exit
+# SHould write to file
+./rep_get_file $DOCUMENT # Anonymous
+./rep_get_doc_file $USER1_SESSION $DOCUMENT $OUTPUT
 
 # Delete docs WITHOUT PERMISSION
+# (SHOULD FAIL) (NO DOC_DELETE)
 ./rep_delete_doc $USER2_SESSION $DOCUMENT
 ./rep_list_docs $USER2_SESSION
 
@@ -51,5 +62,7 @@ exit
 
 
 # Fetch deleted docs
-./rep_get_doc_metadata  $USER1_SESSION $DOCUMENT
+# (SHOULD RETURN METADATA with file_handle = nill)
+./rep_get_doc_metadata $USER1_SESSION $DOCUMENT
+# (SHOULD FAIL file not found)
 ./rep_get_doc_file $USER1_SESSION $DOCUMENT
