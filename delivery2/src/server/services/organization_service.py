@@ -194,8 +194,11 @@ def suspend_organization_subject(organization_name, username, data, db_session: 
             return return_data("error", f"Subject '{username}' is a Manager and cannot be suspended.", HTTP_Code.FORBIDDEN, session_key)
     except Exception as e:
         return return_data("error", f"Subject '{username}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
-        
-    organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+    
+    try:    
+        organization_dao.update_org_subj_association_status(organization_name, username, Status.SUSPENDED.value)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
@@ -225,7 +228,10 @@ def activate_organization_subject(organization_name, username, data, db_session:
     except Exception as e:
         return return_data("error", f"Subject '{username}' doesn't exist in the organization '{organization_name}'.", HTTP_Code.NOT_FOUND, session_key)
     
-    organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    try:
+        organization_dao.update_org_subj_association_status(organization_name, username, Status.ACTIVE.value)
+    except Exception as e:
+        return return_data("error", str(e), HTTP_Code.NOT_FOUND, session_key)
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])

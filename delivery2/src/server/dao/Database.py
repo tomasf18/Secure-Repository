@@ -32,11 +32,12 @@ PERMISSIONS = [
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, reset: bool = False):
         self.engine = create_engine(f"sqlite:///{DATABASE_PATH}")
         self.session = None
 
-        self.reset()
+        if reset:
+            self.reset()
 
     def __enter__(self):
         return self
