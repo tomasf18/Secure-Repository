@@ -72,7 +72,6 @@ class Database:
         repository = Repository(public_key_id=rep_pub_key.id, private_key_id=rep_encrypted_priv_key.id)
         self.session.add(repository)
         self.session.commit()
-        print("Added the repository keys.")
 
     def initialize_permissions(self):
         """

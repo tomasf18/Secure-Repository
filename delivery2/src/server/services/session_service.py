@@ -89,8 +89,6 @@ def create_session(data, db_session: SQLAlchemySession):
     session_server_public_key: bytes
     session_key, session_server_public_key = exchange_keys(client_session_public_key=base64.b64decode(client_session_pub_key))
 
-    print(f"\n\nSERVER: SHARED SECRET: {session_key}\n\n")
-    
     ## Create session
     nonce = secrets.token_hex(16) 
     try:
@@ -127,7 +125,6 @@ def create_session(data, db_session: SQLAlchemySession):
     })
     
     # Return response to the client
-    print(f"\n\nResult: {result}\n\n")
     return result, HTTP_Code.CREATED
 
 # -------------------------------
@@ -199,13 +196,7 @@ def session_assume_role(organization_name, session_id, role, data, db_session):
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # print session roles
-    print(f"\n\n\n\nSession roles: ")
-    for role in session.session_roles:
-        print(role.__repr__())
-    print("\n\n\n\n")
-    
+
     return return_data("data", result, HTTP_Code.OK, session_key)
 
 # -------------------------------
@@ -250,12 +241,6 @@ def session_drop_role(organization_name, session_id, role, data, db_session):
 
     # Update session
     session_dao.update_counter(session.id, decrypted_data["counter"])
-    
-    # print session roles
-    print(f"\n\n\n\nSession roles: ")
-    for role in session.session_roles:
-        print(role.__repr__())
-    print("\n\n\n\n")
         
     return return_data("data", result, HTTP_Code.OK, session_key)
 

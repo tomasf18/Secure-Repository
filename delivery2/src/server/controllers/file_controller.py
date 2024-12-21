@@ -20,12 +20,10 @@ def files(file_handle):
         return_data, code = download_file(file_handle)        
     else:
         return_data = json.dumps({"error": "File not found."})
-        print("\nFile not found.\n")
+        print(f"File {file_handle} not found.")
         code = HTTP_Code.NOT_FOUND
         
     encrypted_return_data, iv_encrypted_return_data = encrypt_anonymous_content(return_data.encode(), encryption_key)
-    print("\n\n\nENCRYPTED_DATA: ", encrypted_return_data)
-    print("\nIV:\n", iv_encrypted_return_data, "\n\n\n")
     return json.dumps({"data": convert_bytes_to_str(encrypted_return_data), 
                        "iv": convert_bytes_to_str(iv_encrypted_return_data)
                        }), code

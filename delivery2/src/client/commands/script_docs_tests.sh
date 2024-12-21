@@ -5,7 +5,7 @@ USER2_SESSION=user2_org1_session_file
 USER3_SESSION=user3_org2_session_file
 DOCUMENT=doc1
 
-INPUT_FILE=input.txt
+INPUT_FILE=file1.txt
 OUTPUT_FILE=output.txt
 
 # Create Users
@@ -38,7 +38,6 @@ OUTPUT_FILE=output.txt
 # Fetch added docs WITH PERMISSION
 ./rep_get_doc_metadata $USER1_SESSION $DOCUMENT
 ./rep_get_doc_file $USER1_SESSION $DOCUMENT $OUTPUT_FILE
-### Counter está a 5!
 
 
 # Delete docs WITHOUT PERMISSION

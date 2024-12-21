@@ -81,7 +81,6 @@ def encrypt_payload(data: dict | str, encryption_key: bytes, integrity_key: byte
         "signature": base64.b64encode(digest).decode('utf-8') # convert_bytes_to_str(digest)
     }
     
-    print(f"Encrypted payload: {body} with encryption key: {encryption_key} and integrity key: {integrity_key}")
     return body
 
 # -------------------------------
@@ -107,7 +106,7 @@ def decrypt_payload(response, encryption_key: bytes, integrity_key: bytes):
     
     # Verify digest of received data and check integrity
     if ( not verify_digest(data_to_digest, received_mac, integrity_key) ):
-        print("Digest verification failed")
+        logging.debug("Digest verification failed")
         return None
     
     encrypted_message = base64.b64decode(message_str.encode('utf-8')) # convert_str_to_bytes(received_data["message"])
@@ -135,10 +134,6 @@ def verify_message_order(data: dict, counter: int, nonce: bytes) -> bool:
     
     received_nonce = data["nonce"]
     received_counter = data["counter"]
-
-    print(f"Received counter: {received_counter}, Received nonce: {received_nonce}\
-        \nExpected counter: >{counter}, Expected nonce: {nonce}")
-    
     return all([
         received_nonce == nonce,
         received_counter > counter
@@ -162,7 +157,6 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
         tuple[dict, Session, bytes]: Decrypted data, Session, Session key
     """
     
-    print(f"\n\n\nSESSION LIFETIME: {SESSION_LIFETIME}\n\n\n")
     session_dao = SessionDAO(db_session)
     
     # Get session
@@ -170,19 +164,16 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
     session = session_dao.get_by_id(session_id)
     
     if session is None:
-        print(f"SERVER: Session with id {session_id} not found")
         raise ValueError(
                  f"Session with id {session_id} not found", HTTP_Code.NOT_FOUND, None
             )
         
     if subject_invalid(session, db_session):
-        print(f"SERVER: Subject {session.subject_username} is suspended")
         raise ValueError(
                 f"Subject {session.subject_username} is suspended", HTTP_Code.FORBIDDEN, None
             )
        
     if session_expired(session):
-        print(f"SERVER: Session with id {session_id} expired")
         raise ValueError(
                 f"Session with id {session_id} expired", HTTP_Code.FORBIDDEN, None
             ) 
@@ -193,7 +184,6 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
     
     decrypted_data = decrypt_payload(data, session_key[:32], session_key[32:])
     if decrypted_data is None:
-        print("SERVER: Error decrypting data")
         raise ValueError(
             f"Invalid session key",
             HTTP_Code.FORBIDDEN,
@@ -201,7 +191,6 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
         )
 
     if (decrypted_data.get("counter") is None) or (decrypted_data.get("nonce") is None):
-        print("No counter or nonce provided")    
         raise ValueError(
             f"No counter or nonce provided!",
             HTTP_Code.FORBIDDEN, 
@@ -209,7 +198,6 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
         )
         
     if not verify_message_order(decrypted_data, counter=session.counter, nonce=session.nonce):
-        print("SERVER: Invalid message order")
         raise ValueError(
             f"Invalid message order",
             HTTP_Code.FORBIDDEN,
@@ -217,7 +205,6 @@ def load_session(data: dict, db_session: SQLAlchemySession, organization_name: s
         )
 
     if organization_name != session.organization_name:
-        print("SERVER: Cannot access organization")
         raise ValueError(
             f"Cannot access organization {organization_name}",
             HTTP_Code.FORBIDDEN, 
@@ -236,5 +223,4 @@ def session_expired(session: Session) -> bool:
 def subject_invalid(session: Session, db_session: SQLAlchemySession) -> bool:
     organization_dao = OrganizationDAO(db_session)
     org_subj_assoc = organization_dao.get_org_subj_association(session.organization_name, session.subject_username)
-    print(f"SUBJECT STATUS: {org_subj_assoc}")
     return org_subj_assoc.status == Status.SUSPENDED.value

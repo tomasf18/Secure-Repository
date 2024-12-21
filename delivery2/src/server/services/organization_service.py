@@ -163,7 +163,7 @@ def add_organization_subject(organization_name, data, db_session: Session):
     except IntegrityError:
         return return_data("error", f"Subject with username '{username}' already exists.", HTTP_Code.BAD_REQUEST, session_key)
     except Exception as e:
-        print("\n\n\nSome error occurreed")
+        print("Some error occurred adding subject to organization")
         print(e)
 
     # Update session

@@ -104,7 +104,6 @@ class OrganizationDAO(BaseDAO):
         """ Add a Subject to an Organization with their public key. """
         org.subjects.append(subject)
         self.session.commit()
-        print(f"Subject '{subject.username}' added to organization '{org.name}'.")
         
         if key and key.id:
             # Update the public key for the subject in the organization
@@ -124,9 +123,9 @@ class OrganizationDAO(BaseDAO):
         ).first()
         
         if org_subject:
-            print(f"Organization: {org_subject.org_name}, Subject: {org_subject.username}, Key: {org_subject.pub_key_id}")
+            print(f"Subject '{subject.username}' added to organization '{org.name}'.")
         else:
-            print(f"Error: Subject '{subject.username}' not found in the organization '{org.name}' after update.")
+            print(f"Error: Could not add Subject '{subject.username}' to the organization '{org.name}'.")
 
             
     def add_subject_to_organization(self, org_name: str, subject_username: str, subject_full_name: str, subject_email: str, subject_pub_key: bytes) -> Subject:

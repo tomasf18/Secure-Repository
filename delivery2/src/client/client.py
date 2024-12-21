@@ -233,7 +233,7 @@ def rep_decrypt_file(encrypted_file, encryption_metadata_path, get_doc_file=Fals
         
     # encryption_metadata_path == <username>_<org_name>/<doc_name>_metadata.json
     encryption_metadata_full_path = os.path.join(os.getenv("CLIENT_METADATAS_PATH"), encryption_metadata_path)
-    print(f"\n\n\nDecrypting file {encrypted_file} with metadata {encryption_metadata_path}\n\n\n")
+    logging.debug(f"Decrypting file {encrypted_file} with metadata {encryption_metadata_path}")
     metadata = read_file(encryption_metadata_full_path) 
     if metadata is None:
         logger.error(f"Error reading metadata file: {encryption_metadata_full_path}")
@@ -392,7 +392,7 @@ def rep_get_file(file_handle, output_file=None, get_doc_file=False):
         with open(encrypted_file_path, "wb") as file:
             file.write(file_contents)
     else:
-        print(f"\n{file_contents}\n")
+        logging.debug(f"{file_contents}")
             
     if not get_doc_file:
         sys.exit(ReturnCode.SUCCESS)
@@ -438,7 +438,6 @@ def rep_assume_role(session_file, role):
 
     data = result.get("data", {})
     roles = data.get("roles")
-
     if roles is not None:
         session_file_content["roles"] = roles
     
@@ -600,8 +599,8 @@ def rep_list_role_subjects(session_file, role):
     result = apiConsumer.send_request(endpoint=endpoint, method=HTTPMethod.GET, data=data, sessionId=session_id, sessionKey=session_key)
     saveContext(session_file, session_file_content)
         
-    subjects = result["data"]
     show_result(result, "Error listing role subjects", print_data=False)
+    subjects = result["data"]
     print("Role Subjects:")
     for subject in subjects:
         print(" -> ", subject)
@@ -1174,7 +1173,7 @@ def rep_get_doc_metadata(session_file, document_name, doc_get_file=False):
     data = result["data"]
     document_name = data["document_name"]
     metadata_path = get_metadata_path(document_name, session_file_content["username"], session_file_content["organization"])
-    print(f"\n\nMetadata path: {metadata_path}\n\n")
+    print(f"Metadata saved on file: {metadata_path}")
     
     # Make sure the metadata directory exists
     os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
@@ -1208,15 +1207,14 @@ def rep_get_doc_file(session_file, document_name, output_file=None):
     decrypted_file_content = rep_decrypt_file(output_encrypted_file, metadata_path, get_doc_file=True)
     
     if output_file is None:
-        output_file = document_name
+        print(decrypted_file_content)
+        sys.exit(ReturnCode.SUCCESS)
     
     output_decrypted_file = get_decrypted_file_path(output_file, session_file_content["username"], session_file_content["organization"])
     # Make sure directory exists
     os.makedirs(os.path.dirname(output_decrypted_file), exist_ok=True)
     with open(output_decrypted_file, "w") as file:
         file.write(decrypted_file_content)
-
-    print(f"\n{decrypted_file_content}\n")
 
 # -------------------------------
 
@@ -1314,10 +1312,10 @@ def show_result(result: dict, error_message: str, print_data: bool = True):
         logger.error(error_message)
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     elif "error" in result:
-        print("\nError: ", result["error"], "\n")
+        print("Error: ", result["error"])
         sys.exit(ReturnCode.REPOSITORY_ERROR)
     elif "data" in result and print_data:
-        print(f"\n{result['data']}\n")
+        print(f"{result['data']}")
 
 # ****************************************************
 # Arguments Validation and Command Execution
