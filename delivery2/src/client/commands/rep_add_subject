@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_add_subject <session_file> <username> <name> <email> <credentials_file>
+python3 ../client.py --command rep_add_subject $@

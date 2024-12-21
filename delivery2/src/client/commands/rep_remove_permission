@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_remove_permission <session_file> <role> <username/permission>
+python3 ../client.py --command rep_remove_permission $@

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_activate_subject <session_file> <username>
+python3 ../client.py --command rep_activate_subject $@

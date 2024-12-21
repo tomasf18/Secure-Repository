@@ -1,0 +1,1 @@
+Example random contents of file3.txt

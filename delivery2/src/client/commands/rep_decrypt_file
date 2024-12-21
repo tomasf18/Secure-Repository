@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# rep_decrypt_file <encrypted_file> <encryption_metadata>
+python3 ../client.py --command rep_decrypt_file $@
