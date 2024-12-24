@@ -450,7 +450,8 @@ def rep_assume_role(session_file, role):
         session_file_content["roles"] = roles
     
     saveContext(session_file, session_file_content)
-    show_result(result, "Error assuming role")
+    show_result(result, "Error assuming role", print_data=False)
+    print(f"{data.get("data")}")
 
     sys.exit(ReturnCode.SUCCESS)
 
@@ -745,7 +746,8 @@ def rep_list_permission_roles(session_file, permission):
     saveContext(session_file, session_file_content)
     
     data = result.get("data", {})
-    is_doc_perm = result.get("document_permission")
+    is_doc_perm = data.get("document_permission")
+    data = data.get("data", {})
 
     show_result(result, "Error listing permission roles", print_data=False)
     if is_doc_perm:
