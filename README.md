@@ -1,6 +1,6 @@
 # SIO - Secure Repository for Organizations
 
-### **Grade: 19.4/20**
+### **Grade: 19.6/20**
 
 ## Project Abstract
 
