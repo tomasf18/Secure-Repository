@@ -469,7 +469,7 @@ These commands require a session and specific permissions for execution.
 
 ## Bookmarks
 
-**GitHub Repository (original)**  
+**GitHub Repository (private | source of the project)**  
 - [SIO Project - Secure Repository](https://github.com/detiuaveiro/sio-2425-project-sio_112981_113384_114514)
 
 ---
