@@ -63,7 +63,7 @@ delivery2/
     └── README.md                     # Project README
 ```
 
-3. **Delivery 3**: Contains the project's report. Here, you can find all the features, functionalities, and implementation details of the system, including a detailed explanation on how we addressed the security requirements, justification of design choices, and the system's Application Security Verification Standard (ASVS) evaluation focusing on Level 3 (L3) under the scope of V6: Stored Cryptography.
+3. **Delivery 3**: Contains the project's report. **[Here](delivery3/Project-Report.pdf)**, you can find all the features, functionalities, and implementation details of the system, including a detailed explanation on how we addressed the security requirements, justification of design choices, and the system's Application Security Verification Standard (ASVS) evaluation focusing on Level 3 (L3) under the scope of V6: Stored Cryptography.
 
 ---
 
